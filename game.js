@@ -39,8 +39,12 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const themeToggleBtn = document.getElementById('theme-toggle');
+
+const GRID_COLORS = { dark: '#22222e', light: '#d8d8e6' };
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let theme = localStorage.getItem('theme') || 'dark';
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -146,6 +150,7 @@ function spawn() {
   next = randomPiece();
   if (collide(current.shape, current.x, current.y)) {
     endGame();
+    return;
   }
   drawNext();
 }
@@ -169,7 +174,7 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = GRID_COLORS[theme];
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -193,6 +198,8 @@ function draw() {
   for (let r = 0; r < ROWS; r++)
     for (let c = 0; c < COLS; c++)
       drawBlock(ctx, c, r, board[r][c], BLOCK);
+
+  if (gameOver) return;
 
   // ghost
   const gy = ghostY();
@@ -253,6 +260,7 @@ function loop(ts) {
     }
   }
   draw();
+  if (gameOver) return;
   animId = requestAnimationFrame(loop);
 }
 
@@ -299,6 +307,20 @@ document.addEventListener('keydown', e => {
   updateHUD();
 });
 
-restartBtn.addEventListener('click', init);
+function applyTheme() {
+  document.body.dataset.theme = theme;
+  themeToggleBtn.textContent = theme === 'light' ? '☀️' : '🌙';
+}
 
+function toggleTheme() {
+  theme = theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('theme', theme);
+  applyTheme();
+  if (current) draw();
+}
+
+restartBtn.addEventListener('click', init);
+themeToggleBtn.addEventListener('click', toggleTheme);
+
+applyTheme();
 init();

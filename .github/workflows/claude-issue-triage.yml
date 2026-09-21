@@ -1,0 +1,43 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Issue Triage
+        id: claude-triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Estas revisando el issue #${{ github.event.issue.number }} del repositorio ${{ github.repository }}.
+
+            Titulo: ${{ github.event.issue.title }}
+            Cuerpo:
+            ${{ github.event.issue.body }}
+
+            Tu tarea:
+            1. Lee el codigo del repo (index.html, style.css, game.js) para entender el contexto real antes de opinar.
+            2. Asigna las labels que correspondan usando `gh issue edit ${{ github.event.issue.number }} --add-label "..."`. Usa unicamente labels existentes en el repo (bug, enhancement, documentation, question, accessibility, good first issue, help wanted, duplicate, invalid, wontfix); si ninguna aplica bien, usa "question". No crees labels nuevas.
+            3. Publica UN comentario en el issue (con `gh issue comment ${{ github.event.issue.number }} --body "..."`) que contenga un diagnostico general en español, en formato Markdown que GitHub pueda renderizar correctamente (usa encabezados/bold con `**`, listas con `-`, y bloques de código con backticks para nombres de archivos/funciones), con esta estructura:
+               - **Resumen del problema**: 1-2 frases.
+               - **Causa probable / area afectada**: que archivo(s) y función(es) de game.js/index.html/style.css estan probablemente involucrados, citando nombres reales del código (`ROWS`, `COLS`, `collide`, `tryRotate`, `clearLines`, `loop`, etc.) cuando aplique.
+               - **Posible enfoque de solución**: pasos de alto nivel para implementar el fix o la feature, sin escribir el código todavia (esto se usará después para implementar la solución real).
+               - **Labels asignadas**: lista las labels que pusiste y por qué.
+
+            No hagas cambios de código, no abras PRs. Solo etiqueta y comenta.
+          claude_args: '--allowedTools "Bash(gh issue edit:*),Bash(gh issue comment:*),Read,Grep,Glob"'
