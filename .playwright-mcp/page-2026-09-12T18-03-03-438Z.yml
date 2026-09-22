@@ -1,0 +1,60 @@
+- generic [ref=e2]:
+  - heading "TETRIS" [level=1] [ref=e3]
+  - complementary [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: SCORE
+      - generic [ref=e10]: "0"
+    - generic [ref=e11]:
+      - generic [ref=e12]: LINES
+      - generic [ref=e13]: "0"
+    - generic [ref=e14]:
+      - generic [ref=e15]: LEVEL
+      - generic [ref=e16]: "1"
+    - generic [ref=e17]: NEXT
+    - generic [ref=e20]:
+      - generic [ref=e21]: MODO CLARO
+      - generic [ref=e22]:
+        - checkbox "Cambiar entre modo oscuro y modo claro"
+        - generic [ref=e23] [cursor=pointer]
+    - generic [ref=e24]:
+      - generic [ref=e25]: CONTROLS
+      - list [ref=e26]:
+        - listitem [ref=e27]:
+          - generic [ref=e28]: ←
+          - generic [ref=e29]: →
+          - text: mover
+        - listitem [ref=e30]:
+          - generic [ref=e31]: ↑
+          - text: rotar
+        - listitem [ref=e32]:
+          - generic [ref=e33]: ↓
+          - text: bajar
+        - listitem [ref=e34]:
+          - generic [ref=e35]: Space
+          - text: caída
+        - listitem [ref=e36]:
+          - generic [ref=e37]: P
+          - text: pausa
+    - generic [ref=e38]:
+      - generic [ref=e39]: POWERUPS
+      - list [ref=e40]:
+        - listitem [ref=e41]:
+          - generic [ref=e42]: 💣
+          - generic [ref=e43]:
+            - strong [ref=e44]: Bomba
+            - generic [ref=e45]: Al aterrizar, destruye un área de 3x3 bloques a su alrededor.
+        - listitem [ref=e46]:
+          - generic [ref=e47]: ⚡
+          - generic [ref=e48]:
+            - strong [ref=e49]: Rayo
+            - generic [ref=e50]: Al aterrizar, limpia por completo la fila o la columna donde cae (al azar).
+        - listitem [ref=e51]:
+          - generic [ref=e52]: 🎨
+          - generic [ref=e53]:
+            - strong [ref=e54]: Tinte
+            - generic [ref=e55]: "Convierte todos los bloques de un color al azar en comodines: cualquier fila que tenga un comodín se limpia, aunque tenga huecos."
+        - listitem [ref=e56]:
+          - generic [ref=e57]: 🧊
+          - generic [ref=e58]:
+            - strong [ref=e59]: Gravedad
+            - generic [ref=e60]: Compacta los huecos del tablero (los bloques caen) y congela la caída automática durante 5 segundos.

@@ -1,0 +1,54 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project overview
+
+A classic Tetris implementation in vanilla JavaScript using the HTML5 Canvas API. No dependencies, no build step, no package manager — just `index.html`, `style.css`, and `game.js`.
+
+## Running the game
+
+There is no build/lint/test tooling. Open `index.html` directly in a browser, or serve it with any static server:
+
+```bash
+python3 -m http.server 8000
+# or
+npx serve .
+```
+
+Then visit `http://localhost:8000`.
+
+## Architecture
+
+Everything lives in `game.js` as top-level state and functions (no modules, no classes) operating on a small set of shared globals: `board`, `current`, `next`, `score`, `lines`, `level`, `paused`, `gameOver`, `dropInterval`, `dropAccum`, `animId`, plus the powerup state `powerupCounter`, `pendingPowerup`, `freezeUntil`.
+
+- **Board model**: `board` is a `ROWS × COLS` matrix; each cell is `0` (empty), a positive index 1–8 into `COLORS`/`PIECES` identifying which piece occupies it, or a **negative** index `-n` marking a "wildcard" cell created by the Tinte powerup (same color as `n`, but excluded from the normal fill check in `clearLines`).
+- **Pieces**: `PIECES` defines the 7 standard tetrominoes plus a bonus 3×3 "nut" piece (type 8: a hollow ring, `[[8,8,8],[8,0,8],[8,8,8]]`) as square matrices. The nut's center cell is `0`, so `merge()` never overwrites whatever was under the hole — it can land straddling an existing gap, making that gap harder to clear. Types 9–12 are the four powerup pieces (2×2 squares) — see Powerups below. Rotation (`rotateCW`) is done by transposing + reversing rows — there's no separate rotation-state table, the shape matrix itself is rotated in place.
+- **Collision** (`collide`): checks a shape against board bounds and already-locked cells; it's the single primitive used by movement, rotation, and drop logic. Negative (wildcard) cells are still truthy, so they still block movement like any other locked cell.
+- **Wall kicks** (`tryRotate`): after rotating, tries offsets `[0, -1, 1, -2, 2]` and takes the first that doesn't collide, else discards the rotation.
+- **Game loop** (`loop`, driven by `requestAnimationFrame`): accumulates elapsed time in `dropAccum` and advances the piece one row (or locks it via `lockPiece`) once `dropInterval` is exceeded. Auto-drop is skipped (without discarding elapsed time) while `performance.now() < freezeUntil`, which the Gravedad powerup sets; manual movement/soft-drop/hard-drop still work during a freeze.
+- **Locking a piece** (`lockPiece`): if `current.powerUp` is set, `applyPowerUp()` runs the effect instead of `merge()` (the powerup piece itself never becomes permanent board cells); otherwise `merge()` bakes the current shape into `board`. Either way `clearLines()` then removes completed/wildcard rows (rechecking the same row index after splicing, since rows above shift down) — except right after a Tinte activation, where `clearLines()` is deliberately skipped for one lock so the wildcard cells are visible for at least one frame before the next lock clears them. `spawn()` then promotes `next` to `current` and generates a new `next`. If the newly spawned piece immediately collides, `endGame()` fires.
+- **Ghost piece** (`ghostY`): projects straight down from the current position to find the landing row; drawn at low alpha in `draw()`.
+- **Scoring/leveling**: `LINE_SCORES[cleared] * level` on line clear; level = `floor(lines / 10) + 1`; `dropInterval = max(100, 1000 - (level - 1) * 90)`. `registerClearedLines()` centralizes the lines/score/level/dropInterval update plus powerup-counter bookkeeping so both `clearLines()` and Rayo's row-clear go through the same path.
+- **Rendering**: `draw()` redraws the whole board canvas every frame (grid → locked blocks → ghost → current piece); `drawNext()` renders the next-piece preview on a separate small canvas. `drawBlock()` also draws a gold outline for wildcard (negative) cells and overlays a piece's powerup emoji for types 9–12.
+- **Input**: a single `keydown` listener switches on `e.code` for movement/rotation/drop/pause; disabled while `paused` or `gameOver`.
+
+## Powerups
+
+A powerup piece is queued via the `pendingPowerup` flag by either of two independent triggers checked at the end of `lockPiece()`:
+
+1. **Lines cleared**: every `POWERUP_LINE_INTERVAL` lines cleared (tracked by `powerupCounter`, bumped inside `registerClearedLines`, which both `clearLines()` and Rayo's row-clear go through).
+2. **Board clutter**: `maybeQueuePowerupFromClutter()` counts "stuck" rows via `countClutteredRows()` — rows with at least 1 filled cell and at least `POWERUP_CLUTTER_MIN_GAPS` empty cells — and sets `pendingPowerup` once that count reaches `POWERUP_CLUTTER_ROWS`. The `!pendingPowerup` guard means this never overrides/duplicates an already-queued powerup from either trigger.
+
+Once `pendingPowerup` is true, the next piece generated by `spawn()` is a random special piece from `POWERUPS` (`randomPowerupPiece()`) instead of a normal one via `randomPiece()`. A powerup piece carries `current.powerUp` (one of `'bomb' | 'lightning' | 'tint' | 'gravity'`) and is rendered as a 2×2 block in its own dedicated color/icon (types 9–12 in `COLORS`/`PIECES`). Its effect fires in `applyPowerUp()` when it locks, targeting the cell(s) around its landing position (`current.x`/`current.y`):
+
+- **Bomba** (`explodeArea`): zeroes out a 3×3 area centered on the piece, clipped to board bounds.
+- **Rayo** (`strikeLine`): 50/50 clears the full row or the full column at the landing position; the row case goes through `removeRow`/`registerClearedLines` like a normal line clear.
+- **Tinte** (`tintColor`): picks one color currently present on the board and negates all its cells (marks them wildcard); `clearLines()`'s fill check treats a wildcard cell as satisfying the row regardless of real gaps, so on the very next lock any row holding one of these cells clears even if incomplete.
+- **Gravedad** (`compactBoard` + `freezeUntil`): re-stacks each column's filled cells (including wildcards) at the bottom, removing internal holes, and freezes auto-drop for `POWERUP_FREEZE_MS`.
+
+`showPowerupBanner()` flashes a short on-canvas banner (`#powerup-banner`) naming the effect. The always-visible explanation legend (`#powerup-legend` in the side panel) is rendered once from the `POWERUPS` array by `renderPowerupLegend()` — add/edit a powerup by editing that array plus `applyPowerUp()`'s switch, and the legend text updates automatically.
+
+## Tunable constants (top of `game.js`)
+
+`COLS`, `ROWS`, `BLOCK` (cell pixel size), `COLORS`, `LINE_SCORES`, initial `dropInterval`, `POWERUP_LINE_INTERVAL` (lines between special pieces), `POWERUP_CLUTTER_ROWS`/`POWERUP_CLUTTER_MIN_GAPS` (board-clutter trigger), `POWERUP_FREEZE_MS` (Gravedad's freeze duration), `POWERUPS` (the 4 effect definitions). If `COLS`/`ROWS`/`BLOCK` change, update the `<canvas id="board">` `width`/`height` in `index.html` to match (`COLS × BLOCK` and `ROWS × BLOCK`).

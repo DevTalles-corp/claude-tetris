@@ -11,8 +11,13 @@ const COLORS = [
   '#ba68c8', // T - purple
   '#81c784', // S - green
   '#e57373', // Z - red
-  '#7986cb', // J - indigo
+  '#64b5f6', // J - pale blue
   '#ffb74d', // L - orange
+  '#b0bec5', // N - nut (silver)
+  '#ff5252', // powerup: bomba (red-orange)
+  '#fff176', // powerup: rayo (bright yellow)
+  '#ff6ec7', // powerup: tinte (pink/magenta)
+  '#26a69a', // powerup: gravedad (teal)
 ];
 
 const PIECES = [
@@ -24,9 +29,134 @@ const PIECES = [
   [[5,5,0],[0,5,5],[0,0,0]],                  // Z
   [[6,0,0],[6,6,6],[0,0,0]],                  // J
   [[0,0,7],[7,7,7],[0,0,0]],                  // L
+  [[8,8,8],[8,0,8],[8,8,8]],                  // N - nut (hollow center)
+  [[9,9],[9,9]],                               // powerup: bomba
+  [[10,10],[10,10]],                           // powerup: rayo
+  [[11,11],[11,11]],                           // powerup: tinte
+  [[12,12],[12,12]],                           // powerup: gravedad
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
+
+// Cada cuántas líneas limpiadas aparece una pieza especial (el tipo es aleatorio entre las 4).
+const POWERUP_LINE_INTERVAL = 5;
+const POWERUP_FREEZE_MS = 5000;
+// Disparador alternativo: si el tablero tiene este número de filas "atascadas"
+// (con al menos 1 bloque y al menos 2 huecos) también aparece un powerup.
+const POWERUP_CLUTTER_ROWS = 11;
+const POWERUP_CLUTTER_MIN_GAPS = 2;
+
+const POWERUPS = [
+  {
+    id: 'bomb',
+    type: 9,
+    name: 'Bomba',
+    color: '#ff5252',
+    icon: '💣',
+    desc: 'Al aterrizar, destruye un área de 3x3 bloques a su alrededor.',
+  },
+  {
+    id: 'lightning',
+    type: 10,
+    name: 'Rayo',
+    color: '#fff176',
+    icon: '⚡',
+    desc: 'Al aterrizar, limpia por completo la fila o la columna donde cae (al azar).',
+  },
+  {
+    id: 'tint',
+    type: 11,
+    name: 'Tinte',
+    color: '#ff6ec7',
+    icon: '🎨',
+    desc: 'Convierte todos los bloques de un color al azar en comodines: cualquier fila que tenga un comodín se limpia, aunque tenga huecos.',
+  },
+  {
+    id: 'gravity',
+    type: 12,
+    name: 'Gravedad',
+    color: '#26a69a',
+    icon: '🧊',
+    desc: 'Compacta los huecos del tablero (los bloques caen) y congela la caída automática durante 5 segundos.',
+  },
+];
+
+const GRID_LINE_COLORS = {
+  dark: '#22222e',
+  light: '#d0d0dc',
+};
+
+// Cada skin define cómo se dibuja el relleno base de un bloque (fillBlock).
+// El contorno dorado de comodín y el icono de powerup se dibujan por fuera,
+// igual para todas las skins (ver drawBlock).
+const SKINS = {
+  retro: {
+    label: 'Retro',
+    fillBlock(context, x, y, size, color) {
+      context.fillStyle = color;
+      context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+      // highlight
+      context.fillStyle = 'rgba(255,255,255,0.12)';
+      context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+    },
+  },
+  neon: {
+    label: 'Neon',
+    fillBlock(context, x, y, size, color) {
+      const px = x * size + 1, py = y * size + 1, s = size - 2;
+      context.save();
+      context.shadowBlur = size * 0.6;
+      context.shadowColor = color;
+      context.fillStyle = color;
+      context.fillRect(px, py, s, s);
+      context.restore();
+      context.shadowBlur = 0;
+      context.fillStyle = 'rgba(255,255,255,0.2)';
+      context.fillRect(px, py, s, 4);
+    },
+  },
+  pastel: {
+    label: 'Pastel',
+    fillBlock(context, x, y, size, color) {
+      const px = x * size + 1, py = y * size + 1, s = size - 2;
+      const radius = Math.min(6, s / 3);
+      const paintRect = () => {
+        if (typeof context.roundRect === 'function') {
+          context.beginPath();
+          context.roundRect(px, py, s, s, radius);
+          context.fill();
+        } else {
+          context.fillRect(px, py, s, s);
+        }
+      };
+      context.fillStyle = color;
+      paintRect();
+      // aclara el color superponiendo blanco translúcido
+      context.fillStyle = 'rgba(255,255,255,0.4)';
+      paintRect();
+    },
+  },
+  pixel: {
+    label: 'Pixel Art',
+    fillBlock(context, x, y, size, color) {
+      const px = x * size + 1, py = y * size + 1, s = size - 2;
+      context.fillStyle = color;
+      context.fillRect(px, py, s, s);
+      // patrón de textura tipo pixel-art/dithering
+      const tile = Math.max(2, Math.floor(s / 5));
+      for (let ty = 0, row = 0; ty < s; ty += tile, row++) {
+        for (let tx = 0, col = 0; tx < s; tx += tile, col++) {
+          const w = Math.min(tile, s - tx);
+          const h = Math.min(tile, s - ty);
+          context.fillStyle = (row + col) % 2 === 0
+            ? 'rgba(0,0,0,0.15)'
+            : 'rgba(255,255,255,0.15)';
+          context.fillRect(px + tx, py + ty, w, h);
+        }
+      }
+    },
+  },
+};
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -39,17 +169,76 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const themeToggle = document.getElementById('theme-toggle');
+const skinSelect = document.getElementById('skin-select');
+const powerupBanner = document.getElementById('powerup-banner');
+const powerupLegendEl = document.getElementById('powerup-legend');
+const pauseMenu = document.getElementById('pause-menu');
+const resumeBtn = document.getElementById('resume-btn');
+const pauseRestartBtn = document.getElementById('pause-restart-btn');
+const toggleControlsBtn = document.getElementById('toggle-controls-btn');
+const pauseControlsList = document.getElementById('pause-controls-list');
+const startLevelSelect = document.getElementById('start-level-select');
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, theme;
+let powerupCounter, pendingPowerup, freezeUntil, powerupBannerTimeout;
+let bestCombo;
+// Se inicializa de forma síncrona (no solo vía initSkin()) para que la primera
+// pieza dibujada por init() ya use la skin persistida, sin depender del orden
+// de las llamadas de arranque al final del archivo.
+let skin = (function readStoredSkin() {
+  const stored = localStorage.getItem('tetris-skin');
+  return isValidSkin(stored) ? stored : 'retro';
+})();
+
+function applyTheme(t) {
+  theme = t;
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('tetris-theme', t);
+  themeToggle.checked = t === 'light';
+}
+
+function initTheme() {
+  const stored = document.documentElement.getAttribute('data-theme');
+  applyTheme(stored === 'light' ? 'light' : 'dark');
+}
+
+function isValidSkin(name) {
+  return typeof name === 'string' && Object.prototype.hasOwnProperty.call(SKINS, name);
+}
+
+function applySkin(name) {
+  skin = isValidSkin(name) ? name : 'retro';
+  localStorage.setItem('tetris-skin', skin);
+  if (skinSelect) skinSelect.value = skin;
+}
+
+function initSkin() {
+  const stored = localStorage.getItem('tetris-skin');
+  applySkin(isValidSkin(stored) ? stored : 'retro');
+}
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
 }
 
 function randomPiece() {
-  const type = Math.floor(Math.random() * 7) + 1;
+  const type = Math.floor(Math.random() * 8) + 1;
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
+}
+
+function randomPowerupPiece() {
+  const pu = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
+  const shape = PIECES[pu.type].map(row => [...row]);
+  return {
+    type: pu.type,
+    shape,
+    x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2),
+    y: 0,
+    powerUp: pu.id,
+  };
 }
 
 function collide(shape, ox, oy) {
@@ -93,23 +282,117 @@ function merge() {
         board[current.y + r][current.x + c] = current.shape[r][c];
 }
 
+function removeRow(r) {
+  board.splice(r, 1);
+  board.unshift(new Array(COLS).fill(0));
+}
+
+function registerClearedLines(count, scoreGain) {
+  lines += count;
+  score += scoreGain;
+  level = Math.floor(lines / 10) + 1;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+  powerupCounter += count;
+  if (powerupCounter >= POWERUP_LINE_INTERVAL) {
+    powerupCounter -= POWERUP_LINE_INTERVAL;
+    pendingPowerup = true;
+  }
+  bestCombo = Math.max(bestCombo, count);
+  updateHUD();
+}
+
 function clearLines() {
   let cleared = 0;
   for (let r = ROWS - 1; r >= 0; r--) {
-    if (board[r].every(v => v !== 0)) {
-      board.splice(r, 1);
-      board.unshift(new Array(COLS).fill(0));
+    const full = board[r].every(v => v !== 0);
+    const hasWildcard = board[r].some(v => v < 0);
+    if (full || hasWildcard) {
+      removeRow(r);
       cleared++;
       r++;
     }
   }
   if (cleared) {
-    lines += cleared;
-    score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    registerClearedLines(cleared, (LINE_SCORES[cleared] || 0) * level);
+  }
+}
+
+function explodeArea(cx, cy) {
+  for (let r = cy - 1; r <= cy + 1; r++)
+    for (let c = cx - 1; c <= cx + 1; c++)
+      if (r >= 0 && r < ROWS && c >= 0 && c < COLS) board[r][c] = 0;
+}
+
+function strikeLine(piece) {
+  const mode = Math.random() < 0.5 ? 'row' : 'col';
+  if (mode === 'row') {
+    const row = Math.min(ROWS - 1, piece.y + Math.floor(piece.shape.length / 2));
+    removeRow(row);
+    registerClearedLines(1, (LINE_SCORES[1] || 0) * level);
+  } else {
+    const col = Math.min(COLS - 1, piece.x + Math.floor(piece.shape[0].length / 2));
+    for (let r = 0; r < ROWS; r++) board[r][col] = 0;
+    score += 100 * level;
     updateHUD();
   }
+}
+
+function tintColor() {
+  const present = new Set();
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (board[r][c] > 0) present.add(board[r][c]);
+  if (present.size === 0) return;
+  const colors = [...present];
+  const chosen = colors[Math.floor(Math.random() * colors.length)];
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (board[r][c] === chosen) board[r][c] = -chosen;
+}
+
+function compactBoard() {
+  for (let c = 0; c < COLS; c++) {
+    const colVals = [];
+    for (let r = 0; r < ROWS; r++) if (board[r][c] !== 0) colVals.push(board[r][c]);
+    for (let r = ROWS - 1, i = colVals.length - 1; r >= 0; r--, i--) {
+      board[r][c] = i >= 0 ? colVals[i] : 0;
+    }
+  }
+}
+
+function showPowerupBanner(id) {
+  const pu = POWERUPS.find(p => p.id === id);
+  if (!pu) return;
+  powerupBanner.textContent = `${pu.icon} ¡${pu.name} activado!`;
+  powerupBanner.style.background = pu.color;
+  powerupBanner.classList.remove('hidden');
+  powerupBanner.classList.add('show');
+  clearTimeout(powerupBannerTimeout);
+  powerupBannerTimeout = setTimeout(() => {
+    powerupBanner.classList.remove('show');
+    powerupBanner.classList.add('hidden');
+  }, 1800);
+}
+
+function applyPowerUp(piece) {
+  const cx = piece.x + Math.floor(piece.shape[0].length / 2);
+  const cy = piece.y + Math.floor(piece.shape.length / 2);
+  switch (piece.powerUp) {
+    case 'bomb':
+      explodeArea(cx, cy);
+      break;
+    case 'lightning':
+      strikeLine(piece);
+      break;
+    case 'tint':
+      tintColor();
+      break;
+    case 'gravity':
+      compactBoard();
+      freezeUntil = performance.now() + POWERUP_FREEZE_MS;
+      break;
+  }
+  showPowerupBanner(piece.powerUp);
 }
 
 function ghostY() {
@@ -135,15 +418,44 @@ function softDrop() {
   }
 }
 
+function countClutteredRows() {
+  let count = 0;
+  for (let r = 0; r < ROWS; r++) {
+    let filled = 0;
+    for (let c = 0; c < COLS; c++) if (board[r][c] !== 0) filled++;
+    const empty = COLS - filled;
+    if (filled >= 1 && empty >= POWERUP_CLUTTER_MIN_GAPS) count++;
+  }
+  return count;
+}
+
+function maybeQueuePowerupFromClutter() {
+  if (!pendingPowerup && countClutteredRows() >= POWERUP_CLUTTER_ROWS) {
+    pendingPowerup = true;
+  }
+}
+
 function lockPiece() {
-  merge();
-  clearLines();
+  if (current.powerUp) {
+    applyPowerUp(current);
+    // El tinte deja los comodines visibles un instante; se limpian en el siguiente lock.
+    if (current.powerUp !== 'tint') clearLines();
+  } else {
+    merge();
+    clearLines();
+  }
+  maybeQueuePowerupFromClutter();
   spawn();
 }
 
 function spawn() {
   current = next;
-  next = randomPiece();
+  if (pendingPowerup) {
+    next = randomPowerupPiece();
+    pendingPowerup = false;
+  } else {
+    next = randomPiece();
+  }
   if (collide(current.shape, current.x, current.y)) {
     endGame();
   }
@@ -158,18 +470,28 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
+  const isWildcard = colorIndex < 0;
+  const color = COLORS[Math.abs(colorIndex)];
   context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  const skinDef = SKINS[skin] || SKINS.retro;
+  skinDef.fillBlock(context, x, y, size, color);
+  if (isWildcard) {
+    context.strokeStyle = '#ffd700';
+    context.lineWidth = 2;
+    context.strokeRect(x * size + 2, y * size + 2, size - 4, size - 4);
+  }
+  const pu = colorIndex >= 9 ? POWERUPS.find(p => p.type === colorIndex) : null;
+  if (pu) {
+    context.font = `${Math.floor(size * 0.6)}px sans-serif`;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(pu.icon, x * size + size / 2, y * size + size / 2 + 1);
+  }
   context.globalAlpha = 1;
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = GRID_LINE_COLORS[theme] || GRID_LINE_COLORS.dark;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -218,64 +540,176 @@ function drawNext() {
       drawBlock(nextCtx, offX + c, offY + r, shape[r][c], NB);
 }
 
+function loadLeaderboard() {
+  try {
+    const raw = localStorage.getItem(LEADERBOARD_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveLeaderboard(entries) {
+  entries.sort((a, b) => b.score - a.score);
+  const truncated = entries.slice(0, LEADERBOARD_MAX);
+  try {
+    localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(truncated));
+  } catch (e) {
+    // Storage unavailable/full (private browsing, quota, blocked, etc.) — keep going
+    // so the caller's UI update still runs instead of leaving the overlay stuck.
+  }
+  return truncated;
+}
+
+function isNewRecord(candidateScore) {
+  const entries = loadLeaderboard();
+  if (entries.length < LEADERBOARD_MAX) return true;
+  return candidateScore > entries[entries.length - 1].score;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderLeaderboard() {
+  const entries = loadLeaderboard();
+  if (entries.length === 0) {
+    leaderboardListEl.innerHTML = '<li class="leaderboard-empty">Sin puntuaciones todavía</li>';
+    return;
+  }
+  leaderboardListEl.innerHTML = entries.map((e, i) => `
+    <li>
+      <span class="leaderboard-rank">${i + 1}</span>
+      <span class="leaderboard-name">${escapeHtml(e.name)}</span>
+      <span class="leaderboard-score">${e.score.toLocaleString()}</span>
+      <span class="leaderboard-meta">${e.lines} líneas · combo x${e.combo}</span>
+    </li>
+  `).join('');
+}
+
+function saveScoreToLeaderboard() {
+  const rawName = playerNameInput.value.trim();
+  const name = rawName || '???';
+  const entries = loadLeaderboard();
+  entries.push({ name, score, lines, combo: bestCombo });
+  saveLeaderboard(entries);
+  renderLeaderboard();
+  overlayRecordEl.classList.add('hidden');
+  overlaySaveEl.classList.add('hidden');
+  overlaySavedMsg.classList.remove('hidden');
+}
+
+function resetLeaderboard() {
+  if (!confirm('¿Seguro que quieres borrar todos los récords?')) return;
+  try {
+    localStorage.removeItem(LEADERBOARD_KEY);
+  } catch (e) {
+    // Storage unavailable — nothing to clear, still refresh the (already empty) view below.
+  }
+  renderLeaderboard();
+}
+
 function endGame() {
   gameOver = true;
   cancelAnimationFrame(animId);
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   overlay.classList.remove('hidden');
+  overlaySavedMsg.classList.add('hidden');
+  playerNameInput.value = '';
+  if (isNewRecord(score)) {
+    overlayRecordEl.classList.remove('hidden');
+    overlaySaveEl.classList.remove('hidden');
+  } else {
+    overlayRecordEl.classList.add('hidden');
+    overlaySaveEl.classList.add('hidden');
+  }
 }
 
 function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    pauseMenu.classList.add('hidden');
     lastTime = performance.now();
     loop(lastTime);
   } else {
     cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+    pauseMenu.classList.remove('hidden');
   }
 }
 
 function loop(ts) {
   const dt = ts - lastTime;
   lastTime = ts;
-  dropAccum += dt;
-  if (dropAccum >= dropInterval) {
+  if (freezeUntil && ts < freezeUntil) {
     dropAccum = 0;
-    if (!collide(current.shape, current.x, current.y + 1)) {
-      current.y++;
-    } else {
-      lockPiece();
+  } else {
+    dropAccum += dt;
+    if (dropAccum >= dropInterval) {
+      dropAccum = 0;
+      if (!collide(current.shape, current.x, current.y + 1)) {
+        current.y++;
+      } else {
+        lockPiece();
+      }
     }
   }
   draw();
+  if (gameOver) return;
   animId = requestAnimationFrame(loop);
 }
 
-function init() {
+function getStoredStartLevel() {
+  const stored = parseInt(localStorage.getItem('tetris-start-level'), 10);
+  return stored >= 1 && stored <= 10 ? stored : 1;
+}
+
+function init(startLevel) {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  level = Number.isInteger(startLevel) && startLevel >= 1 && startLevel <= 10 ? startLevel : getStoredStartLevel();
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   dropAccum = 0;
   lastTime = performance.now();
+  powerupCounter = 0;
+  pendingPowerup = false;
+  freezeUntil = 0;
+  clearTimeout(powerupBannerTimeout);
+  powerupBanner.classList.remove('show');
+  powerupBanner.classList.add('hidden');
   next = randomPiece();
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
+  bestCombo = 0;
+  overlayRecordEl.classList.add('hidden');
+  overlaySaveEl.classList.add('hidden');
+  overlaySavedMsg.classList.add('hidden');
+}
+
+function renderPowerupLegend() {
+  powerupLegendEl.innerHTML = POWERUPS.map(pu => `
+    <li>
+      <span class="powerup-swatch" style="background:${pu.color}">${pu.icon}</span>
+      <span class="powerup-info">
+        <strong>${pu.name}</strong>
+        <small>${pu.desc}</small>
+      </span>
+    </li>
+  `).join('');
 }
 
 document.addEventListener('keydown', e => {
-  if (e.code === 'KeyP') { togglePause(); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
@@ -300,5 +734,31 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+themeToggle.addEventListener('change', () => applyTheme(themeToggle.checked ? 'light' : 'dark'));
+saveScoreBtn.addEventListener('click', saveScoreToLeaderboard);
+resetLeaderboardBtn.addEventListener('click', resetLeaderboard);
+if (skinSelect) skinSelect.addEventListener('change', () => applySkin(skinSelect.value));
+resumeBtn.addEventListener('click', togglePause);
+pauseRestartBtn.addEventListener('click', () => {
+  pauseMenu.classList.add('hidden');
+  const lvl = parseInt(startLevelSelect.value, 10) || 1;
+  init(lvl);
+});
+toggleControlsBtn.addEventListener('click', () => {
+  const nowHidden = pauseControlsList.classList.toggle('hidden');
+  toggleControlsBtn.setAttribute('aria-expanded', String(!nowHidden));
+});
+startLevelSelect.addEventListener('change', () => {
+  localStorage.setItem('tetris-start-level', startLevelSelect.value);
+});
 
+function initStartLevelSelect() {
+  startLevelSelect.value = String(getStoredStartLevel());
+}
+
+initTheme();
+renderPowerupLegend();
 init();
+renderLeaderboard();
+initSkin();
+initStartLevelSelect();

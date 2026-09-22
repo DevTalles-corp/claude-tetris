@@ -5,11 +5,52 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
   <link rel="stylesheet" href="style.css" />
+  <script>
+    (function () {
+      var stored = localStorage.getItem('tetris-theme');
+      document.documentElement.setAttribute('data-theme', stored === 'light' ? 'light' : 'dark');
+    })();
+  </script>
 </head>
 <body>
   <div class="wrapper">
+    <h1 class="game-title">TETRIS</h1>
     <div class="game-container">
-      <canvas id="board" width="300" height="600"></canvas>
+      <div class="board-wrap">
+        <canvas id="board" width="300" height="600"></canvas>
+        <div id="powerup-banner" class="powerup-banner hidden"></div>
+
+        <div id="pause-menu" class="pause-menu hidden">
+          <div class="pause-menu-box">
+            <p class="pause-menu-title">PAUSA</p>
+            <button id="resume-btn">Reanudar</button>
+            <button id="pause-restart-btn">Reiniciar</button>
+            <button id="toggle-controls-btn" aria-expanded="false">Ver controles</button>
+            <ul id="pause-controls-list" class="pause-controls-list hidden">
+              <li><kbd>←</kbd><kbd>→</kbd> mover</li>
+              <li><kbd>↑</kbd> rotar</li>
+              <li><kbd>↓</kbd> bajar</li>
+              <li><kbd>Space</kbd> caída</li>
+              <li><kbd>P</kbd> / <kbd>Esc</kbd> pausa</li>
+            </ul>
+            <div class="pause-menu-level">
+              <label for="start-level-select">Nivel inicial</label>
+              <select id="start-level-select">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <aside class="panel">
         <div class="panel-section">
@@ -30,6 +71,24 @@
           <canvas id="next-canvas" width="120" height="120"></canvas>
         </div>
 
+        <div class="panel-section theme-toggle-section">
+          <span class="label">MODO CLARO</span>
+          <label class="theme-switch">
+            <input type="checkbox" id="theme-toggle" aria-label="Cambiar entre modo oscuro y modo claro" />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="panel-section skin-select-section">
+          <label class="label" for="skin-select">SKIN</label>
+          <select id="skin-select" aria-label="Elegir skin visual">
+            <option value="retro">Retro</option>
+            <option value="neon">Neon</option>
+            <option value="pastel">Pastel</option>
+            <option value="pixel">Pixel Art</option>
+          </select>
+        </div>
+
         <div class="panel-section controls">
           <span class="label">CONTROLS</span>
           <ul>
@@ -40,13 +99,30 @@
             <li><kbd>P</kbd> pausa</li>
           </ul>
         </div>
+
+        <div class="panel-section">
+          <span class="label">POWERUPS</span>
+          <ul id="powerup-legend" class="powerup-legend"></ul>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">TOP SCORES</span>
+          <ol id="leaderboard-list" class="leaderboard-list"></ol>
+          <button id="reset-leaderboard-btn">Resetear records</button>
+        </div>
       </aside>
     </div>
 
     <div id="overlay" class="overlay hidden">
-      <div class="overlay-box">
+      <div class="overlay-box" id="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <p id="overlay-record" class="new-record hidden">¡Nuevo récord! Entra en el Top 5</p>
+        <div id="overlay-save" class="overlay-save hidden">
+          <input type="text" id="player-name-input" placeholder="Tu nombre" maxlength="12" />
+          <button id="save-score-btn">Guardar</button>
+        </div>
+        <p id="overlay-saved-msg" class="saved-msg hidden">¡Puntuación guardada!</p>
         <button id="restart-btn">Reiniciar</button>
       </div>
     </div>
