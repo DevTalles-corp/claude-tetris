@@ -89,6 +89,24 @@ body.light {
   border-color: var(--accent);
 }
 
+#skin-select {
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  color: var(--fg);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  font-family: inherit;
+}
+
+#skin-select:hover,
+#skin-select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
 .game-container {
   display: flex;
   gap: 20px;
