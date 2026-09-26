@@ -63,6 +63,29 @@ body {
   letter-spacing: 1px;
 }
 
+#skin-select {
+  background: #1a1a25;
+  color: #7aa2f7;
+  border: 1px solid #2a2a3a;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+#skin-select:hover {
+  border-color: #7aa2f7;
+}
+
+#skin-select:focus {
+  border-color: #7aa2f7;
+  outline: 2px solid #7aa2f7;
+  outline-offset: 2px;
+}
+
 #next-canvas {
   display: block;
   border: 1px solid #2a2a3a;
@@ -108,7 +131,43 @@ kbd {
   border-radius: 4px;
 }
 
+.hidden {
+  display: none;
+}
+
 .overlay.hidden {
+  display: none;
+}
+
+#menu-buttons,
+#controls-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+#controls-panel ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+#controls-panel li {
+  font-size: 12px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: center;
+}
+
+/* Higher specificity than the plain ID rules above so toggling .hidden
+   via classList always wins, regardless of source order. */
+#menu-buttons.hidden,
+#controls-panel.hidden {
   display: none;
 }
 
@@ -133,7 +192,58 @@ kbd {
   color: #7aa2f7;
 }
 
-#restart-btn {
+#menu-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 220px;
+}
+
+.menu-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.menu-field .label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #555570;
+  font-weight: 600;
+}
+
+#start-level {
+  width: 100%;
+  background: #22222e;
+  color: #e0e0e0;
+  border: 1px solid #3a3a5a;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+#start-level:focus {
+  outline: none;
+  border-color: #7aa2f7;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+#resume-btn,
+#restart-btn,
+#controls-btn,
+#back-btn,
+#start-btn {
   margin-top: 8px;
   background: #7aa2f7;
   color: #0f0f17;
@@ -145,8 +255,263 @@ kbd {
   cursor: pointer;
   letter-spacing: 1px;
   transition: background 0.15s;
+  width: 100%;
 }
 
-#restart-btn:hover {
+#resume-btn:hover,
+#restart-btn:hover,
+#controls-btn:hover,
+#back-btn:hover,
+#start-btn:hover {
   background: #9bbdff;
+}
+
+#controls-btn,
+#back-btn {
+  background: #22222e;
+  color: #e0e0e0;
+  border: 1px solid #3a3a5a;
+}
+
+#controls-btn:hover,
+#back-btn:hover {
+  background: #2c2c3e;
+}
+
+/* ---- Guardar puntuación ---- */
+.score-entry {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.score-entry.hidden {
+  display: none;
+}
+
+#name-input {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  background: #1a1a25;
+  border: 1px solid #3a3a5a;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #e0e0e0;
+  width: 120px;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+#name-input:focus {
+  outline: none;
+  border-color: #7aa2f7;
+}
+
+#save-score-btn {
+  background: #7aa2f7;
+  color: #0f0f17;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+
+#save-score-btn:hover {
+  background: #9bbdff;
+}
+
+#save-score-btn:disabled {
+  background: #3a3a5a;
+  color: #888;
+  cursor: default;
+}
+
+/* ---- Start screen ---- */
+#start-title {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 6px;
+  color: #7aa2f7;
+}
+
+.start-records {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 220px;
+}
+
+#start-records-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+}
+
+.start-stats {
+  display: flex;
+  gap: 28px;
+}
+
+.start-stats .stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+#reset-records-btn {
+  margin-top: 4px;
+  background: transparent;
+  color: #888;
+  border: 1px solid #3a3a5a;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s, color 0.15s;
+}
+
+#reset-records-btn:hover {
+  background: #22223a;
+  color: #e57373;
+}
+
+/* ---- Tabla de puntuaciones (game over) ---- */
+.records-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.records-section.hidden {
+  display: none;
+}
+
+#records-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 220px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+}
+
+.record-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #ccc;
+}
+
+.record-rank {
+  color: #555570;
+  width: 24px;
+}
+
+.record-name {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-score {
+  color: #7aa2f7;
+  font-weight: 700;
+}
+
+.record-row.highlight {
+  border: 1px solid #7aa2f7;
+  background: rgba(122, 162, 247, 0.15);
+  color: #fff;
+}
+
+.record-row.highlight .record-score {
+  color: #ffd54f;
+}
+
+.record-empty {
+  color: #666;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Start screen's records list reuses .record-row/.record-rank/.record-score
+   (shared with the game-over list above) but with its own look, scoped so
+   the two lists don't bleed into each other's styling. */
+#start-records-list .record-row {
+  gap: 10px;
+  padding: 2px 6px;
+  background: none;
+}
+
+#start-records-list .record-rank {
+  color: #7aa2f7;
+  width: 20px;
+  text-align: right;
+}
+
+#start-records-list .record-score {
+  color: #ffd54f;
+  text-align: right;
+  min-width: 60px;
+}
+
+/* ---- Panel de controles (dentro del overlay) ---- */
+#controls-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 220px;
+}
+
+#controls-panel.hidden {
+  display: none;
+}
+
+#controls-panel .label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #555570;
+  font-weight: 600;
+}
+
+#controls-panel ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+#controls-panel li {
+  font-size: 12px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#back-btn {
+  margin-top: 0;
+  width: 100%;
 }

@@ -26,6 +26,16 @@
         </div>
 
         <div class="panel-section">
+          <span class="label">SKIN</span>
+          <select id="skin-select">
+            <option value="retro">Retro</option>
+            <option value="neon">Neón</option>
+            <option value="pastel">Pastel</option>
+            <option value="pixel">Pixel art</option>
+          </select>
+        </div>
+
+        <div class="panel-section">
           <span class="label">NEXT</span>
           <canvas id="next-canvas" width="120" height="120"></canvas>
         </div>
@@ -38,6 +48,7 @@
             <li><kbd>↓</kbd> bajar</li>
             <li><kbd>Space</kbd> caída</li>
             <li><kbd>P</kbd> pausa</li>
+            <li><kbd>Esc</kbd> pausa</li>
           </ul>
         </div>
       </aside>
@@ -47,7 +58,81 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
-        <button id="restart-btn">Reiniciar</button>
+
+        <div id="score-entry" class="score-entry hidden">
+          <input type="text" id="name-input" maxlength="12" placeholder="Tu nombre" autocomplete="off" />
+          <button id="save-score-btn">Guardar</button>
+        </div>
+
+        <div id="records-section" class="records-section hidden">
+          <span class="label">TOP 5</span>
+          <ol id="records-list"></ol>
+        </div>
+
+        <div id="menu-panel">
+          <div class="menu-field">
+            <label for="start-level" class="label">NIVEL INICIAL</label>
+            <select id="start-level">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+              <option value="11">11</option>
+              <option value="12">12</option>
+              <option value="13">13</option>
+              <option value="14">14</option>
+              <option value="15">15</option>
+              <option value="16">16</option>
+              <option value="17">17</option>
+              <option value="18">18</option>
+              <option value="19">19</option>
+              <option value="20">20</option>
+            </select>
+          </div>
+
+          <div id="menu-buttons" class="menu-buttons">
+            <button id="resume-btn">Reanudar</button>
+            <button id="restart-btn">Reiniciar</button>
+            <button id="controls-btn">Ver controles</button>
+          </div>
+        </div>
+
+        <div id="controls-panel" class="hidden">
+          <span class="label">CONTROLES</span>
+          <ul id="controls-panel-list"></ul>
+          <button id="back-btn">Volver</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="start-screen" class="overlay">
+      <div class="overlay-box">
+        <p id="start-title">TETRIS</p>
+
+        <div class="start-records">
+          <span class="label">RECORDS</span>
+          <ol id="start-records-list"></ol>
+        </div>
+
+        <div class="start-stats">
+          <div class="stat">
+            <span class="label">MEJOR COMBO</span>
+            <span class="value" id="start-best-combo">0</span>
+          </div>
+          <div class="stat">
+            <span class="label">MAX LÍNEAS</span>
+            <span class="value" id="start-max-lines">0</span>
+          </div>
+        </div>
+
+        <button id="start-btn">Jugar</button>
+        <button id="reset-records-btn">Reiniciar récords</button>
       </div>
     </div>
   </div>
