@@ -8,6 +8,15 @@
 </head>
 <body>
   <div class="wrapper">
+    <div class="theme-switch-wrap" title="Cambiar tema">
+      <span class="theme-icon">🌙</span>
+      <label class="switch">
+        <input type="checkbox" id="theme-toggle" aria-label="Alternar modo claro/oscuro" />
+        <span class="slider"></span>
+      </label>
+      <span class="theme-icon">☀️</span>
+    </div>
+    <h1 class="game-title">TETRIS</h1>
     <div class="game-container">
       <canvas id="board" width="300" height="600"></canvas>
 
@@ -40,6 +49,16 @@
             <li><kbd>P</kbd> pausa</li>
           </ul>
         </div>
+
+        <div class="panel-section highscores">
+          <span class="label">RECORDS</span>
+          <ol class="highscore-list" id="highscore-list"></ol>
+          <div class="highscore-stats">
+            <span>Mejor combo: <strong id="best-combo">0</strong></span>
+            <span>Líneas máximas: <strong id="max-lines">0</strong></span>
+          </div>
+          <button id="reset-records-btn" class="reset-records-btn">Resetear records</button>
+        </div>
       </aside>
     </div>
 
@@ -47,6 +66,20 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+
+        <div id="name-entry" class="name-entry hidden">
+          <label for="name-input">¡Nuevo record! Nombre:</label>
+          <div class="name-entry-row">
+            <input type="text" id="name-input" maxlength="12" placeholder="Jugador" autocomplete="off" />
+            <button id="save-score-btn">Guardar</button>
+          </div>
+        </div>
+
+        <div id="overlay-highscores" class="overlay-highscores hidden">
+          <span class="label">TOP 5</span>
+          <ol class="highscore-list" id="overlay-highscore-list"></ol>
+        </div>
+
         <button id="restart-btn">Reiniciar</button>
       </div>
     </div>

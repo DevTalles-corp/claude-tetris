@@ -1,0 +1,43 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Issue Triage
+        id: claude-triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          prompt: |
+            Analiza el issue ${{ github.repository }}#${{ github.event.issue.number }} de este repositorio (un juego de Tetris en JavaScript vanilla sobre Canvas, ver CLAUDE.md para la arquitectura).
+
+            Pasos a seguir:
+            1. Lee el título y el cuerpo del issue.
+            2. Ejecuta `gh label list` para ver los labels ya existentes en el repo.
+            3. Determina qué labels del siguiente set estándar aplican al issue: bug, enhancement, question, documentation, duplicate, wontfix. Si un label aplicable no existe todavía en el repo, créalo con `gh label create <nombre> --color <hex> --description "<breve descripción>"` (usa colores estándar de GitHub para cada uno) y luego asígnalo al issue con `gh issue edit ${{ github.event.issue.number }} --add-label "<nombre>"`. No asignes labels que no apliquen.
+            4. Publica UN único comentario en el issue con `gh issue comment ${{ github.event.issue.number }} --body "..."`, escrito en español, con este contenido:
+               - Resumen breve del problema reportado.
+               - Componente(s) del código probablemente afectado(s) (game.js, index.html o style.css, y si es posible la función o zona concreta según la arquitectura descrita en CLAUDE.md).
+               - Causa probable o hipótesis del origen del problema.
+               - Un esbozo del posible enfoque de solución (sin implementarlo todavía; esto es solo diagnóstico para guiar el desarrollo posterior).
+               El comentario debe estar escrito en formato Markdown válido que GitHub pueda renderizar correctamente (encabezados, listas, bloques de código con ``` para nombres de función o fragmentos, etc.).
+            5. No hagas ningún otro cambio en el repositorio (no toques código, no abras PRs).
+
+          claude_args: |
+            --allowedTools "Bash(gh label list:*),Bash(gh label create:*),Bash(gh issue edit:*),Bash(gh issue comment:*)"
