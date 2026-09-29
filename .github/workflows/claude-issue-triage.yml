@@ -1,0 +1,59 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    # Evita el bucle: no reaccionar a ediciones hechas por el propio bot
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write        # necesario para --add-label y para el comentario
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Ensure triage labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # --force crea la label si no existe o actualiza color/descripción si ya existe (idempotente)
+          while IFS='|' read -r name color desc; do
+            [ -z "$name" ] && continue
+            gh label create "$name" --color "$color" --description "$desc" --force
+          done <<'EOF'
+          area:gameplay|1d76db|Piezas, colisión, rotación, wall kicks, lock/clear/spawn
+          area:rendering|0e8a16|Canvas, draw(), ghost piece, preview de la siguiente pieza
+          area:input|5319e7|Teclado, controles, pausa
+          area:ui|c2e0c6|index.html, style.css, HUD, overlay
+          area:scoring|fbca04|Score, lines, level, dropInterval
+          area:infra|bfd4f2|Workflows, CLAUDE.md, README, tooling
+          priority:high|b60205|Bloquea el juego o rompe funcionalidad principal
+          priority:medium|d93f0b|Importante pero no bloqueante
+          priority:low|0052cc|Cosmético o nice-to-have
+          needs-info|e4e669|Falta información para poder trabajarlo
+          triaged|ededed|Analizado automáticamente por Claude
+          EOF
+
+      - name: Run Claude triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Sigue al pie de la letra las instrucciones de `.github/issue-triage-prompt.md`
+            para el issue #${{ github.event.issue.number }} del repositorio ${{ github.repository }}.
+            Cualquier comentario que publiques debe usar un formato markdown que GitHub
+            pueda interpretar y renderizar correctamente (sintaxis estándar de GitHub Flavored Markdown).
+          claude_args: |
+            --allowedTools "Read,Grep,Glob,Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh api:*)"
