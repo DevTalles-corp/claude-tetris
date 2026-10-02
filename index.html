@@ -8,6 +8,7 @@
 </head>
 <body>
   <div class="wrapper">
+    <h1 class="game-title">TETRIS</h1>
     <div class="game-container">
       <canvas id="board" width="300" height="600"></canvas>
 
@@ -37,8 +38,16 @@
             <li><kbd>↑</kbd> rotar</li>
             <li><kbd>↓</kbd> bajar</li>
             <li><kbd>Space</kbd> caída</li>
-            <li><kbd>P</kbd> pausa</li>
+            <li><kbd>P</kbd> / <kbd>Esc</kbd> pausa</li>
           </ul>
+        </div>
+
+        <div class="panel-section theme-toggle">
+          <span class="label">LIGHT MODE</span>
+          <label class="switch">
+            <input type="checkbox" id="theme-toggle" />
+            <span class="slider"></span>
+          </label>
         </div>
       </aside>
     </div>
@@ -48,6 +57,37 @@
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
         <button id="restart-btn">Reiniciar</button>
+      </div>
+    </div>
+
+    <div id="pause-menu" class="overlay hidden">
+      <div class="overlay-box">
+        <div id="pause-main" class="overlay-box">
+          <p class="pause-title">PAUSA</p>
+          <button id="pause-resume" class="menu-btn">Reanudar</button>
+          <button id="pause-restart" class="menu-btn">Reiniciar</button>
+          <button id="pause-show-controls" class="menu-btn">Ver controles</button>
+          <div class="level-row">
+            <span class="label">NIVEL INICIAL</span>
+            <div class="level-stepper">
+              <button id="level-dec" class="menu-btn small" aria-label="Bajar nivel inicial">&minus;</button>
+              <span id="start-level" class="value">1</span>
+              <button id="level-inc" class="menu-btn small" aria-label="Subir nivel inicial">+</button>
+            </div>
+            <span class="menu-hint">Se aplica al reiniciar</span>
+          </div>
+        </div>
+        <div id="pause-controls" class="overlay-box hidden">
+          <p class="pause-title">CONTROLES</p>
+          <ul class="pause-keys">
+            <li><kbd>←</kbd><kbd>→</kbd> mover</li>
+            <li><kbd>↑</kbd> / <kbd>X</kbd> rotar</li>
+            <li><kbd>↓</kbd> bajar</li>
+            <li><kbd>Space</kbd> caída</li>
+            <li><kbd>P</kbd> / <kbd>Esc</kbd> pausa</li>
+          </ul>
+          <button id="pause-back" class="menu-btn">Volver</button>
+        </div>
       </div>
     </div>
   </div>

@@ -11,8 +11,9 @@ const COLORS = [
   '#ba68c8', // T - purple
   '#81c784', // S - green
   '#e57373', // Z - red
-  '#7986cb', // J - indigo
+  '#64b5f6', // J - light blue
   '#ffb74d', // L - orange
+  '#90a4ae', // N - nut - metallic gray
 ];
 
 const PIECES = [
@@ -24,6 +25,7 @@ const PIECES = [
   [[5,5,0],[0,5,5],[0,0,0]],                  // Z
   [[6,0,0],[6,6,6],[0,0,0]],                  // J
   [[0,0,7],[7,7,7],[0,0,0]],                  // L
+  [[8,8,8],[8,0,8],[8,8,8]],                  // N (nut)
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
@@ -39,15 +41,18 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const themeToggle = document.getElementById('theme-toggle');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let startLevel = 1;
+let inputGuardUntil = 0;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
 }
 
 function randomPiece() {
-  const type = Math.floor(Math.random() * 7) + 1;
+  const type = Math.floor(Math.random() * (PIECES.length - 1)) + 1;
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
 }
@@ -106,7 +111,7 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
+    level = Math.max(startLevel, Math.floor(lines / 10) + 1);
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     updateHUD();
   }
@@ -119,6 +124,7 @@ function ghostY() {
 }
 
 function hardDrop() {
+  if (gameOver) return;
   const gy = ghostY();
   score += (gy - current.y) * 2;
   current.y = gy;
@@ -126,6 +132,7 @@ function hardDrop() {
 }
 
 function softDrop() {
+  if (gameOver) return;
   if (!collide(current.shape, current.x, current.y + 1)) {
     current.y++;
     score += 1;
@@ -146,6 +153,7 @@ function spawn() {
   next = randomPiece();
   if (collide(current.shape, current.x, current.y)) {
     endGame();
+    return;
   }
   drawNext();
 }
@@ -169,7 +177,7 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--grid-line').trim();
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -219,28 +227,17 @@ function drawNext() {
 }
 
 function endGame() {
+  if (gameOver) return;
   gameOver = true;
   cancelAnimationFrame(animId);
+  animId = null;
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   overlay.classList.remove('hidden');
 }
 
-function togglePause() {
-  if (gameOver) return;
-  paused = !paused;
-  if (!paused) {
-    lastTime = performance.now();
-    loop(lastTime);
-  } else {
-    cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
-  }
-}
-
 function loop(ts) {
+  if (gameOver || paused) return;
   const dt = ts - lastTime;
   lastTime = ts;
   dropAccum += dt;
@@ -250,6 +247,7 @@ function loop(ts) {
       current.y++;
     } else {
       lockPiece();
+      if (gameOver) return;
     }
   }
   draw();
@@ -260,23 +258,114 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  level = startLevel;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   dropAccum = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  closePauseMenu();
+  inputGuardUntil = performance.now() + 200;
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
+// ---- Menú de pausa ----
+const MAX_START_LEVEL = 10;
+const pauseMenu = document.getElementById('pause-menu');
+const pauseMain = document.getElementById('pause-main');
+const pauseControls = document.getElementById('pause-controls');
+const startLevelEl = document.getElementById('start-level');
+const pauseButtons = [
+  document.getElementById('pause-resume'),
+  document.getElementById('pause-restart'),
+  document.getElementById('pause-show-controls'),
+  document.getElementById('level-dec'),
+  document.getElementById('level-inc'),
+];
+
+function showPauseView(view) {
+  pauseMain.classList.toggle('hidden', view !== 'main');
+  pauseControls.classList.toggle('hidden', view !== 'controls');
+  const target = view === 'main' ? pauseButtons[0] : document.getElementById('pause-back');
+  target.focus();
+}
+
+function closePauseMenu() {
+  pauseMenu.classList.add('hidden');
+  pauseMain.classList.remove('hidden');
+  pauseControls.classList.add('hidden');
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+}
+
+function setStartLevel(n) {
+  startLevel = Math.min(MAX_START_LEVEL, Math.max(1, n));
+  startLevelEl.textContent = startLevel;
+}
+
+function togglePause() {
+  if (gameOver) return;
+  paused = !paused;
+  if (!paused) {
+    closePauseMenu();
+    inputGuardUntil = performance.now() + 200;
+    lastTime = performance.now();
+    animId = requestAnimationFrame(loop);
+  } else {
+    cancelAnimationFrame(animId);
+    pauseMenu.classList.remove('hidden');
+    showPauseView('main');
+  }
+}
+
+function pauseMenuKey(e) {
+  if (!pauseControls.classList.contains('hidden')) return;
+  const i = pauseButtons.indexOf(document.activeElement);
+  switch (e.code) {
+    case 'ArrowDown':
+      e.preventDefault();
+      pauseButtons[(i + 1) % pauseButtons.length].focus();
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      pauseButtons[(i - 1 + pauseButtons.length) % pauseButtons.length].focus();
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      setStartLevel(startLevel - 1);
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      setStartLevel(startLevel + 1);
+      break;
+  }
+}
+
+document.getElementById('pause-resume').addEventListener('click', togglePause);
+document.getElementById('pause-restart').addEventListener('click', init);
+document.getElementById('pause-show-controls').addEventListener('click', () => showPauseView('controls'));
+document.getElementById('pause-back').addEventListener('click', () => showPauseView('main'));
+document.getElementById('level-dec').addEventListener('click', () => setStartLevel(startLevel - 1));
+document.getElementById('level-inc').addEventListener('click', () => setStartLevel(startLevel + 1));
+
 document.addEventListener('keydown', e => {
-  if (e.code === 'KeyP') { togglePause(); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    if (e.repeat) return;
+    // Esc dentro de "Ver controles" vuelve al menú principal
+    if (paused && e.code === 'Escape' && !pauseControls.classList.contains('hidden')) {
+      showPauseView('main');
+      return;
+    }
+    togglePause();
+    return;
+  }
+  if (paused && !gameOver) { pauseMenuKey(e); return; }
   if (paused || gameOver) return;
+  if (performance.now() < inputGuardUntil) return;
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
@@ -300,5 +389,19 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+
+function applyTheme(theme) {
+  document.body.classList.toggle('light-theme', theme === 'light');
+  themeToggle.checked = theme === 'light';
+}
+
+themeToggle.addEventListener('change', () => {
+  const theme = themeToggle.checked ? 'light' : 'dark';
+  localStorage.setItem('theme', theme);
+  applyTheme(theme);
+  draw();
+});
+
+applyTheme(localStorage.getItem('theme') === 'light' ? 'light' : 'dark');
 
 init();
