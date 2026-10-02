@@ -169,7 +169,7 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim();
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -230,6 +230,7 @@ function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    overlay.classList.add('hidden');
     lastTime = performance.now();
     loop(lastTime);
   } else {
@@ -241,6 +242,7 @@ function togglePause() {
 }
 
 function loop(ts) {
+  if (gameOver || paused) return;
   const dt = ts - lastTime;
   lastTime = ts;
   dropAccum += dt;
@@ -252,6 +254,9 @@ function loop(ts) {
       lockPiece();
     }
   }
+  // endGame() pudo ejecutarse dentro de lockPiece(): su cancelAnimationFrame no
+  // afecta al frame en curso, así que hay que cortar aquí para no re-agendar el bucle.
+  if (gameOver) return;
   draw();
   animId = requestAnimationFrame(loop);
 }
@@ -273,6 +278,25 @@ function init() {
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
+
+// ---- Tema claro/oscuro (oscuro por defecto) ----
+const themeBtn = document.getElementById('theme-toggle');
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  themeBtn.textContent = theme === 'light' ? '🌙 Oscuro' : '☀️ Claro';
+  try { localStorage.setItem('theme', theme); } catch {}
+  if (board) draw();
+}
+
+themeBtn.addEventListener('click', () => {
+  applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
+  themeBtn.blur(); // evita que Space/Enter reactiven el botón durante el juego
+});
+
+let savedTheme = null;
+try { savedTheme = localStorage.getItem('theme'); } catch {}
+applyTheme(savedTheme === 'light' ? 'light' : 'dark');
 
 document.addEventListener('keydown', e => {
   if (e.code === 'KeyP') { togglePause(); return; }

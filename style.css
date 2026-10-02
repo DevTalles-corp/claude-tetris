@@ -1,3 +1,37 @@
+:root {
+  --bg: #0f0f17;
+  --text: #e0e0e0;
+  --canvas-bg: #1a1a25;
+  --border: #2a2a3a;
+  --label: #555570;
+  --value: #7aa2f7;
+  --muted: #888;
+  --kbd-bg: #22223a;
+  --kbd-border: #3a3a5a;
+  --kbd-text: #aaa;
+  --overlay-bg: rgba(10, 10, 20, 0.75);
+  --btn-text: #0f0f17;
+  --shadow: rgba(0, 0, 0, 0.6);
+  --grid: #22222e;
+}
+
+:root[data-theme='light'] {
+  --bg: #f2f3f8;
+  --text: #22222e;
+  --canvas-bg: #ffffff;
+  --border: #c8cad8;
+  --label: #6b6d85;
+  --value: #3d5fc4;
+  --muted: #555;
+  --kbd-bg: #e6e8f2;
+  --kbd-border: #bfc3d6;
+  --kbd-text: #444;
+  --overlay-bg: rgba(240, 241, 247, 0.8);
+  --btn-text: #ffffff;
+  --shadow: rgba(0, 0, 0, 0.15);
+  --grid: #e3e5ee;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -5,8 +39,8 @@
 }
 
 body {
-  background: #0f0f17;
-  color: #e0e0e0;
+  background: var(--bg);
+  color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
   display: flex;
   align-items: center;
@@ -19,6 +53,16 @@ body {
   position: relative;
 }
 
+.game-title {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 10px;
+  color: #ff9e3d;
+  text-shadow: 0 0 20px rgba(255, 158, 61, 0.5);
+  margin-bottom: 20px;
+}
+
 .game-container {
   display: flex;
   gap: 20px;
@@ -27,10 +71,10 @@ body {
 
 #board {
   display: block;
-  border: 1px solid #2a2a3a;
-  background: #1a1a25;
+  border: 1px solid var(--border);
+  background: var(--canvas-bg);
   border-radius: 4px;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 40px var(--shadow);
 }
 
 /* ---- Panel lateral ---- */
@@ -51,7 +95,7 @@ body {
 .label {
   font-size: 10px;
   letter-spacing: 2px;
-  color: #555570;
+  color: var(--label);
   font-weight: 600;
 }
 
@@ -59,14 +103,14 @@ body {
   font-family: 'Courier New', Courier, monospace;
   font-size: 26px;
   font-weight: 700;
-  color: #7aa2f7;
+  color: var(--value);
   letter-spacing: 1px;
 }
 
 #next-canvas {
   display: block;
-  border: 1px solid #2a2a3a;
-  background: #1a1a25;
+  border: 1px solid var(--border);
+  background: var(--canvas-bg);
   border-radius: 4px;
 }
 
@@ -80,20 +124,20 @@ body {
 
 .controls li {
   font-size: 12px;
-  color: #888;
+  color: var(--muted);
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
 kbd {
-  background: #22223a;
-  border: 1px solid #3a3a5a;
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
   border-radius: 3px;
   padding: 1px 6px;
   font-size: 11px;
   font-family: inherit;
-  color: #aaa;
+  color: var(--kbd-text);
 }
 
 /* ---- Overlay ---- */
@@ -103,7 +147,7 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(10, 10, 20, 0.75);
+  background: var(--overlay-bg);
   backdrop-filter: blur(4px);
   border-radius: 4px;
 }
@@ -130,13 +174,13 @@ kbd {
 #overlay-score {
   font-family: 'Courier New', Courier, monospace;
   font-size: 14px;
-  color: #7aa2f7;
+  color: var(--value);
 }
 
 #restart-btn {
   margin-top: 8px;
-  background: #7aa2f7;
-  color: #0f0f17;
+  background: var(--value);
+  color: var(--btn-text);
   border: none;
   border-radius: 6px;
   padding: 10px 28px;
@@ -144,9 +188,28 @@ kbd {
   font-weight: 700;
   cursor: pointer;
   letter-spacing: 1px;
-  transition: background 0.15s;
+  transition: filter 0.15s;
 }
 
 #restart-btn:hover {
-  background: #9bbdff;
+  filter: brightness(1.15);
+}
+
+/* ---- Toggle de tema ---- */
+.theme-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: var(--canvas-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  border-color: var(--value);
 }
