@@ -8,6 +8,7 @@
 </head>
 <body>
   <div class="wrapper">
+    <h1 class="game-title">TETRIS</h1>
     <div class="game-container">
       <canvas id="board" width="300" height="600"></canvas>
 
@@ -40,6 +41,14 @@
             <li><kbd>P</kbd> pausa</li>
           </ul>
         </div>
+
+        <div class="panel-section theme-toggle">
+          <span class="label">LIGHT MODE</span>
+          <label class="switch">
+            <input type="checkbox" id="theme-toggle" />
+            <span class="slider"></span>
+          </label>
+        </div>
       </aside>
     </div>
 
@@ -47,7 +56,31 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <div id="gameover-records" class="records hidden">
+          <form id="name-form" class="name-form hidden" onsubmit="return false">
+            <input id="name-input" type="text" maxlength="12" value="Jugador" autocomplete="off" />
+            <button type="button" id="save-name-btn" class="action-btn">Guardar</button>
+          </form>
+          <table class="records-table">
+            <thead><tr><th>#</th><th>Nombre</th><th>Puntos</th><th>Líneas</th></tr></thead>
+            <tbody id="over-records-body"></tbody>
+          </table>
+          <p class="records-stats">Mejor combo: <b id="over-best-combo">0</b> · Líneas máx: <b id="over-max-lines">0</b></p>
+        </div>
         <button id="restart-btn">Reiniciar</button>
+      </div>
+    </div>
+
+    <div id="start-screen" class="overlay">
+      <div class="overlay-box">
+        <p id="start-title">TOP 5</p>
+        <table class="records-table">
+          <thead><tr><th>#</th><th>Nombre</th><th>Puntos</th><th>Líneas</th></tr></thead>
+          <tbody id="start-records-body"></tbody>
+        </table>
+        <p class="records-stats">Mejor combo: <b id="start-best-combo">0</b> · Líneas máx: <b id="start-max-lines">0</b></p>
+        <button id="play-btn" class="action-btn">Jugar</button>
+        <button id="reset-records-btn" class="link-btn">Resetear records</button>
       </div>
     </div>
   </div>
