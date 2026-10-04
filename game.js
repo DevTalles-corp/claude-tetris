@@ -11,8 +11,12 @@ const COLORS = [
   '#ba68c8', // T - purple
   '#81c784', // S - green
   '#e57373', // Z - red
-  '#7986cb', // J - indigo
+  '#90caf9', // J - pale blue
   '#ffb74d', // L - orange
+  '#f06292', // R - pink (ring)
+  '#616161', // bomb - gray
+  '#e0e0e0', // tint - light gray
+  '#ffd700', // wild - gold
 ];
 
 const PIECES = [
@@ -24,9 +28,16 @@ const PIECES = [
   [[5,5,0],[0,5,5],[0,0,0]],                  // Z
   [[6,0,0],[6,6,6],[0,0,0]],                  // J
   [[0,0,7],[7,7,7],[0,0,0]],                  // L
+  [[8,8,8],[8,0,8],[8,8,8]],                  // R (ring)
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
+
+const SPECIAL_EVERY_LINES = 8;
+const BOMB = 9, TINT = 10, WILD = 11; // indices into COLORS
+const SPECIAL_TYPES = [BOMB, TINT];
+const BOMB_RADIUS = 1; // 1 => 3x3 blast area
+const BLOCK_GLYPHS = { [BOMB]: '✹', [TINT]: '◐', [WILD]: '★' };
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -41,15 +52,25 @@ const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let specialsAwarded, specialPending;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
 }
 
-function randomPiece() {
-  const type = Math.floor(Math.random() * 7) + 1;
-  const shape = PIECES[type].map(row => [...row]);
+function createPiece(type, baseShape) {
+  const shape = baseShape.map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
+}
+
+function randomPiece() {
+  const type = Math.floor(Math.random() * (PIECES.length - 1)) + 1;
+  return createPiece(type, PIECES[type]);
+}
+
+function randomSpecialPiece() {
+  const type = SPECIAL_TYPES[Math.floor(Math.random() * SPECIAL_TYPES.length)];
+  return createPiece(type, [[type]]);
 }
 
 function collide(shape, ox, oy) {
@@ -93,10 +114,33 @@ function merge() {
         board[current.y + r][current.x + c] = current.shape[r][c];
 }
 
+// BOMB: clears the (2*BOMB_RADIUS+1)² area centered on the piece.
+function detonate(cx, cy) {
+  for (let r = cy - BOMB_RADIUS; r <= cy + BOMB_RADIUS; r++)
+    for (let c = cx - BOMB_RADIUS; c <= cx + BOMB_RADIUS; c++)
+      if (r >= 0 && r < ROWS && c >= 0 && c < COLS) board[r][c] = 0;
+}
+
+// TINT: turns every block of the color found right below the piece into WILD. No-op on empty/floor/WILD.
+function applyTint(x, y) {
+  const target = board[y + 1]?.[x];
+  if (!target || target === WILD) return;
+  for (const row of board)
+    for (let c = 0; c < COLS; c++)
+      if (row[c] === target) row[c] = WILD;
+}
+
+// A row is complete when every gap can be covered by a WILD block in that row.
+function isRowComplete(row) {
+  const gaps = row.filter(v => v === 0).length;
+  const wilds = row.filter(v => v === WILD).length;
+  return gaps <= wilds;
+}
+
 function clearLines() {
   let cleared = 0;
   for (let r = ROWS - 1; r >= 0; r--) {
-    if (board[r].every(v => v !== 0)) {
+    if (isRowComplete(board[r])) {
       board.splice(r, 1);
       board.unshift(new Array(COLS).fill(0));
       cleared++;
@@ -105,6 +149,10 @@ function clearLines() {
   }
   if (cleared) {
     lines += cleared;
+    if (Math.floor(lines / SPECIAL_EVERY_LINES) > specialsAwarded) {
+      specialsAwarded++;
+      specialPending = true;
+    }
     score += (LINE_SCORES[cleared] || 0) * level;
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
@@ -136,14 +184,17 @@ function softDrop() {
 }
 
 function lockPiece() {
-  merge();
+  if (current.type === BOMB) detonate(current.x, current.y);
+  else if (current.type === TINT) applyTint(current.x, current.y);
+  else merge();
   clearLines();
   spawn();
 }
 
 function spawn() {
   current = next;
-  next = randomPiece();
+  next = specialPending ? randomSpecialPiece() : randomPiece();
+  specialPending = false;
   if (collide(current.shape, current.x, current.y)) {
     endGame();
   }
@@ -165,6 +216,14 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   // highlight
   context.fillStyle = 'rgba(255,255,255,0.12)';
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  const glyph = BLOCK_GLYPHS[colorIndex];
+  if (glyph) {
+    context.fillStyle = '#1a1a24';
+    context.font = `${size * 0.6}px sans-serif`;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(glyph, x * size + size / 2, y * size + size / 2 + 1);
+  }
   context.globalAlpha = 1;
 }
 
@@ -253,6 +312,7 @@ function loop(ts) {
     }
   }
   draw();
+  if (gameOver) return;
   animId = requestAnimationFrame(loop);
 }
 
@@ -265,6 +325,8 @@ function init() {
   gameOver = false;
   dropInterval = 1000;
   dropAccum = 0;
+  specialsAwarded = 0;
+  specialPending = false;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
