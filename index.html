@@ -7,6 +7,10 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <button id="theme-toggle" class="theme-toggle" type="button" role="switch" aria-checked="false" aria-label="Cambiar a modo claro">☀️ Claro</button>
+
+  <h1 class="game-title">TETRIS</h1>
+
   <div class="wrapper">
     <div class="game-container">
       <canvas id="board" width="300" height="600"></canvas>
@@ -39,6 +43,11 @@
             <li><kbd>Space</kbd> caída</li>
             <li><kbd>P</kbd> pausa</li>
           </ul>
+        </div>
+
+        <div class="panel-section powerup">
+          <span class="label">POWER-UP</span>
+          <p>💣 Cada 10 líneas aparece una <strong>Bomba</strong>: al caer destruye un área 3×3.</p>
         </div>
       </aside>
     </div>

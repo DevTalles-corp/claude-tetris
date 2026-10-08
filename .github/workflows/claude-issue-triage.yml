@@ -1,0 +1,75 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  triage:
+    # Evita bucles: no reacciona a issues editados por el propio bot,
+    # y en 'edited' solo actúa si cambió el cuerpo del issue (el issue principal).
+    if: |
+      github.event.action == 'opened' ||
+      (github.event.action == 'edited' && github.event.changes.body != null)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Triage del issue con Claude
+        id: triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--allowedTools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*)"'
+          prompt: |
+            Eres el responsable de clasificación (triage) de issues del repositorio ${{ github.repository }}.
+            Analiza el issue #${{ github.event.issue.number }} y haz DOS cosas: asignar labels y publicar un diagnóstico.
+
+            Contexto del proyecto: es un juego de Tetris en JavaScript vanilla sobre HTML5 Canvas,
+            sin dependencias ni build. Los archivos clave son index.html, style.css y game.js.
+            Lee CLAUDE.md para entender la arquitectura antes de diagnosticar.
+
+            PASOS:
+
+            1. Lee el issue completo:
+               gh issue view ${{ github.event.issue.number }}
+
+            2. Consulta las labels disponibles en el repo y usa SOLO esas:
+               gh label list
+               (actualmente: bug, enhancement, documentation, question, accessibility,
+               good first issue, help wanted, duplicate, invalid, wontfix)
+
+            3. Asigna las labels más apropiadas (una o varias) según el contenido:
+               gh issue edit ${{ github.event.issue.number }} --add-label "label1,label2"
+               Elige por categoría (p.ej. bug vs enhancement vs question), y añade
+               "good first issue" si el arreglo parece sencillo y acotado.
+
+            4. Publica UN comentario con un diagnóstico general, en español, con este formato:
+
+               ## 🔍 Diagnóstico automático
+
+               **Tipo:** <bug | mejora | pregunta | documentación | ...>
+               **Resumen:** <1-2 frases describiendo el problema o petición>
+               **Área del código afectada:** <archivos/funciones probables, p.ej. game.js:clearLines>
+               **Causa probable / análisis:** <hipótesis técnica basada en la arquitectura>
+               **Posible enfoque de solución:** <pasos de alto nivel para implementar el fix>
+               **Complejidad estimada:** <baja | media | alta>
+               **Dudas / información faltante:** <qué falta aclarar, si aplica>
+
+               Publícalo con:
+               gh issue comment ${{ github.event.issue.number }} --body "..."
+
+            IMPORTANTE:
+            - El diagnóstico es para que el equipo implemente luego la solución, así que sé
+              concreto y técnico sobre archivos y funciones, pero NO escribas el código del fix aquí.
+            - No inventes labels que no existan. Si ninguna encaja, usa "question".
+            - Escribe todo el texto de cara al usuario en español.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
