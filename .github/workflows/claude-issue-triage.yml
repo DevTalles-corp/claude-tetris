@@ -1,0 +1,50 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true # ediciones rápidas seguidas → solo corre la última
+
+jobs:
+  triage:
+    if: github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Triage issue with Claude
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            ISSUE: #${{ github.event.issue.number }}
+
+            Eres el triager de este repositorio (Tetris en JS vanilla, ver CLAUDE.md).
+            1. Lee el issue: `gh issue view <n> --json title,body,labels,comments`.
+            2. Lee los labels disponibles: `gh label list`. Asigna SOLO labels existentes
+               con `gh issue edit <n> --add-label ...` (quita los que ya no apliquen tras una edición
+               con `--remove-label`). Nunca crees labels.
+            3. Explora el código relevante (Read/Grep/Glob) y escribe en español un diagnóstico:
+               - Resumen del problema / petición
+               - Causa probable o área afectada (archivos y funciones concretas)
+               - Enfoque sugerido para la solución
+               - Dudas o información que falta
+               No implementes nada ni abras PRs.
+            4. El comentario debe empezar con `<!-- claude-triage -->`. Si ya existe un comentario
+               tuyo con ese marcador, edítalo (`gh api -X PATCH repos/<repo>/issues/comments/<id> -f body=...`);
+               si no, créalo con `gh issue comment <n> --body-file ...`.
+          claude_args: |
+            --allowedTools "Bash(gh issue:*),Bash(gh label list:*),Bash(gh api:*),Read,Grep,Glob,Write"

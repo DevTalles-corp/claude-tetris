@@ -4,12 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
+  <script>
+    try {
+      if (localStorage.getItem('theme') === 'light') document.documentElement.dataset.theme = 'light';
+    } catch (e) {}
+  </script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="wrapper">
     <div class="game-container">
-      <canvas id="board" width="300" height="600"></canvas>
+      <canvas id="board" width="300" height="650"></canvas>
 
       <aside class="panel">
         <div class="panel-section">
@@ -39,6 +44,11 @@
             <li><kbd>Space</kbd> caída</li>
             <li><kbd>P</kbd> pausa</li>
           </ul>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">TEMA</span>
+          <button id="theme-toggle" type="button" aria-pressed="false"></button>
         </div>
       </aside>
     </div>

@@ -3,6 +3,7 @@
 const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
+const TITLE_H = 50; // banda superior del canvas donde se dibuja el título
 
 const COLORS = [
   null,
@@ -11,7 +12,7 @@ const COLORS = [
   '#ba68c8', // T - purple
   '#81c784', // S - green
   '#e57373', // Z - red
-  '#7986cb', // J - indigo
+  '#90caf9', // J - pale blue
   '#ffb74d', // L - orange
 ];
 
@@ -39,6 +40,26 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const themeBtn = document.getElementById('theme-toggle');
+
+let themeColors;
+
+function applyTheme(light, persist) {
+  if (light) document.documentElement.dataset.theme = 'light';
+  else delete document.documentElement.dataset.theme;
+  if (persist) {
+    try { localStorage.setItem('theme', light ? 'light' : 'dark'); } catch (e) {}
+  }
+  const style = getComputedStyle(document.documentElement);
+  themeColors = {
+    grid: style.getPropertyValue('--grid').trim(),
+    accent: style.getPropertyValue('--accent').trim(),
+    highlight: style.getPropertyValue('--block-highlight').trim(),
+  };
+  themeBtn.textContent = light ? '☀ Claro' : '☾ Oscuro';
+  themeBtn.setAttribute('aria-pressed', String(light));
+  themeBtn.setAttribute('aria-label', light ? 'Tema claro activo, cambiar a oscuro' : 'Tema oscuro activo, cambiar a claro');
+}
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
@@ -163,13 +184,13 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   context.fillStyle = color;
   context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
   // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
+  context.fillStyle = themeColors.highlight;
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
   context.globalAlpha = 1;
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = themeColors.grid;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -185,8 +206,26 @@ function drawGrid() {
   }
 }
 
+function drawTitle() {
+  ctx.fillStyle = themeColors.accent;
+  ctx.font = '800 32px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '8px';
+  ctx.fillText('TETRIS', canvas.width / 2 + 4, TITLE_H / 2);
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+}
+
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawTitle();
+  ctx.save();
+  ctx.translate(0, TITLE_H);
+  drawBoard();
+  ctx.restore();
+}
+
+function drawBoard() {
   drawGrid();
 
   // board
@@ -253,7 +292,9 @@ function loop(ts) {
     }
   }
   draw();
-  animId = requestAnimationFrame(loop);
+  // endGame() puede ejecutarse dentro de este mismo frame (lockPiece → spawn);
+  // su cancelAnimationFrame no alcanza al frame que reprogramamos aquí.
+  if (!gameOver) animId = requestAnimationFrame(loop);
 }
 
 function init() {
@@ -301,4 +342,15 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 
+themeBtn.addEventListener('click', () => {
+  applyTheme(document.documentElement.dataset.theme !== 'light', true);
+  themeBtn.blur(); // evita que Space (caída) active el botón
+  // en pausa o game over no hay bucle de dibujo
+  if (paused || gameOver) {
+    draw();
+    drawNext();
+  }
+});
+
+applyTheme(document.documentElement.dataset.theme === 'light', false);
 init();
