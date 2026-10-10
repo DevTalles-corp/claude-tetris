@@ -104,6 +104,8 @@ Define la estructura visual:
 
 Aporta el aspecto visual con estética _dark / retro arcade_: fondo oscuro, tipografía monoespaciada para los marcadores y _backdrop blur_ en los overlays.
 
+Los colores viven en variables CSS (`:root` = tema oscuro, `[data-theme="light"]` = tema claro). El botón de la esquina superior derecha (`#theme-toggle`, un `role="switch"`) alterna el atributo `data-theme` en `<html>`; `game.js` lee `--grid` para repintar la cuadrícula del canvas. El modo oscuro es el predeterminado y la elección no se persiste.
+
 ### 3. `game.js`
 
 Contiene toda la lógica del juego. A grandes rasgos:
