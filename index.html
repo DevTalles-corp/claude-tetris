@@ -7,6 +7,11 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="title-bar">
+    <h1 class="title">TETRIS</h1>
+    <button id="theme-toggle" type="button" aria-pressed="false" title="Cambiar tema (T)">Modo claro</button>
+  </div>
+
   <div class="wrapper">
     <div class="game-container">
       <canvas id="board" width="300" height="600"></canvas>
@@ -24,6 +29,10 @@
           <span class="label">LEVEL</span>
           <span class="value" id="level">1</span>
         </div>
+        <div class="panel-section">
+          <span class="label">POWER-UP</span>
+          <span class="value powerup" id="powerup">—</span>
+        </div>
 
         <div class="panel-section">
           <span class="label">NEXT</span>
@@ -38,6 +47,7 @@
             <li><kbd>↓</kbd> bajar</li>
             <li><kbd>Space</kbd> caída</li>
             <li><kbd>P</kbd> pausa</li>
+            <li><kbd>T</kbd> tema</li>
           </ul>
         </div>
       </aside>

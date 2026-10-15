@@ -42,6 +42,22 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Sistema de puntuación** clásico de Tetris (100 / 300 / 500 / 800 multiplicado por nivel).
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Pausa** y **Game Over** con opción de reinicio.
+- **Tema claro/oscuro** con botón junto al título o tecla `T` (siempre inicia en oscuro).
+- **Power-ups aleatorios** cada 3 líneas (ver abajo).
+
+### Power-ups
+
+Cada 3 líneas eliminadas, la siguiente pieza trae **un bloque especial** con un ícono. Al fijarse la pieza, el efecto se aplica en la celda donde quedó ese bloque:
+
+| Power-up      | Efecto                                                                 |
+| ------------- | ---------------------------------------------------------------------- |
+| 💣 Bomba      | Destruye un área de 3×3                                                |
+| ⚡ Rayo       | Limpia la fila y la columna completas                                  |
+| 🎨 Tinte      | Convierte todos los bloques de ese color en comodines y los elimina    |
+| ⬇ Gravedad   | Compacta los huecos del tablero (las filas completas se limpian)       |
+| ❄ Congelar   | Detiene la caída automática durante 5 segundos                         |
+
+Cada bloque destruido por un power-up suma `10 × nivel` puntos. El panel **POWER-UP** muestra el efecto activo o el próximo.
 
 ---
 
@@ -85,6 +101,7 @@ Después abre `http://localhost:8000` en el navegador.
 | `↓`       | Soft drop (bajar más rápido)      |
 | `Espacio` | Hard drop (caída instantánea)     |
 | `P`       | Pausar / reanudar                 |
+| `T`       | Cambiar tema claro / oscuro       |
 
 ---
 

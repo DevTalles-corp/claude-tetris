@@ -1,0 +1,74 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+concurrency:
+  group: claude-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    # Ignore edits made by bots (including Claude itself) to avoid loops
+    if: github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Issue Triage
+        id: claude-triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--allowedTools "Read,Glob,Grep,Write,Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*)"'
+          prompt: |
+            Eres el encargado de hacer triage de issues en el repositorio ${{ github.repository }}
+            (un Tetris clásico en JavaScript vanilla + HTML5 Canvas + CSS).
+
+            Issue: #${{ github.event.issue.number }}
+            Evento: ${{ github.event.action }} (opened = issue nuevo, edited = se editó el título o la descripción)
+
+            Sigue estos pasos:
+
+            1. Lee el issue con `gh issue view ${{ github.event.issue.number }} --json title,body,labels,comments`
+               y los labels disponibles con `gh label list`.
+            2. Lee `CLAUDE.md` y el código relevante (`game.js`, `index.html`, `style.css`) para ubicar
+               exactamente qué partes del código están involucradas.
+            3. Elige los labels apropiados USANDO SOLO LOS QUE YA EXISTEN en el repositorio (no crees labels nuevos)
+               y aplícalos con `gh issue edit ${{ github.event.issue.number }} --add-label "label1,label2"`.
+               Si el evento es `edited`, quita con `--remove-label` los labels que ya no apliquen.
+            4. Escribe un diagnóstico en español en el archivo `/tmp/claude-triage.md`. La primera línea debe ser
+               exactamente `<!-- claude-triage -->` y después usa este formato.
+               Todo el contenido debe estar en Markdown válido que GitHub pueda renderizar (GitHub Flavored
+               Markdown): encabezados con `##`, negritas con `**`, listas con `-` o `1.`, código en línea con
+               comillas invertidas y bloques de código con triple comilla invertida indicando el lenguaje
+               (por ejemplo ```js). Deja una línea en blanco entre secciones y antes/después de listas y bloques
+               de código para que se rendericen correctamente. No uses HTML salvo el marcador `<!-- claude-triage -->`.
+
+               ## 🔍 Diagnóstico automático
+               **Resumen:** qué se reporta o se solicita, en 1-3 frases.
+               **Tipo y labels:** labels asignados y por qué.
+               **Análisis técnico:** causa probable y archivos/funciones implicados con referencias
+               `archivo:línea` (por ejemplo `COLORS`, `PIECES`, `clearLines()` en `game.js`).
+               **Propuesta de solución:** pasos concretos para implementarla (NO la implementes).
+               **Riesgos / dependencias:** constantes acopladas u otras partes que podrían verse afectadas
+               (por ejemplo `COLS`/`ROWS`/`BLOCK` ↔ tamaño del `<canvas>` en `index.html`).
+               **Preguntas abiertas:** información faltante para resolverlo (omite la sección si no hay).
+
+            5. Publica el diagnóstico:
+               - Si ya existe en el issue un comentario tuyo que contenga `<!-- claude-triage -->` y es tu último
+                 comentario, actualízalo con
+                 `gh issue comment ${{ github.event.issue.number }} --edit-last --body-file /tmp/claude-triage.md`.
+               - En cualquier otro caso crea uno nuevo con
+                 `gh issue comment ${{ github.event.issue.number }} --body-file /tmp/claude-triage.md`.
+
+            Restricciones: no modifiques archivos del repositorio, no abras pull requests y no cierres el issue.
