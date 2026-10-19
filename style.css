@@ -206,6 +206,20 @@ kbd {
   cursor: pointer;
 }
 
+#skin-select {
+  position: fixed;
+  top: 16px;
+  right: 140px;
+  background: var(--board-bg);
+  color: var(--text);
+  border: 1px solid var(--board-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 #theme-toggle:hover {
   border-color: var(--accent);
 }

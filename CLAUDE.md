@@ -53,3 +53,7 @@ Three files: `index.html` (DOM + two canvases), `style.css`, `game.js` (all logi
 - Canvas size is hardcoded in `index.html` (`300×600` board, `120×120` next). Changing `COLS/ROWS/BLOCK` in `game.js` requires updating those attributes. `drawNext` uses its own `NB = 30` and centers the piece's bounding box in the canvas.
 - Level/speed formula lives in `updateSpeed()` (called by `init` and `clearLines`).
 - `README.md` says "~300 lines" and documents controls/scoring; keep in sync if mechanics change.
+
+## Skins
+
+- `SKINS` (`retro|neon|pastel|pixel`): cada una con `colors` (16, mismo indice que antes `COLORS`), `boardBg`, `grid`, `glyph` y `drawBlock(ctx, px, py, size, color, idx)` (solo el cuerpo). Globals `skin`/`colors` los fija `applySkin` (persistido en `localStorage` `tetris.skin`, redibuja). El wrapper `drawBlock` maneja alpha e iconos. Skins deben resetear `shadowBlur` y respetar `globalAlpha`; Retro usa `--grid` y fondo CSS del tema.
