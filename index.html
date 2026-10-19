@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
-  <link rel="stylesheet" href="style.css?v=9" />
+  <link rel="stylesheet" href="style.css?v=10" />
 </head>
 <body>
   <button id="theme-toggle" type="button" aria-label="Cambiar tema">☀️ Claro</button>
@@ -39,7 +39,7 @@
             <li><kbd>Space</kbd> caída</li>
             <li><kbd>C</kbd>/<kbd>Shift</kbd> reservar</li>
             <li><kbd>E</kbd> habilidad</li>
-            <li><kbd>P</kbd> pausa</li>
+            <li><kbd>P</kbd>/<kbd>Esc</kbd> pausa</li>
             <li><kbd>M</kbd> silencio</li>
           </ul>
         </div>
@@ -100,9 +100,17 @@
       </div>
     </div>
 
+    <div id="pause-menu" class="overlay hidden">
+      <div class="overlay-box ability-box">
+        <p class="ability-title" id="pause-title">PAUSA</p>
+        <ul class="ability-list" id="pause-list"></ul>
+        <p class="ability-hint" id="pause-hint"></p>
+      </div>
+    </div>
+
   </div>
   </main>
 
-  <script src="game.js?v=9"></script>
+  <script src="game.js?v=10"></script>
 </body>
 </html>

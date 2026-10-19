@@ -133,6 +133,10 @@ const abilityMenu = document.getElementById('ability-menu');
 const abilityTitle = document.getElementById('ability-title');
 const abilityList = document.getElementById('ability-list');
 const abilityHint = document.getElementById('ability-hint');
+const pauseMenu = document.getElementById('pause-menu');
+const pauseTitle = document.getElementById('pause-title');
+const pauseList = document.getElementById('pause-list');
+const pauseHint = document.getElementById('pause-hint');
 
 let gridColor = '#22222e';
 
@@ -143,6 +147,24 @@ let popups, particles, flashRows, shakeLeft, shakePower, perfectFlash;
 let challengeIdx = null, challenge = null; // desafío activo (null = juego normal)
 let elapsed, garbageAccum, revealLeft, challengeStartLines, startedChallenges, challengeQueue;
 let queue, held, holdUsed, energy, peekLeft, slowLeft, undoSnap, menuOpen, menuMode; // next === queue[0]
+let pauseView = 'main';   // 'main' | 'controls'
+let inputBlockUntil = 0;  // ignora teclas de juego tras reanudar
+const MAX_START_LEVEL = 10;
+const INPUT_BLOCK_MS = 150;
+const CONTROLS = [
+  ['← →', 'mover'], ['↑ / X', 'rotar'], ['↓', 'bajar'], ['Space', 'caída'],
+  ['C / Shift', 'reservar'], ['E', 'habilidad'], ['P / Esc', 'pausa'], ['M', 'silencio'],
+];
+let baseLevel = 1; // nivel inicial de la partida en curso (fijado en init)
+let startLevel = loadStartLevel(); // nivel inicial de la próxima partida
+
+function loadStartLevel() {
+  try {
+    const n = parseInt(localStorage.getItem('tetris.startLevel'), 10);
+    if (n >= 1 && n <= MAX_START_LEVEL) return n;
+  } catch (e) { /* localStorage no disponible */ }
+  return 1;
+}
 
 // ---- Audio (WebAudio, sin archivos) ----
 let audioCtx = null;
@@ -410,7 +432,7 @@ function clearLines(tspin) {
 }
 
 function updateSpeed() {
-  level = Math.floor(lines / 10) + 1;
+  level = baseLevel + Math.floor(lines / 10);
   dropInterval = Math.max(100, 1000 - (level - 1) * 90);
 }
 
@@ -960,17 +982,100 @@ function endGame() {
   draw(0);
 }
 
-function togglePause() {
-  if (gameOver) return;
-  paused = !paused;
-  if (!paused) {
-    lastTime = performance.now();
-    loop(lastTime);
-  } else {
-    cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+function setStartLevel(n) {
+  startLevel = Math.min(MAX_START_LEVEL, Math.max(1, n));
+  try { localStorage.setItem('tetris.startLevel', String(startLevel)); } catch (e) { /* ignorar */ }
+  renderPause();
+}
+
+function openPause() {
+  if (gameOver || paused || menuOpen) return;
+  paused = true;
+  pauseView = 'main';
+  cancelAnimationFrame(animId);
+  renderPause();
+  pauseMenu.classList.remove('hidden');
+}
+
+function resumeGame() {
+  if (!paused) return;
+  paused = false;
+  pauseMenu.classList.add('hidden');
+  dropAccum = 0;
+  lastTime = performance.now();
+  inputBlockUntil = lastTime + INPUT_BLOCK_MS;
+  animId = requestAnimationFrame(loop);
+}
+
+function startLevelRow(key) {
+  const li = document.createElement('li');
+  const row = document.createElement('div');
+  row.className = 'ability-btn level-row';
+  const kbd = document.createElement('kbd');
+  kbd.textContent = key;
+  const text = document.createElement('span');
+  text.textContent = 'Nivel inicial';
+  const small = document.createElement('small');
+  small.textContent = 'Para la próxima partida';
+  text.appendChild(small);
+  const step = (label, d) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'level-step';
+    b.textContent = label;
+    b.disabled = startLevel + d < 1 || startLevel + d > MAX_START_LEVEL;
+    b.addEventListener('click', () => { b.blur(); setStartLevel(startLevel + d); });
+    return b;
+  };
+  const val = document.createElement('strong');
+  val.className = 'level-val';
+  val.textContent = startLevel;
+  row.append(kbd, text, step('◀', -1), val, step('▶', 1));
+  li.appendChild(row);
+  return li;
+}
+
+function renderPause() {
+  pauseList.replaceChildren();
+  if (pauseView === 'controls') {
+    pauseTitle.textContent = 'CONTROLES';
+    CONTROLS.forEach(([k, d]) => {
+      const li = document.createElement('li');
+      li.className = 'ctrl-row';
+      const kbd = document.createElement('kbd');
+      kbd.textContent = k;
+      li.append(kbd, ` ${d}`);
+      pauseList.appendChild(li);
+    });
+    pauseList.appendChild(menuButton(1, '↩', 'Volver', '', () => { pauseView = 'main'; renderPause(); }));
+    pauseHint.textContent = '1 / Esc volver';
+    return;
+  }
+  pauseTitle.textContent = 'PAUSA';
+  pauseList.appendChild(menuButton(1, '▶', 'Reanudar', '', resumeGame));
+  pauseList.appendChild(menuButton(2, '🔄', 'Reiniciar', 'Nueva partida', init));
+  pauseList.appendChild(menuButton(3, '⌨', 'Ver controles', '', () => { pauseView = 'controls'; renderPause(); }));
+  pauseList.appendChild(startLevelRow(4));
+  pauseHint.textContent = '1–4 elegir · ← → nivel · P/Esc reanudar';
+}
+
+// Teclas del menú de pausa; el resto de teclas se ignora mientras está abierto.
+function pauseKey(e) {
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    if (pauseView === 'controls' && e.code === 'Escape') { pauseView = 'main'; renderPause(); } else resumeGame();
+    return;
+  }
+  if (pauseView === 'controls') {
+    if (e.key === '1') { pauseView = 'main'; renderPause(); }
+    return;
+  }
+  switch (e.key) {
+    case '1': resumeGame(); break;
+    case '2': init(); break;
+    case '3': pauseView = 'controls'; renderPause(); break;
+    case '4': setStartLevel(startLevel % MAX_START_LEVEL + 1); break;
+    case 'ArrowLeft': setStartLevel(startLevel - 1); break;
+    case 'ArrowRight': setStartLevel(startLevel + 1); break;
   }
 }
 
@@ -1025,6 +1130,9 @@ function init() {
   lines = 0;
   paused = false;
   gameOver = false;
+  pauseView = 'main';
+  inputBlockUntil = 0;
+  baseLevel = startLevel;
   updateSpeed();
   dropAccum = 0;
   elapsed = 0;
@@ -1034,6 +1142,7 @@ function init() {
   challengeIdx = null;
   challengeStartLines = 0;
   startedChallenges = new Set();
+  CHALLENGES.forEach((c, i) => { if (c.level < baseLevel) startedChallenges.add(i); }); // ya superados
   challengeQueue = [];
   pendingPower = false;
   pendingSingle = false;
@@ -1069,6 +1178,7 @@ function init() {
   updateGoalHUD();
   overlay.classList.add('hidden');
   abilityMenu.classList.add('hidden');
+  pauseMenu.classList.add('hidden');
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -1089,8 +1199,11 @@ document.addEventListener('keydown', e => {
     }
     return;
   }
-  if (e.code === 'KeyP') { togglePause(); return; }
-  if (paused || gameOver) return;
+  if (gameOver) return;
+  if (e.repeat && (e.code === 'KeyP' || e.code === 'Escape')) return;
+  if (paused) { pauseKey(e); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') { openPause(); return; }
+  if (performance.now() < inputBlockUntil) return;
   switch (e.code) {
     case 'KeyE':
       openMenu();

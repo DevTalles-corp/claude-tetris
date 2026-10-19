@@ -46,6 +46,11 @@ Three files: `index.html` (DOM + two canvases), `style.css`, `game.js` (all logi
 - `next` is `queue[0]`; `spawn` shifts `queue`, `refillQueue` tops it up (pending power/single inserted at front; `peekLeft` > 0 keeps `PEEK_COUNT` queued).
 - `saveUndo()` runs at start of `lockPiece` (board, score, queue, combo, challenge state; not challenge clock). `undoPlacement` restores it. `held` = hold slot, free mechanic (`C`/`Shift` → `holdPiece`, not an ability); `holdUsed` limits it to once per piece (reset in `spawn`, saved in undo snapshot, dims `#hold-canvas` via `.locked`). `slowLeft` multiplies drop interval by `SLOW_FACTOR` in `loop`.
 
+## Pause menu
+
+- `#pause-menu` (separate from `#overlay`, game over only). `P`/`Esc` → `openPause`/`resumeGame`; while `paused`, keydown only goes to `pauseKey` (`pauseView` `main`/`controls`). On resume `inputBlockUntil` ignores game keys for 150 ms.
+- `startLevel` (localStorage `tetris.startLevel`, 1–10) applies to the next game: `init` snapshots it into `baseLevel`; `updateSpeed` uses `baseLevel + floor(lines/10)`; `init` marks challenges with `c.level < baseLevel` as started.
+
 ## Gotchas
 
 - Layout: `[.panel-left][#board][.panel-right]`; board is CSS-scaled (`height: min(600px, 100vh - 110px)`), internal canvas stays `300×600`. `keydown` `preventDefault`s `GAME_KEYS` (arrows/Space) so page never scrolls.

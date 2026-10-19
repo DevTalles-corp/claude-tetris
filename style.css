@@ -354,6 +354,44 @@ kbd {
   min-height: 1.2em;
 }
 
+/* ---- Menú de pausa ---- */
+.level-row {
+  cursor: default;
+}
+
+.level-row span {
+  flex: 1;
+}
+
+.level-step {
+  padding: 2px 8px;
+  background: var(--board-bg);
+  color: var(--text);
+  border: 1px solid var(--board-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.level-step:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.level-step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.level-val {
+  min-width: 1.6em;
+  text-align: center;
+}
+
+.ctrl-row {
+  width: 270px;
+  font-size: 13px;
+  color: var(--text);
+}
+
 /* ---- Modo desafío ---- */
 .goal-desc {
   font-size: 11px;

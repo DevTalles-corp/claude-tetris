@@ -57,7 +57,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
   - ⏳ **Lentitud**: la caída es ×3 más lenta durante 10 s.
   - ↩️ **Deshacer**: revierte la última colocación (tablero, puntaje, combo) y recuperas esa pieza.
 - **Reserva (HOLD)**: `C` o `Shift` guarda la pieza actual en el panel HOLD; si ya hay una guardada, las intercambia. Solo una vez por pieza: el slot se atenúa hasta que la pieza actual se fije. Sirve para esperar un Tetris o evitar un mal spawn.
-- **Pausa** y **Game Over** con opción de reinicio.
+- **Menú de pausa** (`P` o `Esc`): Reanudar, Reiniciar, Ver controles y Nivel inicial (1–10, se guarda en el navegador y aplica a la próxima partida; los desafíos de niveles inferiores no se disparan). Atajos `1`–`4`, `←`/`→` cambian el nivel. Los controles del juego quedan bloqueados mientras está abierto. **Game Over** con opción de reinicio.
 - **Toggle de tema** claro/oscuro (botón arriba a la derecha; por defecto modo oscuro).
 
 ---
@@ -103,7 +103,7 @@ Después abre `http://localhost:8000` en el navegador.
 | `Espacio` | Hard drop (caída instantánea)     |
 | `C` / `Shift` | Reservar / intercambiar pieza (HOLD) |
 | `E`       | Abrir habilidades (barra llena)   |
-| `P`       | Pausar / reanudar                 |
+| `P` / `Esc` | Menú de pausa (reanudar, reiniciar, controles, nivel inicial) |
 | `M`       | Silenciar / activar sonido        |
 
 ---
