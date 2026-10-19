@@ -46,6 +46,11 @@ Three files: `index.html` (DOM + two canvases), `style.css`, `game.js` (all logi
 - `next` is `queue[0]`; `spawn` shifts `queue`, `refillQueue` tops it up (pending power/single inserted at front; `peekLeft` > 0 keeps `PEEK_COUNT` queued).
 - `saveUndo()` runs at start of `lockPiece` (board, score, queue, combo, challenge state; not challenge clock). `undoPlacement` restores it. `held` = hold slot, free mechanic (`C`/`Shift` → `holdPiece`, not an ability); `holdUsed` limits it to once per piece (reset in `spawn`, saved in undo snapshot, dims `#hold-canvas` via `.locked`). `slowLeft` multiplies drop interval by `SLOW_FACTOR` in `loop`.
 
+## Records
+
+- `records` (`tetris.records` en localStorage, try/catch) = `{top[5], bestCombo, maxLines}`; `maxCombo` global por partida (reset en `init`, sube en `clearLines`). `endGame` actualiza históricos y, si `rankFor(score)>=0`, muestra `#name-form`; `commitRecord` inserta. `renderRecords(container, highlightIdx)` usa solo textContent.
+- Pantalla de inicio `#start-screen`: al cargar `init()` + cancel rAF + `showStart()`; `atStart` hace que `keydown` solo acepte Enter/Space. Con foco en `#name-input` el `keydown` global sale antes de todo.
+
 ## Gotchas
 
 - Layout: `[.panel-left][#board][.panel-right]`; board is CSS-scaled (`height: min(600px, 100vh - 110px)`), internal canvas stays `300×600`. `keydown` `preventDefault`s `GAME_KEYS` (arrows/Space) so page never scrolls.

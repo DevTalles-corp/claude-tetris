@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
-  <link rel="stylesheet" href="style.css?v=9" />
+  <link rel="stylesheet" href="style.css?v=10" />
 </head>
 <body>
   <button id="theme-toggle" type="button" aria-label="Cambiar tema">☀️ Claro</button>
@@ -88,7 +88,23 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <form id="name-form" class="name-form hidden" onsubmit="return false">
+          <input id="name-input" type="text" maxlength="12" placeholder="Tu nombre" autocomplete="off" />
+          <button id="save-btn" type="button" class="btn">Guardar</button>
+        </form>
+        <p id="record-msg" class="record-msg"></p>
+        <div id="overlay-records"></div>
         <button id="restart-btn" class="btn">Reiniciar</button>
+        <button id="reset-btn" type="button" class="btn btn-small">Borrar records</button>
+      </div>
+    </div>
+
+    <div id="start-screen" class="overlay">
+      <div class="overlay-box">
+        <p class="start-title">TETRIS</p>
+        <div id="start-records"></div>
+        <button id="start-btn" class="btn">Jugar</button>
+        <button id="start-reset-btn" type="button" class="btn btn-small">Borrar records</button>
       </div>
     </div>
 
@@ -103,6 +119,6 @@
   </div>
   </main>
 
-  <script src="game.js?v=9"></script>
+  <script src="game.js?v=10"></script>
 </body>
 </html>

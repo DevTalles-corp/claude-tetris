@@ -105,6 +105,11 @@ Después abre `http://localhost:8000` en el navegador.
 | `E`       | Abrir habilidades (barra llena)   |
 | `P`       | Pausar / reanudar                 |
 | `M`       | Silenciar / activar sonido        |
+| `Enter` / `Espacio` | Jugar (pantalla de inicio) |
+
+### Records
+
+Top 5 local (`localStorage`, clave `tetris.records`) con nombre (máx. 12 caracteres, campo al terminar la partida), puntos, líneas y nivel. Se muestra en la pantalla de inicio y en game over (la fila nueva se resalta), junto al mejor combo y las líneas máximas históricas. El botón «Borrar records» los reinicia.
 
 ---
 
