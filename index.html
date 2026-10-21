@@ -4,14 +4,27 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=13" />
 </head>
 <body>
+  <div class="top-controls">
+  <select id="skin-select" aria-label="Skin">
+    <option value="retro">Retro</option>
+    <option value="neon">Neon</option>
+    <option value="pastel">Pastel</option>
+    <option value="pixel">Pixel art</option>
+  </select>
+  <button id="theme-toggle" type="button" aria-label="Cambiar tema">☀️ Claro</button>
+  </div>
+  <main class="app">
+  <h1 class="title">TETRIS</h1>
   <div class="wrapper">
     <div class="game-container">
-      <canvas id="board" width="300" height="600"></canvas>
-
-      <aside class="panel">
+      <aside class="panel panel-left">
+        <div class="panel-section">
+          <span class="label">HOLD</span>
+          <canvas id="hold-canvas" width="120" height="80"></canvas>
+        </div>
         <div class="panel-section">
           <span class="label">SCORE</span>
           <span class="value" id="score">0</span>
@@ -25,11 +38,6 @@
           <span class="value" id="level">1</span>
         </div>
 
-        <div class="panel-section">
-          <span class="label">NEXT</span>
-          <canvas id="next-canvas" width="120" height="120"></canvas>
-        </div>
-
         <div class="panel-section controls">
           <span class="label">CONTROLS</span>
           <ul>
@@ -37,8 +45,49 @@
             <li><kbd>↑</kbd> rotar</li>
             <li><kbd>↓</kbd> bajar</li>
             <li><kbd>Space</kbd> caída</li>
+            <li><kbd>C</kbd>/<kbd>Shift</kbd> reservar</li>
+            <li><kbd>E</kbd> habilidad</li>
             <li><kbd>P</kbd> pausa</li>
+            <li><kbd>M</kbd> silencio</li>
           </ul>
+        </div>
+      </aside>
+
+      <canvas id="board" width="300" height="600"></canvas>
+
+      <aside class="panel panel-right">
+        <div class="panel-section">
+          <span class="label">NEXT</span>
+          <canvas id="next-canvas" width="120" height="120"></canvas>
+        </div>
+
+        <div class="panel-section hidden" id="peek-section">
+          <span class="label">PRÓXIMAS 5</span>
+          <canvas id="peek-canvas" width="150" height="40"></canvas>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">ENERGÍA</span>
+          <div class="energy-bar" id="energy-bar"><div class="energy-fill" id="energy-fill"></div></div>
+          <span class="energy-hint" id="energy-hint">0%</span>
+          <span class="value power-status" id="ability-status">—</span>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">COMBO</span>
+          <span class="value combo-status" id="combo-status">—</span>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">POWER</span>
+          <span class="value power-status" id="power-status">—</span>
+        </div>
+
+        <div class="panel-section hidden" id="goal-section">
+          <span class="label">OBJETIVO</span>
+          <span class="goal-desc" id="goal-desc"></span>
+          <span class="value goal-status" id="goal-status">—</span>
+          <span class="value goal-status" id="timer-status"></span>
         </div>
       </aside>
     </div>
@@ -47,11 +96,67 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
-        <button id="restart-btn">Reiniciar</button>
+        <form id="name-form" class="name-form hidden" autocomplete="off">
+          <label for="name-input">¡Entras en el top! Tu nombre:</label>
+          <div class="name-row">
+            <input id="name-input" type="text" maxlength="12" placeholder="Jugador" />
+            <button type="submit" class="btn">Guardar</button>
+          </div>
+        </form>
+        <div id="records-box" class="records-box"></div>
+        <button id="restart-btn" class="btn">Reiniciar</button>
+        <button id="reset-records-btn" class="link-btn" type="button">Borrar records</button>
       </div>
     </div>
-  </div>
 
-  <script src="game.js"></script>
+    <div id="start-overlay" class="overlay hidden">
+      <div class="overlay-box">
+        <p id="start-title">TETRIS</p>
+        <div id="start-records" class="records-box"></div>
+        <button id="start-btn" class="btn">Jugar</button>
+        <button id="start-reset-btn" class="link-btn" type="button">Borrar records</button>
+      </div>
+    </div>
+
+    <div id="pause-menu" class="overlay hidden">
+      <div class="overlay-box pause-box">
+        <p class="pause-title">PAUSA</p>
+        <ul class="pause-list" id="pause-list">
+          <li><button type="button" class="pause-item" data-action="resume">Reanudar</button></li>
+          <li><button type="button" class="pause-item" data-action="restart">Reiniciar</button></li>
+          <li><button type="button" class="pause-item" data-action="controls">Ver controles</button></li>
+          <li>
+            <button type="button" class="pause-item" data-action="level">
+              Nivel inicial
+              <span class="pause-level"><span data-level="-1">◀</span> <b id="start-level">1</b> <span data-level="1">▶</span></span>
+            </button>
+          </li>
+        </ul>
+        <ul class="pause-controls hidden" id="pause-controls">
+          <li><kbd>←</kbd><kbd>→</kbd> mover</li>
+          <li><kbd>↑</kbd>/<kbd>X</kbd> rotar</li>
+          <li><kbd>↓</kbd> bajar</li>
+          <li><kbd>Space</kbd> caída</li>
+          <li><kbd>C</kbd>/<kbd>Shift</kbd> reservar</li>
+          <li><kbd>E</kbd> habilidad</li>
+          <li><kbd>P</kbd>/<kbd>Esc</kbd> pausa</li>
+          <li><kbd>M</kbd> silencio</li>
+        </ul>
+        <p class="ability-hint">↑↓ elegir · Enter aceptar · ←→ nivel</p>
+      </div>
+    </div>
+
+    <div id="ability-menu" class="overlay hidden">
+      <div class="overlay-box ability-box">
+        <p class="ability-title" id="ability-title">HABILIDAD</p>
+        <ul class="ability-list" id="ability-list"></ul>
+        <p class="ability-hint" id="ability-hint"></p>
+      </div>
+    </div>
+
+  </div>
+  </main>
+
+  <script src="game.js?v=10"></script>
 </body>
 </html>
