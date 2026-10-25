@@ -1,0 +1,59 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, reopened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Número del issue a analizar'
+        required: true
+
+jobs:
+  triage:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    env:
+      ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Triage issue with Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            ISSUE: #${{ env.ISSUE_NUMBER }}
+
+            Eres un asistente de triage de issues para un juego de Tetris en JavaScript
+            (archivos: index.html, game.js, style.css). Responde siempre en español.
+
+            Pasos:
+            1. Lee el issue con `gh issue view ${{ env.ISSUE_NUMBER }} --comments` y lista los
+               labels existentes con `gh label list`.
+            2. Clasifica el issue y aplícale labels con `gh issue edit ${{ env.ISSUE_NUMBER }} --add-label ...`:
+               - Tipo (uno): `bug`, `enhancement`, `question`, `documentation`.
+               - Área (uno o más): `gameplay`, `ui/estilos`, `controles`, `rendimiento`.
+               - Prioridad (una): `priority: high`, `priority: medium`, `priority: low`.
+               - `needs-info` si falta información para reproducir o entender el problema.
+               Si algún label no existe, créalo antes con `gh label create` (con color y descripción breve).
+            3. Revisa el código relevante del repositorio (Read/Grep/Glob) para relacionar el issue
+               con archivos y funciones concretas.
+            4. Publica UN solo comentario con `gh issue comment ${{ env.ISSUE_NUMBER }} --body ...` que incluya:
+               - **Resumen** del issue.
+               - **Clasificación**: labels asignados y por qué.
+               - **Diagnóstico general**: causa probable, archivos/funciones implicadas, pasos sugeridos.
+               - **Información faltante**: preguntas al autor, si aplica.
+
+            Restricciones: no modifiques código, no abras PRs y no cierres el issue.
+          claude_args: |
+            --allowed-tools "Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue edit:*),Bash(gh label list:*),Bash(gh label create:*),Read,Grep,Glob"

@@ -8,47 +8,99 @@
 </head>
 <body>
   <div class="wrapper">
+    <h1 class="title">TETRIS</h1>
+
+    <button id="theme-toggle" class="theme-toggle" type="button" role="switch" aria-checked="false" aria-label="Cambiar a modo claro">
+      <span>Oscuro</span>
+      <span class="switch"></span>
+      <span>Claro</span>
+    </button>
+
+    <div class="game-area">
     <div class="game-container">
-      <canvas id="board" width="300" height="600"></canvas>
+      <aside class="panel panel-left">
+        <label class="powerup-option">
+          <input type="checkbox" id="powerup-toggle" checked />
+          <span>Power-ups</span>
+        </label>
+        <span class="freeze hidden" id="freeze"></span>
+        <span class="combo-count" id="combo"></span>
+        <div class="features">
+          <span class="label">COMBOS</span>
+          <label class="powerup-option"><input type="checkbox" data-feature="combo" checked /><span>Combo</span></label>
+          <label class="powerup-option"><input type="checkbox" data-feature="tspin" checked /><span>T-spin</span></label>
+          <label class="powerup-option"><input type="checkbox" data-feature="b2b" checked /><span>Back-to-Back</span></label>
+          <label class="powerup-option"><input type="checkbox" data-feature="perfect" checked /><span>Perfect Clear</span></label>
+        </div>
+        <button id="mute-btn" class="mute-btn" type="button" aria-pressed="false">🔊 Sonido</button>
+      </aside>
+
+      <div class="board-wrap">
+        <canvas id="board" width="300" height="600"></canvas>
+        <div id="combo-msg" class="combo-msg" aria-live="polite"></div>
+
+        <div id="overlay" class="overlay hidden">
+          <div class="overlay-box">
+            <p id="overlay-title">GAME OVER</p>
+            <p id="overlay-score"></p>
+            <button id="restart-btn">Reiniciar</button>
+          </div>
+        </div>
+      </div>
 
       <aside class="panel">
-        <div class="panel-section">
-          <span class="label">SCORE</span>
-          <span class="value" id="score">0</span>
-        </div>
-        <div class="panel-section">
-          <span class="label">LINES</span>
-          <span class="value" id="lines">0</span>
-        </div>
-        <div class="panel-section">
-          <span class="label">LEVEL</span>
-          <span class="value" id="level">1</span>
+        <div class="panel-top">
+          <div class="stats">
+            <div class="panel-section">
+              <span class="label">SCORE</span>
+              <span class="value" id="score">0</span>
+            </div>
+            <div class="panel-section">
+              <span class="label">LINES</span>
+              <span class="value" id="lines">0</span>
+            </div>
+            <div class="panel-section">
+              <span class="label">LEVEL</span>
+              <span class="value" id="level">1</span>
+            </div>
+          </div>
+
+          <div class="panel-section controls">
+            <span class="label">CONTROLS</span>
+            <ul>
+              <li><kbd>←</kbd><kbd>→</kbd> mover</li>
+              <li><kbd>↑</kbd> rotar</li>
+              <li><kbd>↓</kbd> bajar</li>
+              <li><kbd>Space</kbd> caída</li>
+              <li><kbd>P</kbd> pausa</li>
+            </ul>
+          </div>
         </div>
 
         <div class="panel-section">
           <span class="label">NEXT</span>
           <canvas id="next-canvas" width="120" height="120"></canvas>
+          <span class="next-name" id="next-name"></span>
+          <span class="next-desc" id="next-desc"></span>
         </div>
+      </aside>
 
-        <div class="panel-section controls">
-          <span class="label">CONTROLS</span>
-          <ul>
-            <li><kbd>←</kbd><kbd>→</kbd> mover</li>
-            <li><kbd>↑</kbd> rotar</li>
-            <li><kbd>↓</kbd> bajar</li>
-            <li><kbd>Space</kbd> caída</li>
-            <li><kbd>P</kbd> pausa</li>
-          </ul>
+      <aside class="panel panel-right">
+        <div class="panel-section">
+          <span class="label">PARTIDA ANTERIOR</span>
+          <span class="value" id="last-score">—</span>
+          <span class="last-name" id="last-name"></span>
+        </div>
+        <div class="panel-section">
+          <span class="label">JUGADOR</span>
+          <input type="text" id="player-name" maxlength="12" placeholder="Tu nombre" autocomplete="off">
+        </div>
+        <div class="panel-section">
+          <span class="label">RÉCORD</span>
+          <span class="best-score" id="best-score">—</span>
         </div>
       </aside>
     </div>
-
-    <div id="overlay" class="overlay hidden">
-      <div class="overlay-box">
-        <p id="overlay-title">GAME OVER</p>
-        <p id="overlay-score"></p>
-        <button id="restart-btn">Reiniciar</button>
-      </div>
     </div>
   </div>
 
