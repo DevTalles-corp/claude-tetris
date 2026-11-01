@@ -72,6 +72,17 @@ jobs:
             Escribe todo el texto en español, con rutas y números de línea reales
             (por ejemplo, game.js:42). Si el issue no da información suficiente,
             indícalo en `informacion_faltante` en lugar de suponer.
+
+            Tu texto se publica tal cual en un comentario de GitHub, así que escríbelo
+            en Markdown compatible con GitHub (GFM):
+            - Usa `código en línea` para rutas, funciones, variables y teclas.
+            - Usa bloques de código con triple comilla invertida e indica el lenguaje
+              (por ejemplo, ```js) para fragmentos de varias líneas.
+            - Usa **negritas** para resaltar lo importante.
+            - No uses encabezados (#): el comentario ya tiene sus propias secciones.
+            - Cada elemento de `archivos_afectados`, `plan_de_solucion` e
+              `informacion_faltante` debe ser una sola línea, sin viñetas ni numeración
+              propias: el comentario ya los presenta como lista.
           claude_args: |
             --model claude-opus-5-5
             --max-turns 15
