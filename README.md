@@ -39,6 +39,13 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
   - Pentominós **+**, **U** e **Y**, que aparecen ocasionalmente (~10 % de las piezas).
   - Pieza **single 1×1** como recompensa tras hacer un Tetris (4 líneas a la vez).
   - Pieza **3×3 hueca** como reto cada vez que subes de nivel.
+- **Power-ups**: cada 5 líneas aparece un bloque 1×1 con icono que aplica su efecto donde cae (no se queda en el tablero):
+  - 💣 **Bomba**: destruye el área 3×3 alrededor.
+  - ⚡ **Rayo**: limpia la fila y la columna completas (en cruz).
+  - 🎨 **Tinte**: convierte todos los bloques del color sobre el que cae en **comodines** (arcoíris), que desaparecen al limpiar la siguiente línea.
+  - ⬇ **Gravedad**: compacta los huecos del tablero.
+  - ❄ **Congelar**: detiene la caída automática durante 5 segundos.
+  - Cada bloque destruido por un power-up suma 10 puntos; las filas que borra no cuentan como líneas.
 - **Rotación** con _wall kicks_ básicos (pequeños desplazamientos para que la pieza pueda rotar pegada a la pared).
 - **Soft drop** (bajada acelerada) y **hard drop** (caída instantánea).
 - **Pieza fantasma** (_ghost piece_): muestra dónde aterrizará la pieza actual.
@@ -112,7 +119,7 @@ Aporta el aspecto visual con estética _dark / retro arcade_: fondo oscuro, tipo
 
 Contiene toda la lógica del juego. A grandes rasgos:
 
-- **Modelo del tablero**: una matriz `ROWS × COLS` donde cada celda guarda `0` (vacía) o un índice de color (1–12) que identifica la pieza.
+- **Modelo del tablero**: una matriz `ROWS × COLS` donde cada celda guarda `0` (vacía) o un índice de color (1–18) que identifica la pieza (13–17 son power-ups y 18 es el comodín).
 - **Piezas**: definidas como matrices cuadradas. Para rotar se calcula la transposición + reverso de filas (`rotateCW`).
 - **Detección de colisiones** (`collide`): comprueba que ninguna celda de la pieza salga del tablero ni se solape con bloques ya fijados.
 - **Wall kicks** (`tryRotate`): si la rotación choca, intenta desplazar la pieza ±1 y ±2 columnas antes de descartar el giro.
@@ -177,9 +184,11 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `COLS`         | Columnas del tablero                     | `10`                  |
 | `ROWS`         | Filas del tablero                        | `20`                  |
 | `BLOCK`        | Tamaño en píxeles de cada celda          | `30`                  |
-| `COLORS`       | Paleta de colores por tipo de pieza      | 12 colores            |
+| `COLORS`       | Paleta de colores por tipo de pieza      | 18 colores            |
 | `LINE_SCORES`  | Puntos por 1, 2, 3 o 4 líneas eliminadas | `[0,100,300,500,800]` |
 | `PENTOMINO_CHANCE` | Probabilidad de que salga un pentominó | `0.1`               |
+| `POWERUP_EVERY_LINES` | Cada cuántas líneas aparece un power-up | `5`              |
+| `FREEZE_MS`    | Duración del power-up Congelar en ms     | `5000`                |
 | `dropInterval` | Velocidad inicial de caída en ms         | `1000`                |
 
 > Si cambias `COLS`, `ROWS` o `BLOCK`, recuerda ajustar también `width` y `height` del `<canvas id="board">` en `index.html` para que coincida (`COLS × BLOCK` × `ROWS × BLOCK`).

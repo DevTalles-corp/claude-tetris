@@ -18,6 +18,12 @@ const COLORS = [
   '#dce775', // Y - lime
   '#a1887f', // single - brown
   '#90a4ae', // hueca 3x3 - blue grey
+  '#ef5350', // power-up bomba
+  '#fdd835', // power-up rayo
+  '#ab47bc', // power-up tinte
+  '#5c6bc0', // power-up gravedad
+  '#81d4fa', // power-up congelar
+  '#ffffff', // comodín (se dibuja en arcoíris, ver drawBlock)
 ];
 
 const PIECES = [
@@ -34,6 +40,12 @@ const PIECES = [
   [[0,0,0,0],[10,10,10,10],[0,10,0,0],[0,0,0,0]], // Y
   [[11]],                                      // single (recompensa tras un Tetris)
   [[12,12,12],[12,0,12],[12,12,12]],          // 3x3 hueca (reto al subir de nivel)
+  [[13]],                                      // power-up bomba
+  [[14]],                                      // power-up rayo
+  [[15]],                                      // power-up tinte
+  [[16]],                                      // power-up gravedad
+  [[17]],                                      // power-up congelar
+  null,                                        // comodín: solo valor de celda, nunca pieza
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
@@ -42,6 +54,13 @@ const STANDARD_TYPES = 7;          // índices 1–7
 const PENTOMINO_TYPES = [8, 9, 10];
 const PENTOMINO_CHANCE = 0.1;
 const SINGLE = 11, HOLLOW = 12;
+
+const BOMB = 13, BOLT = 14, DYE = 15, GRAVITY = 16, FREEZE = 17, WILD = 18;
+const POWERUP_TYPES = [BOMB, BOLT, DYE, GRAVITY, FREEZE];
+const POWERUP_ICONS = { [BOMB]: '💣', [BOLT]: '⚡', [DYE]: '🎨', [GRAVITY]: '⬇', [FREEZE]: '❄' };
+const POWERUP_EVERY_LINES = 5;
+const FREEZE_MS = 5000;
+const POWERUP_BLOCK_SCORE = 10;    // puntos por bloque destruido por un power-up
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -58,7 +77,7 @@ const themeToggle = document.getElementById('theme-toggle');
 
 let gridColor = '#22222e';
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, pieceQueue;
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, pieceQueue, freezeLeft;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -117,6 +136,75 @@ function merge() {
         board[current.y + r][current.x + c] = current.shape[r][c];
 }
 
+// Quita de cada columna las celdas que cumplan shouldRemove y deja caer lo de encima.
+function compactColumns(shouldRemove) {
+  let removed = 0;
+  for (let c = 0; c < COLS; c++) {
+    const kept = [];
+    for (let r = 0; r < ROWS; r++) {
+      if (shouldRemove(board[r][c])) removed++;
+      else kept.push(board[r][c]);
+    }
+    const pad = ROWS - kept.length;
+    for (let r = 0; r < ROWS; r++) board[r][c] = r < pad ? 0 : kept[r - pad];
+  }
+  return removed;
+}
+
+function clearCell(r, c) {
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS || !board[r][c]) return 0;
+  board[r][c] = 0;
+  return 1;
+}
+
+function mostCommonColor() {
+  const counts = {};
+  let best = 0;
+  for (const row of board)
+    for (const v of row)
+      if (v && v !== WILD) {
+        counts[v] = (counts[v] || 0) + 1;
+        if (!best || counts[v] > counts[best]) best = v;
+      }
+  return best;
+}
+
+// Aplica el efecto del power-up en la celda donde se fijó. Las filas que borra
+// un efecto no cuentan como líneas (no suben nivel ni generan más power-ups).
+function applyPowerUp(type, cx, cy) {
+  let destroyed = 0;
+  switch (type) {
+    case BOMB:
+      for (let r = cy - 1; r <= cy + 1; r++)
+        for (let c = cx - 1; c <= cx + 1; c++)
+          destroyed += clearCell(r, c);
+      break;
+    case BOLT:
+      for (let r = 0; r < ROWS; r++) if (r !== cy) destroyed += clearCell(r, cx);
+      destroyed += board[cy].filter(v => v).length;
+      board.splice(cy, 1);
+      board.unshift(new Array(COLS).fill(0));
+      break;
+    case DYE: {
+      const below = cy + 1 < ROWS ? board[cy + 1][cx] : 0;
+      const target = below && below !== WILD ? below : mostCommonColor();
+      if (target)
+        for (const row of board)
+          for (let c = 0; c < COLS; c++)
+            if (row[c] === target) row[c] = WILD;
+      break;
+    }
+    case GRAVITY:
+      compactColumns(v => v === 0);
+      break;
+    case FREEZE:
+      freezeLeft = FREEZE_MS;
+      break;
+  }
+  score += destroyed * POWERUP_BLOCK_SCORE;
+  updateHUD();
+}
+
 function clearLines() {
   let cleared = 0;
   for (let r = ROWS - 1; r >= 0; r--) {
@@ -129,14 +217,22 @@ function clearLines() {
   }
   if (cleared) {
     const prevLevel = level;
+    const prevLines = lines;
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
     level = Math.floor(lines / 10) + 1;
     // Piezas forzadas: se juegan después de la que ya se ve en el preview.
     if (cleared === 4) pieceQueue.push(makePiece(SINGLE));
     if (level > prevLevel) pieceQueue.push(makePiece(HOLLOW));
+    if (Math.floor(lines / POWERUP_EVERY_LINES) > Math.floor(prevLines / POWERUP_EVERY_LINES))
+      pieceQueue.push(makePiece(POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)]));
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    // Los comodines desaparecen al limpiar cualquier línea; al compactar
+    // pueden completarse filas nuevas, así que se vuelve a comprobar.
+    const wilds = compactColumns(v => v === WILD);
+    score += wilds * POWERUP_BLOCK_SCORE;
     updateHUD();
+    if (wilds) clearLines();
   }
 }
 
@@ -164,7 +260,9 @@ function softDrop() {
 }
 
 function lockPiece() {
-  merge();
+  // Un power-up no se queda en el tablero: solo aplica su efecto.
+  if (POWERUP_TYPES.includes(current.type)) applyPowerUp(current.type, current.x, current.y);
+  else merge();
   clearLines();
   spawn();
 }
@@ -186,13 +284,23 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
+  const color = colorIndex === WILD
+    ? `hsl(${(performance.now() / 8 + (x + y) * 30) % 360}, 75%, 60%)`
+    : COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
   context.fillStyle = color;
   context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
   // highlight
   context.fillStyle = 'rgba(255,255,255,0.12)';
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  const icon = POWERUP_ICONS[colorIndex];
+  if (icon) {
+    context.fillStyle = '#ffffff';
+    context.font = `${Math.floor(size * 0.6)}px sans-serif`;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(icon, x * size + size / 2, y * size + size / 2 + 1);
+  }
   context.globalAlpha = 1;
 }
 
@@ -233,6 +341,17 @@ function draw() {
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       drawBlock(ctx, current.x + c, current.y + r, current.shape[r][c], BLOCK);
+
+  // congelar: velo azul y cuenta atrás
+  if (freezeLeft > 0) {
+    ctx.fillStyle = 'rgba(129, 212, 250, 0.15)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#4fc3f7';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`❄ ${Math.ceil(freezeLeft / 1000)} s`, canvas.width / 2, 8);
+  }
 }
 
 function drawNext() {
@@ -271,7 +390,9 @@ function togglePause() {
 function loop(ts) {
   const dt = ts - lastTime;
   lastTime = ts;
-  dropAccum += dt;
+  // Congelar detiene la gravedad; la pausa no lo consume (togglePause reinicia lastTime).
+  if (freezeLeft > 0) freezeLeft = Math.max(0, freezeLeft - dt);
+  else dropAccum += dt;
   if (dropAccum >= dropInterval) {
     dropAccum = 0;
     if (!collide(current.shape, current.x, current.y + 1)) {
@@ -295,6 +416,7 @@ function init() {
   dropInterval = 1000;
   dropAccum = 0;
   pieceQueue = [];
+  freezeLeft = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
