@@ -256,7 +256,8 @@ function loop(ts) {
     }
   }
   draw();
-  animId = requestAnimationFrame(loop);
+  // endGame() no puede cancelar el frame en curso: no reprogramar tras game over.
+  if (!gameOver) animId = requestAnimationFrame(loop);
 }
 
 function init() {
