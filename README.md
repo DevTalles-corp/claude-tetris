@@ -35,6 +35,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 
 - Tablero de **10 × 20** celdas.
 - Las **7 piezas estándar** (I, O, T, S, Z, J, L) con colores diferenciados.
+- **Piezas especiales** que aparecen de vez en cuando: pentominós **`+`**, **`U`** e **`Y`** (5 bloques), un **cuadrado hueco 3×3** muy poco frecuente y un **bloque 1×1** como recompensa después de cada Tetris (ver [Piezas especiales](#piezas-especiales)).
 - **Rotación** con _wall kicks_ básicos (pequeños desplazamientos para que la pieza pueda rotar pegada a la pared).
 - **Soft drop** (bajada acelerada) y **hard drop** (caída instantánea).
 - **Pieza fantasma** (_ghost piece_): muestra dónde aterrizará la pieza actual.
@@ -108,7 +109,7 @@ Aporta el aspecto visual con estética _dark / retro arcade_: fondo oscuro, tipo
 
 Contiene toda la lógica del juego. A grandes rasgos:
 
-- **Modelo del tablero**: una matriz `ROWS × COLS` donde cada celda guarda `0` (vacía) o un índice de color (1–7) que identifica la pieza.
+- **Modelo del tablero**: una matriz `ROWS × COLS` donde cada celda guarda `0` (vacía) o un índice de color (1–12) que identifica la pieza: 1–7 las clásicas y 8–12 las especiales.
 - **Piezas**: definidas como matrices cuadradas. Para rotar se calcula la transposición + reverso de filas (`rotateCW`).
 - **Detección de colisiones** (`collide`): comprueba que ninguna celda de la pieza salga del tablero ni se solape con bloques ya fijados.
 - **Wall kicks** (`tryRotate`): si la rotación choca, intenta desplazar la pieza ±1 y ±2 columnas antes de descartar el giro.
@@ -137,6 +138,18 @@ init()
 ```
 
 Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara `endGame()` y se muestra el overlay de **Game Over**.
+
+### Piezas especiales
+
+| Pieza | Forma | Cuándo aparece |
+| --- | --- | --- |
+| `+` (cruz) | `.■.` / `■■■` / `.■.` | Pentominó: 8 % en total entre `+`, `U` e `Y` |
+| `U` | `■.■` / `■■■` | Pentominó |
+| `Y` | `■` / `■■` / `■` / `■` | Pentominó |
+| Cuadrado hueco 3×3 | `■■■` / `■.■` / `■■■` | 1 % |
+| Bloque 1×1 | `■` | Siempre como siguiente pieza después de un Tetris |
+
+`randomPiece()` delega en `randomType()`: primero entrega el 1×1 si hay recompensa pendiente (`bonusSingle`), luego decide si sale una especial y, si no, una clásica. Después de una pieza especial siempre sale una clásica (`lastSpecial`), para evitar secuencias injustas; la única excepción es la recompensa 1×1. Todas usan la misma lógica que las clásicas para moverse, rotar, chocar, fijarse y completar líneas.
 
 ---
 
@@ -173,9 +186,11 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `COLS`         | Columnas del tablero                     | `10`                  |
 | `ROWS`         | Filas del tablero                        | `20`                  |
 | `BLOCK`        | Tamaño en píxeles de cada celda          | `30`                  |
-| `COLORS`       | Paleta de colores por tipo de pieza      | 7 colores             |
+| `COLORS`       | Paleta de colores por tipo de pieza      | 12 colores (7 + 5 especiales) |
 | `LINE_SCORES`  | Puntos por 1, 2, 3 o 4 líneas eliminadas | `[0,100,300,500,800]` |
 | `dropInterval` | Velocidad inicial de caída en ms         | `1000`                |
+| `PENTOMINO_CHANCE` | Probabilidad de que la pieza generada sea un pentominó | `0.08` |
+| `HOLLOW_CHANCE` | Probabilidad del cuadrado hueco 3×3      | `0.01`                |
 
 > Si cambias `COLS`, `ROWS` o `BLOCK`, recuerda ajustar también `width` y `height` del `<canvas id="board">` en `index.html` para que coincida (`COLS × BLOCK` × `ROWS × BLOCK`).
 
