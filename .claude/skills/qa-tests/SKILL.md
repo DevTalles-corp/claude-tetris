@@ -22,7 +22,8 @@ En ningún caso se cambia `main` directamente.
 - Cada prueba debe partir de un estado conocido. La página sigue la preferencia del sistema, así que `playwright.config.js` fija `colorScheme: 'dark'`; no quitarlo.
 - La evidencia siempre queda en `tests/evidencia/issue-N/AAAA-MM-DD_HH-MM-SS/`, donde N es el número del issue y la fecha y hora es la de la ejecución. Cada ejecución crea su propia carpeta; no sobrescribir ejecuciones anteriores.
 - Ejecutar con `ISSUE=N npm test`. Sin `ISSUE`, la evidencia cae en `sin-issue/` y no debe usarse en un PR.
-- Cada escenario captura su pantalla con un nombre que diga qué verifica (`carga-tablero.png`, `modo-claro.png`, etc.).
+- Cada escenario captura su pantalla con un nombre que diga qué verifica. El nombre va **sin extensión**: `capturar(page, 'modo-claro')` guarda `modo-claro.png`. Si se escribe `'modo-claro.png'`, queda `modo-claro.png.png`.
+- El bucle del juego sigue corriendo durante la prueba (también tras un GAME OVER). Si una prueba cambia el estado y después mide algo del canvas (color de un píxel, posición de una pieza), hazlo en **un mismo `page.evaluate`**: entre dos llamadas, la gravedad puede mover la pieza y la prueba fallaría sin un error real.
 - No modificar `index.html`, `game.js` ni `style.css` para que una prueba pase. Si una prueba falla, reportar la causa.
 
 ## Referencia
