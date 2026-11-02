@@ -93,7 +93,7 @@ jobs:
           for v in "$CARPETA"*.webm; do
             g="${v%.webm}.gif"
             ffmpeg -loglevel error -y -i "$v" \
-              -vf "fps=6,scale=320:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse" "$g"
+              -vf "fps=6,scale=480:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse" "$g"
             echo "GIF: $g ($(du -h "$g" | cut -f1))"
           done
 

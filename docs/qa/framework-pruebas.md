@@ -4,7 +4,9 @@
 
 **Dónde está:**
 - `tests/issue-N.spec.js`: las pruebas, un archivo por issue. Las del modo claro están en `tests/issue-3.spec.js`.
-- `tests/helpers/evidencia.js`: la función `capturar`, compartida por todas las pruebas.
+- `tests/helpers/evidencia.js`: `capturar` y `guardarVideo`, compartidas por todas las pruebas.
+- `tests/helpers/semilla.js`: `fijarSemilla` hace que las piezas salgan siempre en el mismo orden, sin tocar el juego.
+- `tests/helpers/bot-tetris.js`: el bot que juega con el teclado (`jugar`).
 - `tests/evidencia/`: las capturas por issue y fecha.
 - `playwright.config.js`: servidor local en el puerto 8000 y tema oscuro fijo.
 

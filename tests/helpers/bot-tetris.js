@@ -106,4 +106,32 @@ function siguienteTecla({ tablero, forma, x, atascado }) {
   return 'Space';
 }
 
-module.exports = { siguienteTecla, mejorJugada, rotarCW };
+// Juega con el teclado hasta que `hasta(estado)` sea verdadero o haya GAME OVER.
+// page.evaluate solo lee el estado; las jugadas se hacen con teclas, como una persona.
+// Devuelve el último estado leído.
+async function jugar(page, hasta) {
+  let atascado = 0;
+  let anterior = '';
+  for (;;) {
+    const estado = await page.evaluate(() => ({
+      tablero: board.map(f => [...f]),
+      forma: current.shape.map(f => [...f]),
+      x: current.x,
+      y: current.y,
+      piezas: pieces,
+      lineas: lines,
+      nivel: level,
+      gameOver,
+    }));
+    if (estado.gameOver || hasta(estado)) return estado;
+
+    // Si la tecla anterior no cambió la pieza, cuenta como atasco (ver siguienteTecla).
+    const clave = `${estado.piezas}|${estado.forma.join()}|${estado.x}|${estado.y}`;
+    atascado = clave === anterior ? atascado + 1 : 0;
+    anterior = clave;
+
+    await page.keyboard.press(siguienteTecla({ tablero: estado.tablero, forma: estado.forma, x: estado.x, atascado }));
+  }
+}
+
+module.exports = { siguienteTecla, mejorJugada, rotarCW, jugar };

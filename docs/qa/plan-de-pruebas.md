@@ -34,6 +34,8 @@ Verificar que cada cambio de Tetris funciona en el navegador antes de llegar a `
 | TC-09 | Suma al fijar una pieza | Cada pieza fijada en el tablero (Espacio) suma 1: `#pieces` pasa de 0 a 1 y de 1 a 2 (issue #18) | `contador-suma-al-fijar.png` |
 | TC-10 | Reinicio a 0 | Tras fijar 3 piezas, pausar y pulsar Reiniciar devuelve `#pieces` a `0` (issue #18) | `contador-reinicia-en-cero.png` |
 | TC-11 | Partida automática hasta el nivel 4 | Un bot con el teclado juega desde el inicio hasta 30 líneas (`#level` = 4) sin GAME OVER; el video de la partida queda como evidencia (issue #26) | `inicio-partida.png`, `nivel-4-sin-game-over.png`, `partida-nivel-4.webm` (video) |
+| TC-12 | Partida reproducible | Con la semilla 26, dos partidas sacan las mismas 10 primeras piezas (issue #31) | `misma-secuencia-de-piezas.png` |
+| TC-13 | Récord del bot | Con la semilla 26, el bot juega hasta GAME OVER o 90 s y logra al menos 30 líneas. Solo corre con `ISSUE=31`: es una medición, no regresión (issue #31) | `record-final.png`, `record-panel.png` |
 
 Cada requerimiento agrega sus propios casos con un ID nuevo en `tests/issue-N.spec.js`.
 
