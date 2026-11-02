@@ -20,6 +20,7 @@ Changes can only be verified by running the game in a browser.
 - **Locking sequence:** gravity (`loop`), `softDrop`, and `hardDrop` all end in `lockPiece()`, which runs `merge()` → `clearLines()` → `spawn()`. Game over is detected only in `spawn()`, when a new piece collides immediately.
 - **Rendering:** `draw()` repaints the whole board canvas every frame from state, so input handlers only mutate state. The next-piece preview is different: `drawNext()` runs only from `spawn()`.
 - **HUD:** DOM counters update only through `updateHUD()`. `hardDrop()` doesn't call it and relies on the `keydown` handler calling it after every action.
+- **Pause menu:** `togglePause()` (P/Escape) shows `#pause-menu`, separate from the game-over `#overlay`. While paused the `keydown` handler ignores every game key; on close, `closePauseMenu()` copies still-held keys into `blockedKeys`, whose auto-repeat is ignored until their `keyup`. `startLevel` is the selector preference (`localStorage` `tetris-start-level`); `init()` copies it into `gameStartLevel`, from which `clearLines()` counts levels (`gameStartLevel + floor(lines / 10)`); both use `speedForLevel()` for `dropInterval`.
 - **Animation loop:** `loop()` always schedules its next frame at the end, so a `cancelAnimationFrame` issued from inside a `loop()` call does not stop it.
 
 ## Conventions
