@@ -13,6 +13,11 @@ const COLORS = [
   '#e57373', // Z - red
   '#90caf9', // J - pale blue
   '#ffb74d', // L - orange
+  '#f06292', // + - pink (special)
+  '#4db6ac', // U - teal (special)
+  '#d4e157', // Y - lime (special)
+  '#90a4ae', // single - blue grey (Tetris reward)
+  '#a1887f', // hollow square - brown (special)
 ];
 
 const PIECES = [
@@ -24,9 +29,21 @@ const PIECES = [
   [[5,5,0],[0,5,5],[0,0,0]],                  // Z
   [[6,0,0],[6,6,6],[0,0,0]],                  // J
   [[0,0,7],[7,7,7],[0,0,0]],                  // L
+  [[0,8,0],[8,8,8],[0,8,0]],                  // + pentomino
+  [[9,0,9],[9,9,9],[0,0,0]],                  // U pentomino
+  [[0,10,0,0],[0,10,10,0],[0,10,0,0],[0,10,0,0]], // Y pentomino
+  [[11]],                                      // single (1x1)
+  [[12,12,12],[12,0,12],[12,12,12]],           // hollow square (center stays empty)
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
+
+// Special pieces (indices into PIECES). The 7 classic pieces stay the main set.
+const PENTOMINOES = [8, 9, 10];  // +, U, Y
+const SINGLE = 11;               // always the next piece after a Tetris
+const HOLLOW = 12;               // hollow 3x3 square
+const PENTOMINO_CHANCE = 0.08;   // chance that a generated piece is a pentomino
+const HOLLOW_CHANCE = 0.01;      // chance that a generated piece is the hollow square
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -41,14 +58,31 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 
-let board, current, next, score, lines, level, pieces, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let board, current, next, score, lines, level, pieces, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bonusSingle, lastSpecial;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
 }
 
+// Picks the next piece type: the Tetris reward first, then an occasional special piece,
+// otherwise a classic one. Two special pieces never come in a row (except the reward).
+function randomType() {
+  if (bonusSingle) {
+    bonusSingle = false;
+    return SINGLE;
+  }
+  if (!lastSpecial) {
+    const r = Math.random();
+    if (r < HOLLOW_CHANCE) return HOLLOW;
+    if (r < HOLLOW_CHANCE + PENTOMINO_CHANCE)
+      return PENTOMINOES[Math.floor(Math.random() * PENTOMINOES.length)];
+  }
+  return Math.floor(Math.random() * 7) + 1;
+}
+
 function randomPiece() {
-  const type = Math.floor(Math.random() * 7) + 1;
+  const type = randomType();
+  lastSpecial = type > 7;
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
 }
@@ -107,6 +141,7 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
+    if (cleared === 4) bonusSingle = true; // reward: the next generated piece is the 1x1 block
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     updateHUD();
@@ -272,6 +307,8 @@ function init() {
   gameOver = false;
   dropInterval = 1000;
   dropAccum = 0;
+  bonusSingle = false;
+  lastSpecial = false;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
