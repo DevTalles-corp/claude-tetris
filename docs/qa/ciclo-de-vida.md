@@ -13,7 +13,9 @@ Algo falla en `qa`. El issue sigue abierto hasta que las pruebas pasan.
 
 ```mermaid
 flowchart LR
-  A[Issue nuevo] --> B[Claude implementa en su rama]
+  A[Issue nuevo] --> T["Claude diagnostica y etiqueta"]
+  T --> R["Revisión humana del diagnóstico"]
+  R --> B[Claude implementa en su rama]
   B --> C[PR a qa]
   C --> D[Workflow QA]
   D -->|Pasan| E[Aprobación manual]

@@ -1,6 +1,6 @@
 # Fase 1 · Implementación y decisión de evidencia
 
-**Qué pasa:** se crea el issue con la plantilla **Requerimiento**. Como la plantilla menciona a `@claude`, Claude empieza en cuanto se abre el issue.
+**Qué pasa:** después del [diagnóstico de la fase 0](fase-0-diagnostico.md), una persona revisa el issue y pide la implementación comentando con la mención a Claude. Claude ya no empieza solo al crear el issue.
 
 **Quién:** Claude, siguiendo la skill `qa-tests`.
 
@@ -14,7 +14,7 @@
 
 ```mermaid
 flowchart TD
-  A["Issue con la plantilla Requerimiento"] --> B["Claude implementa en claude/issue-N"]
+  A["Pedido a Claude en un comentario"] --> B["Claude implementa en claude/issue-N"]
   B --> C{"¿Se ve o se usa en el navegador?"}
   C -->|Sí| D["Crea tests/issue-N.spec.js"]
   C -->|No| E["Verificación LLM en verificacion-llm.md"]
