@@ -21,7 +21,11 @@ El workflow crea las de área y prioridad si no existen. Solo agrega etiquetas: 
 4. Propuesta de solución
 5. Riesgos
 
+Claude responde con piezas cortas: una o dos frases para el diagnóstico y la causa, y listas breves para el resto. El workflow arma el Markdown con un formato fijo (tabla de etiquetas, tabla de archivos, pasos numerados y viñetas) y recorta lo que se extienda: máximo 4 archivos, 5 pasos y 3 riesgos.
+
 Hay un solo comentario por issue: si se edita el issue, se actualiza en lugar de crear otro.
+
+![Ejemplo de diagnóstico](../image/diagnostico-ejemplo.png)
 
 ```mermaid
 flowchart TD

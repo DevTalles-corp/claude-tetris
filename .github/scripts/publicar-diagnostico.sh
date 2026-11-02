@@ -2,44 +2,63 @@
 # Aplica las etiquetas y publica (o actualiza) el diagnóstico de Claude en un issue.
 # Lo usa .github/workflows/claude-issue-triage.yml.
 #
+# Claude devuelve piezas cortas (JSON); este script arma el Markdown con un formato fijo
+# y recorta lo que se extienda, para que el comentario sea breve y fácil de leer.
+#
 # Variables: RESULTADO (JSON de Claude), NUMERO, REPO, MODELO, GH_TOKEN.
 # Con SECO=1 solo imprime las etiquetas y el comentario, sin llamar a GitHub (para probar en local).
 set -euo pipefail
 
 MARCADOR='<!-- diagnostico-claude -->'
 
-# Etiquetas: tipo, áreas y prioridad, en ese orden, sin vacíos ni repetidas
-ETIQUETAS=$(jq -r '([.tipo] + (.areas // []) + [.prioridad]) | map(select(. != null and . != ""))
-  | reduce .[] as $e ([]; if index([$e]) then . else . + [$e] end) | join(",")' <<< "$RESULTADO")
+# Funciones jq comunes: texto en una línea, recortado, y seguro dentro de una tabla
+JQ_DEFS='
+def limpio: tostring | gsub("[\\r\\n\\t]+"; " ") | gsub(" {2,}"; " ") | ltrimstr(" ") | rtrimstr(" ");
+def corto($n): limpio | if length > $n then .[0:($n - 1)] + "…" else . end;
+def celda($n): corto($n) | gsub("\\|"; "\\|");
+def vacio: if (. | limpio) == "" then "_Sin información._" else . end;
+'
+q() { jq -r "$JQ_DEFS $1" <<< "$RESULTADO"; }
 
-seccion() {
-  jq -r --arg k "$1" '.[$k] // "" | if (. | gsub("\\s"; "")) == "" then "_Sin información._" else . end' <<< "$RESULTADO"
-}
+# Etiquetas: tipo, áreas y prioridad, en ese orden, sin vacíos ni repetidas
+ETIQUETAS=$(q '([.tipo] + (.areas // []) + [.prioridad]) | map(select(. != null and . != ""))
+  | reduce .[] as $e ([]; if index([$e]) then . else . + [$e] end) | join(",")')
 
 {
   echo "$MARCADOR"
-  echo "### 🩺 Diagnóstico de Claude"
-  echo "**Etiquetas:** ${ETIQUETAS//,/ · }"
+  echo "## 🩺 Diagnóstico de Claude"
   echo
-  echo "#### Diagnóstico"
-  seccion diagnostico
+  echo "| Tipo | Área | Prioridad |"
+  echo "|---|---|---|"
+  q '"| `\(.tipo)` | \((.areas // []) | map("`\(.)`") | join(" ")) | \(
+      {"prioridad:alta":"🔴 Alta","prioridad:media":"🟠 Media","prioridad:baja":"🟢 Baja"}[.prioridad] // .prioridad) |"'
   echo
-  echo "#### Área afectada"
-  seccion area_afectada
+  echo "### 🔍 Diagnóstico"
+  q '.diagnostico | corto(300) | vacio'
   echo
-  echo "#### Causa raíz"
-  seccion causa_raiz
+  echo "### 📂 Área afectada"
+  if [ "$(q '(.area_afectada // []) | length')" -gt 0 ]; then
+    echo "| Archivo | Qué hay ahí |"
+    echo "|---|---|"
+    q '(.area_afectada // [])[0:4][] | "| `\(.archivo | celda(60) | gsub("`"; ""))` | \(.detalle | celda(140)) |"'
+  else
+    echo "_Sin información._"
+  fi
   echo
-  echo "#### Propuesta de solución"
-  seccion propuesta_solucion
+  echo "### 🧩 Causa raíz"
+  q '.causa_raiz | corto(300) | vacio'
   echo
-  echo "#### Riesgos"
-  seccion riesgos
+  echo "### 🛠️ Propuesta de solución"
+  q 'if ((.propuesta_solucion // []) | length) == 0 then "_Sin información._"
+     else (.propuesta_solucion[0:5] | to_entries[] | "\(.key + 1). \(.value | corto(160))") end'
+  echo
+  echo "### ⚠️ Riesgos"
+  q 'if ((.riesgos // []) | length) == 0 then "_Sin información._"
+     else (.riesgos[0:3][] | "- \(corto(160))") end'
   echo
   echo "---"
-  echo "<sub>Modelo: \`$MODELO\` · $(date -u '+%Y-%m-%d %H:%M UTC') · Se actualiza al editar el título o la descripción del issue.</sub>"
-  echo
-  echo "<sub>Para implementar, comenta en este issue mencionando a Claude (arroba seguida de claude, todo junto) y pide que siga la skill \`qa-tests\`.</sub>"
+  echo "<sub>🤖 Modelo \`$MODELO\` · $(date -u '+%Y-%m-%d %H:%M UTC') · Se actualiza al editar el título o la descripción.<br>"
+  echo "Para implementar, comenta mencionando a Claude (arroba seguida de claude, todo junto) y pide que siga la skill \`qa-tests\`.</sub>"
 } > diagnostico.md
 
 # Un comentario de un bot con la mención literal dispararía claude.yml: se quita la arroba
