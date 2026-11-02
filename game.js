@@ -14,6 +14,7 @@ const COLORS = [
   '#90caf9', // J - pale blue
   '#ffb74d', // L - orange
   '#a1887f', // N - tuerca (nut)
+  '#ff5252', // B - bomba (nunca se guarda en el tablero)
 ];
 
 const PIECES = [
@@ -26,9 +27,15 @@ const PIECES = [
   [[6,0,0],[6,6,6],[0,0,0]],                  // J
   [[0,0,7],[7,7,7],[0,0,0]],                  // L
   [[8,8,8],[8,0,8],[8,8,8]],                  // N (tuerca)
+  [[9]],                                       // B (bomba)
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
+
+const BOMB = 9;              // tipo de la pieza bomba; randomPiece() nunca la genera
+const BOMB_EVERY = 5;        // cada cuántas líneas se gana una bomba
+const BOMB_RADIUS = 1;       // 1 => área de 3x3 centrada donde cae la bomba
+const BOMB_BLOCK_SCORE = 10; // puntos por bloque destruido (× nivel)
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -47,6 +54,7 @@ const THEME_KEY = 'tetris-theme';
 let theme = { grid: '#22222e', highlight: 'rgba(255,255,255,0.12)', edge: 'transparent', ghostAlpha: 0.2 };
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let nextBombAt, pendingBombs;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -56,6 +64,27 @@ function randomPiece() {
   const type = Math.floor(Math.random() * 8) + 1;
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
+}
+
+function bombPiece() {
+  const shape = PIECES[BOMB].map(row => [...row]);
+  return { type: BOMB, shape, x: Math.floor(COLS / 2), y: 0 };
+}
+
+// Destruye los bloques fijados en el área (2·BOMB_RADIUS+1)² centrada en la bomba.
+// No aplica gravedad: los bloques de arriba quedan flotando.
+function explode() {
+  let destroyed = 0;
+  for (let r = current.y - BOMB_RADIUS; r <= current.y + BOMB_RADIUS; r++) {
+    if (r < 0 || r >= ROWS) continue;
+    for (let c = current.x - BOMB_RADIUS; c <= current.x + BOMB_RADIUS; c++) {
+      if (c < 0 || c >= COLS || !board[r][c]) continue;
+      board[r][c] = 0;
+      destroyed++;
+    }
+  }
+  score += destroyed * BOMB_BLOCK_SCORE * level;
+  updateHUD();
 }
 
 function collide(shape, ox, oy) {
@@ -114,6 +143,10 @@ function clearLines() {
     score += (LINE_SCORES[cleared] || 0) * level;
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    while (lines >= nextBombAt) {
+      pendingBombs++;
+      nextBombAt += BOMB_EVERY;
+    }
     updateHUD();
   }
 }
@@ -142,14 +175,23 @@ function softDrop() {
 }
 
 function lockPiece() {
-  merge();
-  clearLines();
+  if (current.type === BOMB) {
+    explode();
+  } else {
+    merge();
+    clearLines();
+  }
   spawn();
 }
 
 function spawn() {
   current = next;
-  next = randomPiece();
+  if (pendingBombs > 0) {
+    pendingBombs--;
+    next = bombPiece();
+  } else {
+    next = randomPiece();
+  }
   if (collide(current.shape, current.x, current.y)) {
     endGame();
   }
@@ -162,8 +204,42 @@ function updateHUD() {
   levelEl.textContent = level;
 }
 
+function drawBomb(context, x, y, size, alpha) {
+  const cx = (x + 0.5) * size;
+  const cy = (y + 0.56) * size;
+  const rad = size * 0.34;
+  context.globalAlpha = alpha ?? 1;
+  // mecha
+  context.strokeStyle = '#8d6e63';
+  context.lineWidth = Math.max(1.5, size * 0.07);
+  context.beginPath();
+  context.moveTo(cx + rad * 0.5, cy - rad * 0.8);
+  context.quadraticCurveTo(cx + rad * 0.9, cy - rad * 1.4, cx + rad * 1.2, cy - rad * 1.25);
+  context.stroke();
+  // chispa
+  context.fillStyle = '#ffd54f';
+  context.beginPath();
+  context.arc(cx + rad * 1.2, cy - rad * 1.25, size * 0.08, 0, Math.PI * 2);
+  context.fill();
+  // cuerpo
+  context.fillStyle = COLORS[BOMB];
+  context.beginPath();
+  context.arc(cx, cy, rad, 0, Math.PI * 2);
+  context.fill();
+  context.strokeStyle = theme.edge;
+  context.lineWidth = 1;
+  context.stroke();
+  // brillo
+  context.fillStyle = theme.highlight;
+  context.beginPath();
+  context.arc(cx - rad * 0.35, cy - rad * 0.35, rad * 0.3, 0, Math.PI * 2);
+  context.fill();
+  context.globalAlpha = 1;
+}
+
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
+  if (colorIndex === BOMB) return drawBomb(context, x, y, size, alpha);
   const color = COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
   context.fillStyle = color;
@@ -205,6 +281,17 @@ function draw() {
 
   // ghost
   const gy = ghostY();
+  if (current.type === BOMB) {
+    // área de explosión donde caerá la bomba
+    const x0 = Math.max(0, current.x - BOMB_RADIUS);
+    const y0 = Math.max(0, gy - BOMB_RADIUS);
+    const x1 = Math.min(COLS - 1, current.x + BOMB_RADIUS);
+    const y1 = Math.min(ROWS - 1, gy + BOMB_RADIUS);
+    ctx.globalAlpha = theme.ghostAlpha;
+    ctx.fillStyle = COLORS[BOMB];
+    ctx.fillRect(x0 * BLOCK, y0 * BLOCK, (x1 - x0 + 1) * BLOCK, (y1 - y0 + 1) * BLOCK);
+    ctx.globalAlpha = 1;
+  }
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       if (current.shape[r][c])
@@ -220,8 +307,10 @@ function drawNext() {
   const NB = 30;
   nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
   const shape = next.shape;
-  const offX = Math.floor((4 - shape[0].length) / 2);
-  const offY = Math.floor((4 - shape.length) / 2);
+  // la bomba (1x1) se centra exacto; el resto conserva su alineación
+  const center = next.type === BOMB ? n => (4 - n) / 2 : n => Math.floor((4 - n) / 2);
+  const offX = center(shape[0].length);
+  const offY = center(shape.length);
   for (let r = 0; r < shape.length; r++)
     for (let c = 0; c < shape[r].length; c++)
       drawBlock(nextCtx, offX + c, offY + r, shape[r][c], NB);
@@ -294,6 +383,8 @@ function init() {
   gameOver = false;
   dropInterval = 1000;
   dropAccum = 0;
+  nextBombAt = BOMB_EVERY;
+  pendingBombs = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
