@@ -179,8 +179,12 @@ test('frecuencias: hueco cerca del 1 %, pentominós cerca del 8 % y nunca dos es
 
 test('una pieza especial que no cabe al aparecer termina la partida', async ({ page }) => {
   const r = await page.evaluate(() => {
+    // Situación realista: una torre de piezas llega al techo en el centro, donde aparecen
+    // las piezas. Las filas no se completan (a los lados hay huecos), así que no se eliminan.
     board = createBoard();
-    for (let f = 0; f < 3; f++) for (let c = 0; c < COLS; c++) board[f][c] = 3;
+    const colores = [1, 2, 3, 4, 5, 6, 7];
+    for (let f = 1; f < ROWS; f++)
+      for (let c = 3; c <= 6; c++) board[f][c] = colores[(f + c) % colores.length];
     next = { type: HOLLOW, shape: PIECES[HOLLOW].map((f) => [...f]), x: 3, y: 0 };
     spawn();
     draw();
