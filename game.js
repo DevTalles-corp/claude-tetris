@@ -15,6 +15,7 @@ const COLORS = [
   '#ffb74d', // L - orange
   '#a1887f', // N - tuerca (nut)
   '#ff5252', // B - bomba (nunca se guarda en el tablero)
+  '#ffeb3b', // R - rayo (nunca se guarda en el tablero)
 ];
 
 const PIECES = [
@@ -28,6 +29,7 @@ const PIECES = [
   [[0,0,7],[7,7,7],[0,0,0]],                  // L
   [[8,8,8],[8,0,8],[8,8,8]],                  // N (tuerca)
   [[9]],                                       // B (bomba)
+  [[10]],                                      // R (rayo)
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
@@ -37,7 +39,11 @@ const BOMB_EVERY = 5;        // cada cuántas líneas se gana una bomba
 const BOMB_RADIUS = 1;       // 1 => área de 3x3 centrada donde cae la bomba
 const BOMB_BLOCK_SCORE = 10; // puntos por bloque destruido (× nivel)
 
-const canvas = document.getElementById('board');
+const LIGHTNING = 10;             // tipo de la pieza rayo; randomPiece() nunca la genera
+const LIGHTNING_EVERY = 4;        // cada cuántas líneas se gana un rayo
+const LIGHTNING_BLOCK_SCORE = 10; // puntos por bloque destruido (× nivel)
+
+const canvas =document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
 const nextCtx = nextCanvas.getContext('2d');
@@ -55,6 +61,7 @@ let theme = { grid: '#22222e', highlight: 'rgba(255,255,255,0.12)', edge: 'trans
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let nextBombAt, pendingBombs;
+let nextLightningAt, pendingLightnings;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -69,6 +76,27 @@ function randomPiece() {
 function bombPiece() {
   const shape = PIECES[BOMB].map(row => [...row]);
   return { type: BOMB, shape, x: Math.floor(COLS / 2), y: 0 };
+}
+
+function lightningPiece() {
+  const shape = PIECES[LIGHTNING].map(row => [...row]);
+  return { type: LIGHTNING, shape, x: Math.floor(COLS / 2), y: 0 };
+}
+
+// Vacía la columna y elimina la fila donde cae el rayo (con gravedad: lo de arriba baja).
+// No cuenta en LINES ni en el nivel, así que no encadena más bombas ni rayos.
+function strike() {
+  let destroyed = 0;
+  for (let r = 0; r < ROWS; r++) {
+    if (board[r][current.x]) { board[r][current.x] = 0; destroyed++; }
+  }
+  if (current.y >= 0 && current.y < ROWS) {
+    destroyed += board[current.y].filter(v => v !== 0).length;
+    board.splice(current.y, 1);
+    board.unshift(new Array(COLS).fill(0));
+  }
+  score += destroyed * LIGHTNING_BLOCK_SCORE * level;
+  updateHUD();
 }
 
 // Destruye los bloques fijados en el área (2·BOMB_RADIUS+1)² centrada en la bomba.
@@ -147,6 +175,10 @@ function clearLines() {
       pendingBombs++;
       nextBombAt += BOMB_EVERY;
     }
+    while (lines >= nextLightningAt) {
+      pendingLightnings++;
+      nextLightningAt += LIGHTNING_EVERY;
+    }
     updateHUD();
   }
 }
@@ -177,6 +209,8 @@ function softDrop() {
 function lockPiece() {
   if (current.type === BOMB) {
     explode();
+  } else if (current.type === LIGHTNING) {
+    strike();
   } else {
     merge();
     clearLines();
@@ -186,7 +220,10 @@ function lockPiece() {
 
 function spawn() {
   current = next;
-  if (pendingBombs > 0) {
+  if (pendingLightnings > 0) {
+    pendingLightnings--;
+    next = lightningPiece();
+  } else if (pendingBombs > 0) {
     pendingBombs--;
     next = bombPiece();
   } else {
@@ -237,9 +274,29 @@ function drawBomb(context, x, y, size, alpha) {
   context.globalAlpha = 1;
 }
 
+function drawLightning(context, x, y, size, alpha) {
+  const px = x * size, py = y * size;
+  context.globalAlpha = alpha ?? 1;
+  context.fillStyle = COLORS[LIGHTNING];
+  context.beginPath();
+  context.moveTo(px + size * 0.6, py + size * 0.06);
+  context.lineTo(px + size * 0.22, py + size * 0.56);
+  context.lineTo(px + size * 0.46, py + size * 0.56);
+  context.lineTo(px + size * 0.36, py + size * 0.94);
+  context.lineTo(px + size * 0.78, py + size * 0.4);
+  context.lineTo(px + size * 0.54, py + size * 0.4);
+  context.closePath();
+  context.fill();
+  context.strokeStyle = '#f57f17';
+  context.lineWidth = 1.5;
+  context.stroke();
+  context.globalAlpha = 1;
+}
+
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
   if (colorIndex === BOMB) return drawBomb(context, x, y, size, alpha);
+  if (colorIndex === LIGHTNING) return drawLightning(context, x, y, size, alpha);
   const color = COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
   context.fillStyle = color;
@@ -292,6 +349,14 @@ function draw() {
     ctx.fillRect(x0 * BLOCK, y0 * BLOCK, (x1 - x0 + 1) * BLOCK, (y1 - y0 + 1) * BLOCK);
     ctx.globalAlpha = 1;
   }
+  if (current.type === LIGHTNING) {
+    // fila y columna que se limpiarán
+    ctx.globalAlpha = theme.ghostAlpha;
+    ctx.fillStyle = COLORS[LIGHTNING];
+    ctx.fillRect(0, gy * BLOCK, COLS * BLOCK, BLOCK);
+    ctx.fillRect(current.x * BLOCK, 0, BLOCK, ROWS * BLOCK);
+    ctx.globalAlpha = 1;
+  }
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       if (current.shape[r][c])
@@ -308,7 +373,7 @@ function drawNext() {
   nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
   const shape = next.shape;
   // la bomba (1x1) se centra exacto; el resto conserva su alineación
-  const center = next.type === BOMB ? n => (4 - n) / 2 : n => Math.floor((4 - n) / 2);
+  const center = (next.type === BOMB || next.type === LIGHTNING) ? n => (4 - n) / 2 : n => Math.floor((4 - n) / 2);
   const offX = center(shape[0].length);
   const offY = center(shape.length);
   for (let r = 0; r < shape.length; r++)
@@ -385,6 +450,8 @@ function init() {
   dropAccum = 0;
   nextBombAt = BOMB_EVERY;
   pendingBombs = 0;
+  nextLightningAt = LIGHTNING_EVERY;
+  pendingLightnings = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
