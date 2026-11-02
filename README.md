@@ -1,6 +1,6 @@
 # Tetris
 
-**Versión 1.0**: el número de versión se muestra junto al título del juego (`<span class="version">` en `index.html`).
+**Versión 1.1**: el número de versión se muestra junto al título del juego (`<span class="version">` en `index.html`).
 
 Implementación del clásico **Tetris** en JavaScript vanilla, usando HTML5 Canvas y CSS. Sin dependencias externas, sin frameworks, sin proceso de build: solo abrir y jugar.
 
@@ -38,6 +38,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - Tablero de **10 × 20** celdas.
 - Las **7 piezas estándar** (I, O, T, S, Z, J, L) más la **tuerca**, una pieza de reto de 3x3 con el centro vacío, todas con colores diferenciados.
 - **Bomba**: cada 5 líneas eliminadas aparece en la vista previa una pieza bomba de 1 celda. Al fijarse destruye los bloques de un área de **3x3** centrada en ella (sin gravedad: lo de arriba queda flotando) y suma 10 puntos por bloque destruido, multiplicados por el nivel. Mientras cae, el ghost marca en rojo el área de explosión.
+- **Rayo**: cada 4 líneas eliminadas aparece en la vista previa una pieza rayo de 1 celda (no sustituye a la bomba; si coinciden, sale primero el rayo). Al fijarse vacía la **columna** y elimina la **fila** donde cae, con gravedad (lo de arriba baja). Suma 10 puntos por bloque destruido × nivel, sin contar dos veces la intersección, y no cuenta en `LINES` ni en el nivel. Mientras cae, el ghost marca en amarillo la fila y la columna afectadas.
 - **Rotación** con _wall kicks_ básicos (pequeños desplazamientos para que la pieza pueda rotar pegada a la pared).
 - **Soft drop** (bajada acelerada) y **hard drop** (caída instantánea).
 - **Pieza fantasma** (_ghost piece_): muestra dónde aterrizará la pieza actual.
@@ -113,8 +114,9 @@ El botón **Tema claro / Tema oscuro** junto al título cambia entre ambos temas
 
 Contiene toda la lógica del juego. A grandes rasgos:
 
-- **Modelo del tablero**: una matriz `ROWS × COLS` donde cada celda guarda `0` (vacía) o un índice de color (1–8) que identifica la pieza. La bomba (tipo `9`) nunca se guarda en el tablero.
+- **Modelo del tablero**: una matriz `ROWS × COLS` donde cada celda guarda `0` (vacía) o un índice de color (1–8) que identifica la pieza. La bomba (tipo `9`) y el rayo (tipo `10`) nunca se guardan en el tablero.
 - **Bomba** (`bombPiece`, `explode`): `clearLines` encola una bomba cada vez que `lines` alcanza `nextBombAt`; `spawn` la pone como siguiente pieza. Al fijarse, `lockPiece` llama a `explode()` en lugar de `merge()`/`clearLines()`.
+- **Rayo** (`lightningPiece`, `strike`): igual que la bomba, con `nextLightningAt` y `pendingLightnings`. `spawn` da prioridad al rayo sobre la bomba. `strike()` vacía la columna y elimina la fila (`splice`/`unshift`).
 - **Piezas**: definidas como matrices cuadradas. Para rotar se calcula la transposición + reverso de filas (`rotateCW`).
 - **Detección de colisiones** (`collide`): comprueba que ninguna celda de la pieza salga del tablero ni se solape con bloques ya fijados.
 - **Wall kicks** (`tryRotate`): si la rotación choca, intenta desplazar la pieza ±1 y ±2 columnas antes de descartar el giro.
@@ -185,6 +187,8 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `BOMB_EVERY`   | Cada cuántas líneas aparece una bomba    | `5`                   |
 | `BOMB_RADIUS`  | Radio de la explosión (`1` = 3x3)        | `1`                   |
 | `BOMB_BLOCK_SCORE` | Puntos por bloque destruido (× nivel) | `10`                |
+| `LIGHTNING_EVERY` | Cada cuántas líneas aparece un rayo   | `4`                   |
+| `LIGHTNING_BLOCK_SCORE` | Puntos por bloque del rayo (× nivel) | `10`              |
 
 > Si cambias `COLS`, `ROWS` o `BLOCK`, recuerda ajustar también `width` y `height` del `<canvas id="board">` en `index.html` para que coincida (`COLS × BLOCK` × `ROWS × BLOCK`).
 
