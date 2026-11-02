@@ -257,6 +257,8 @@ function loop(ts) {
     }
   }
   draw();
+  // Si la gravedad terminó la partida, no programar otro frame: el bucle se detiene aquí.
+  if (gameOver) return;
   animId = requestAnimationFrame(loop);
 }
 
