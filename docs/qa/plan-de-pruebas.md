@@ -41,6 +41,13 @@ Verificar que cada cambio de Tetris funciona en el navegador antes de llegar a `
 | TC-16 | Bucle detenido tras GAME OVER por gravedad | Con la semilla 34 y sin pulsar teclas tras apilar, la gravedad termina la partida; 3 s después `animId`, `pieces` y `board` no cambian (issue #39) | `game-over-por-gravedad.png`, `tras-3-s-sin-cambios.png` |
 | TC-17 | Reiniciar tras GAME OVER por gravedad | Tras el GAME OVER, Reiniciar pone `pieces` en 0 y la pieza nueva vuelve a caer sola (issue #39) | `reiniciar-vuelve-a-caer.png` |
 | TC-18 | Pausa con P | Con P el bucle se detiene (`animId` y posición de la pieza fijos); con P de nuevo la pieza vuelve a caer (issue #39) | `pausa.png` |
+| TC-19 | Pentominós | `+`, `U` e `Y` tienen 5 bloques, 4 giros vuelven a la forma original y la cruz es simétrica (issue #42) | `piezas-especiales-en-tablero.png` |
+| TC-20 | Colisiones de las especiales | Las 5 piezas nuevas respetan paredes, suelo y bloques fijos (issue #42) | — |
+| TC-21 | Cuadrado hueco | Al fijarse quedan 8 bloques y el centro vacío; al rotar conserva la forma (issue #42) | `cuadrado-hueco-centro-vacio.png` |
+| TC-22 | Líneas con especiales | El 1×1 completa una línea: suma 100 puntos y, con 10 líneas, sube al nivel 2 (issue #42) | `linea-completada-con-1x1.png` |
+| TC-23 | Recompensa del Tetris | Tras eliminar 4 líneas a la vez, la pieza siguiente es el 1×1 (issue #42) | `recompensa-1x1-tras-tetris.png` |
+| TC-24 | Frecuencias | En 20 000 piezas: hueco entre 0,5 y 1,5 %, pentominós entre 6 y 10 %, ninguna especial seguida y el 1×1 solo como recompensa (issue #42) | — |
+| TC-25 | Fin de partida | Un cuadrado hueco que no cabe al aparecer dispara GAME OVER (issue #42) | `game-over-con-cuadrado-hueco.png` |
 
 Cada requerimiento agrega sus propios casos con un ID nuevo en `tests/issue-N.spec.js`.
 

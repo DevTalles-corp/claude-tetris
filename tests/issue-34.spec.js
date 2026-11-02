@@ -30,8 +30,8 @@ test('la pieza J se dibuja en azul pálido y las demás piezas no cambian', asyn
   await page.goto('/');
 
   expect(await page.evaluate(() => COLORS[6])).toBe(DESPUES);
-  // Solo la J cambia: el resto de la paleta queda igual.
-  expect(await page.evaluate(() => COLORS.slice(1))).toEqual([
+  // Solo la J cambia: el resto de la paleta clásica queda igual (índices 1-7; 8-12 son piezas especiales, issue #42).
+  expect(await page.evaluate(() => COLORS.slice(1, 8))).toEqual([
     '#4dd0e1', '#ffd54f', '#ba68c8', '#81c784', '#e57373', DESPUES, '#ffb74d',
   ]);
 
