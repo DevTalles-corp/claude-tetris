@@ -38,6 +38,9 @@ Verificar que cada cambio de Tetris funciona en el navegador antes de llegar a `
 | TC-13 | Récord del bot | Con la semilla 26, el bot juega hasta GAME OVER o 90 s y logra al menos 30 líneas. Solo corre con `ISSUE=31`: es una medición, no regresión (issue #31) | `record-final.png`, `record-panel.png` |
 | TC-14 | La J en azul pálido | `COLORS[6]` vale `#90caf9`, el resto de la paleta no cambia, y el centro de una celda de la J dibujada en el tablero tiene ese color (issue #34) | `j-azul-palido.png` |
 | TC-15 | Antes y después de la J | Con el color anterior (`#7986cb`) y con el nuevo (`#90caf9`), la J dibujada muestra cada color en su celda (issue #34) | `antes-j-indigo.png`, `despues-j-azul-palido.png` |
+| TC-16 | Bucle detenido tras GAME OVER por gravedad | Con la semilla 34 y sin pulsar teclas tras apilar, la gravedad termina la partida; 3 s después `animId`, `pieces` y `board` no cambian (issue #39) | `game-over-por-gravedad.png`, `tras-3-s-sin-cambios.png` |
+| TC-17 | Reiniciar tras GAME OVER por gravedad | Tras el GAME OVER, Reiniciar pone `pieces` en 0 y la pieza nueva vuelve a caer sola (issue #39) | `reiniciar-vuelve-a-caer.png` |
+| TC-18 | Pausa con P | Con P el bucle se detiene (`animId` y posición de la pieza fijos); con P de nuevo la pieza vuelve a caer (issue #39) | `pausa.png` |
 
 Cada requerimiento agrega sus propios casos con un ID nuevo en `tests/issue-N.spec.js`.
 

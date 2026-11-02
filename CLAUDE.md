@@ -24,5 +24,5 @@ Three files: `index.html` (DOM + two canvases), `style.css`, and `game.js` (all 
 ## Gotchas
 
 - Canvas sizes are hardcoded in `index.html` (`board` is 300×600, `next-canvas` is 120×120). If you change `COLS`, `ROWS` or `BLOCK` in `game.js`, update the `<canvas>` width/height to match.
-- `endGame()` and `togglePause()` stop the loop with `cancelAnimationFrame(animId)`. When game over is triggered from inside `loop` (gravity lock), `loop` still schedules its next frame afterward and overwrites `animId`, so the loop keeps running; it is only guarded by `gameOver` in the input handler. Keep this in mind when changing the loop or end-of-game behavior.
+- `endGame()` and `togglePause()` stop the loop with `cancelAnimationFrame(animId)`. When game over is triggered from inside `loop` (gravity lock), `cancelAnimationFrame` has no effect on the frame that is already running, so `loop` checks `gameOver` after `draw()` and returns without scheduling another frame. Keep that check when changing the loop or end-of-game behavior; otherwise the game keeps locking pieces behind the GAME OVER overlay.
 - `README.md` documents controls, scoring and tunable constants; update it if you change them.
