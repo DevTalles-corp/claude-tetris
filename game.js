@@ -169,8 +169,8 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    level = gameStartLevel + Math.floor(lines / 10);
+    dropInterval = speedForLevel(level);
     while (lines >= nextBombAt) {
       pendingBombs++;
       nextBombAt += BOMB_EVERY;
@@ -416,13 +416,12 @@ function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    closePauseMenu();
     lastTime = performance.now();
     loop(lastTime);
   } else {
     cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+    openPauseMenu();
   }
 }
 
@@ -442,15 +441,109 @@ function loop(ts) {
   animId = requestAnimationFrame(loop);
 }
 
+// ---- Menú de pausa ----
+const START_LEVEL_KEY = 'tetris-start-level';
+const MAX_START_LEVEL = 10;
+const pauseMenu = document.getElementById('pause-menu');
+const resumeBtn = document.getElementById('pause-resume');
+const pauseRestartBtn = document.getElementById('pause-restart');
+const controlsToggle = document.getElementById('pause-controls-toggle');
+const pauseControls = document.getElementById('pause-controls');
+const startLevelSelect = document.getElementById('start-level');
+
+let startLevel = 1;     // preferencia del selector: aplica a la próxima partida
+let gameStartLevel = 1; // nivel inicial de la partida en curso
+const heldKeys = new Set();    // teclas pulsadas ahora mismo
+const blockedKeys = new Set(); // ignoradas por el juego hasta su keyup
+
+function openPauseMenu() {
+  pauseControls.hidden = true;
+  controlsToggle.setAttribute('aria-expanded', 'false');
+  pauseMenu.classList.remove('hidden');
+  resumeBtn.focus();
+}
+
+function closePauseMenu() {
+  if (pauseMenu.contains(document.activeElement)) document.activeElement.blur();
+  pauseMenu.classList.add('hidden');
+  // lo que siga pulsado al volver no debe mover la pieza
+  heldKeys.forEach(code => blockedKeys.add(code));
+}
+
+function speedForLevel(lvl) {
+  return Math.max(100, 1000 - (lvl - 1) * 90);
+}
+
+const GAME_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyX', 'Space'];
+
+window.addEventListener('keydown', e => {
+  heldKeys.add(e.code);
+  // una pulsación nueva (no autorrepetición) nunca está bloqueada; cubre keyups perdidos
+  if (!e.repeat) blockedKeys.delete(e.code);
+  if (!paused) return;
+  if (e.code === 'Tab') trapFocus(e);
+  // con el menú abierto, las teclas de juego no deben desplazar la página
+  else if (GAME_KEYS.includes(e.code) && !pauseMenu.contains(e.target)) e.preventDefault();
+}, true);
+window.addEventListener('keyup', e => {
+  heldKeys.delete(e.code);
+  blockedKeys.delete(e.code);
+}, true);
+window.addEventListener('blur', () => {
+  heldKeys.clear();
+  blockedKeys.clear();
+});
+
+// mantiene el foco de Tab dentro del menú de pausa
+function trapFocus(e) {
+  const items = [...pauseMenu.querySelectorAll('button, select')];
+  const first = items[0], last = items[items.length - 1];
+  const inside = pauseMenu.contains(document.activeElement);
+  if (e.shiftKey && (!inside || document.activeElement === first)) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && (!inside || document.activeElement === last)) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
+resumeBtn.addEventListener('click', () => {
+  if (paused) togglePause();
+});
+
+pauseRestartBtn.addEventListener('click', init);
+
+controlsToggle.addEventListener('click', () => {
+  const open = pauseControls.hidden;
+  pauseControls.hidden = !open;
+  controlsToggle.setAttribute('aria-expanded', String(open));
+});
+
+for (let n = 1; n <= MAX_START_LEVEL; n++) startLevelSelect.add(new Option(String(n), String(n)));
+
+startLevelSelect.addEventListener('change', () => {
+  startLevel = Number(startLevelSelect.value);
+  try { localStorage.setItem(START_LEVEL_KEY, String(startLevel)); } catch (e) {}
+});
+
+try {
+  const saved = Number(localStorage.getItem(START_LEVEL_KEY));
+  if (Number.isInteger(saved) && saved >= 1 && saved <= MAX_START_LEVEL) startLevel = saved;
+} catch (e) {}
+startLevelSelect.value = String(startLevel);
+
 function init() {
   resetRecordsState();
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  gameStartLevel = startLevel;
+  level = gameStartLevel;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  closePauseMenu();
+  dropInterval = speedForLevel(level);
   dropAccum = 0;
   nextBombAt = BOMB_EVERY;
   pendingBombs = 0;
@@ -468,8 +561,11 @@ function init() {
 document.addEventListener('keydown', e => {
   // récords: sin partida (pantalla de inicio) o escribiendo el nombre
   if (!current || e.target instanceof HTMLInputElement) return;
-  if (e.code === 'KeyP') { togglePause(); return; }
-  if (paused || gameOver) return;
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    if (!e.repeat) togglePause();
+    return;
+  }
+  if (paused || gameOver || blockedKeys.has(e.code)) return;
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;

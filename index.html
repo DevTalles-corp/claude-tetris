@@ -43,10 +43,32 @@
             <li><kbd>↑</kbd> rotar</li>
             <li><kbd>↓</kbd> bajar</li>
             <li><kbd>Space</kbd> caída</li>
-            <li><kbd>P</kbd> pausa</li>
+            <li><kbd>P</kbd><kbd>Esc</kbd> pausa</li>
           </ul>
         </div>
       </aside>
+    </div>
+
+    <!-- Menú de pausa -->
+    <div id="pause-menu" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+      <div class="overlay-box pause-box">
+        <p id="pause-title">PAUSA</p>
+        <button id="pause-resume" type="button" class="pause-btn primary">Reanudar</button>
+        <button id="pause-restart" type="button" class="pause-btn">Reiniciar</button>
+        <button id="pause-controls-toggle" type="button" class="pause-btn" aria-expanded="false" aria-controls="pause-controls">Ver controles</button>
+        <ul id="pause-controls" class="pause-controls" hidden>
+          <li><span><kbd>←</kbd><kbd>→</kbd></span> mover</li>
+          <li><span><kbd>↑</kbd><kbd>X</kbd></span> rotar</li>
+          <li><span><kbd>↓</kbd></span> bajar</li>
+          <li><span><kbd>Space</kbd></span> caída instantánea</li>
+          <li><span><kbd>P</kbd><kbd>Esc</kbd></span> pausa / reanudar</li>
+        </ul>
+        <label class="pause-level" for="start-level">
+          Nivel inicial
+          <select id="start-level"></select>
+        </label>
+        <p class="pause-hint">Se aplica al reiniciar o en la próxima partida</p>
+      </div>
     </div>
 
     <div id="overlay" class="overlay hidden">
