@@ -19,6 +19,7 @@ Implementación del clásico **Tetris** en JavaScript vanilla, usando HTML5 Canv
     - [Opción 1: abrir el archivo directamente](#opción-1-abrir-el-archivo-directamente)
     - [Opción 2: servidor local (recomendado)](#opción-2-servidor-local-recomendado)
   - [Controles](#controles)
+  - [Récords](#récords)
   - [Cómo funciona](#cómo-funciona)
     - [1. `index.html`](#1-indexhtml)
     - [2. `style.css`](#2-stylecss)
@@ -46,6 +47,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Sistema de puntuación** clásico de Tetris (100 / 300 / 500 / 800 multiplicado por nivel).
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Pausa** y **Game Over** con opción de reinicio.
+- **Récords locales**: top 5 con nombre, mejor combo y líneas máximas, guardados en el navegador (ver [Récords](#récords)).
 
 ---
 
@@ -90,6 +92,28 @@ Después abre `http://localhost:8000` en el navegador.
 | `Espacio` | Hard drop (caída instantánea)     |
 | `P`       | Pausar / reanudar                 |
 
+Mientras se escribe el nombre en el campo de récord, las teclas del juego no actúan; `Enter` guarda el nombre.
+
+---
+
+## Récords
+
+Al cargar la página aparece una **pantalla de inicio** con el top 5, el mejor combo y las líneas máximas. El juego no arranca hasta pulsar **Jugar**.
+
+- **Top 5**: al terminar la partida, si la puntuación es mayor que 0 y entra en el top (hay menos de 5 récords o supera al quinto), se guarda con el nombre por defecto `Jugador` y la fila se resalta. Aparece un campo de texto (máx. 12 caracteres) para escribir tu nombre; **Guardar** o `Enter` lo cambia. Si reinicias o cierras sin guardar, el récord queda con `Jugador`. Si no entra en el top, el overlay muestra la tabla directamente.
+- **Mejor combo**: racha máxima de bloqueos consecutivos de piezas normales que limpian al menos una línea. Un bloqueo que no limpia líneas reinicia la racha; la bomba y el rayo no la cuentan ni la cortan.
+- **Líneas máximas**: el mayor número de líneas (`LINES`) conseguido en una partida.
+- Ambas marcas se actualizan al terminar la partida y se resaltan en el game over si son nuevas.
+- **Borrar récords** (en la pantalla de inicio y en el game over) pide confirmación y elimina todo.
+
+Se guardan en `localStorage` con la clave `tetris-records`:
+
+```json
+{ "top": [{ "name": "Ana", "score": 1200, "lines": 9, "level": 1 }], "bestCombo": 3, "maxLines": 9 }
+```
+
+Si los datos faltan o están corruptos se ignoran sin errores. Los nombres se pintan con `textContent`.
+
 ---
 
 ## Cómo funciona
@@ -102,7 +126,8 @@ Define la estructura visual:
 
 - Un `<canvas id="board">` de **300 × 600** píxeles donde se renderiza el tablero.
 - Un panel lateral con `SCORE`, `LINES`, `LEVEL`, vista de la siguiente pieza y la lista de controles.
-- Un overlay para los estados **PAUSA** y **GAME OVER**.
+- Un overlay para los estados **PAUSA** y **GAME OVER** (en game over incluye el bloque de récords `#over-records`).
+- Un overlay de inicio (`#start-overlay`) con los récords y el botón **Jugar**.
 
 ### 2. `style.css`
 
@@ -124,11 +149,13 @@ Contiene toda la lógica del juego. A grandes rasgos:
 - **Limpieza de líneas** (`clearLines`): recorre el tablero de abajo hacia arriba; cada fila completa se elimina y se inserta una vacía en la cima.
 - **Puntuación**: usa la tabla clásica `[0, 100, 300, 500, 800]` multiplicada por el nivel actual; el hard drop suma 2 puntos por celda recorrida y el soft drop 1 punto por fila.
 - **Nivel y velocidad**: el nivel sube cada 10 líneas; la velocidad de caída se calcula como `max(100, 1000 − (level − 1) × 90)` milisegundos.
+- **Récords** (sección `Récords locales` al final): `trackCombo` se llama desde `lockPiece` tras `clearLines`; `endGame` llama a `finishRecords()`, que guarda marcas y la fila del top (protegido para ejecutarse una vez por partida); `init` llama a `resetRecordsState()`.
 - **Ghost piece** (`ghostY`): proyecta la posición final de la pieza actual hacia abajo y la dibuja con la opacidad del tema (`--ghost-alpha`: 0.2 en oscuro, 0.4 en claro).
 
 ### Flujo del juego
 
 ```
+carga → pantalla de inicio (récords) → Jugar
 init()
   ├─ createBoard()                  → matriz vacía
   ├─ next = randomPiece()
@@ -144,7 +171,7 @@ init()
    keydown → mover / rotar / soft-drop / hard-drop / pausa
 ```
 
-Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara `endGame()` y se muestra el overlay de **Game Over**.
+Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara `endGame()` y se muestra el overlay de **Game Over** con los récords.
 
 ---
 
@@ -189,6 +216,9 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `BOMB_BLOCK_SCORE` | Puntos por bloque destruido (× nivel) | `10`                |
 | `LIGHTNING_EVERY` | Cada cuántas líneas aparece un rayo   | `4`                   |
 | `LIGHTNING_BLOCK_SCORE` | Puntos por bloque del rayo (× nivel) | `10`              |
+| `RECORDS_MAX`  | Puestos de la tabla de récords           | `5`                   |
+| `RECORD_NAME_MAX` | Longitud máxima del nombre (ajusta también `maxlength` en `index.html`) | `12` |
+| `RECORD_DEFAULT_NAME` | Nombre por defecto del récord     | `'Jugador'`           |
 
 > Si cambias `COLS`, `ROWS` o `BLOCK`, recuerda ajustar también `width` y `height` del `<canvas id="board">` en `index.html` para que coincida (`COLS × BLOCK` × `ROWS × BLOCK`).
 

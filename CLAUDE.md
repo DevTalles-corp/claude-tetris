@@ -20,6 +20,7 @@ Changes can only be verified by running the game in a browser.
 - **Locking sequence:** gravity (`loop`), `softDrop`, and `hardDrop` all end in `lockPiece()`, which runs `merge()` → `clearLines()` → `spawn()`. Game over is detected only in `spawn()`, when a new piece collides immediately.
 - **Rendering:** `draw()` repaints the whole board canvas every frame from state, so input handlers only mutate state. The next-piece preview is different: `drawNext()` runs only from `spawn()`.
 - **HUD:** DOM counters update only through `updateHUD()`. `hardDrop()` doesn't call it and relies on the `keydown` handler calling it after every action.
+- **Start screen and records:** nothing runs at load except rendering `#start-overlay`; the game starts when "Jugar" calls `init()`, so `current` is undefined until then (the `keydown` handler returns early, and also ignores events from `<input>`). The records section at the end of `game.js` persists `tetris-records` in `localStorage`. `endGame()` calls `finishRecords()`, which is guarded to run once per game because `endGame()` can fire repeatedly (see the animation loop note).
 - **Animation loop:** `loop()` always schedules its next frame at the end, so a `cancelAnimationFrame` issued from inside a `loop()` call does not stop it.
 
 ## Conventions

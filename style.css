@@ -231,3 +231,149 @@ kbd {
 #restart-btn:hover {
   background: var(--accent-hover);
 }
+
+/* ---- Récords ---- */
+.records-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.records-box[hidden],
+.record-form[hidden] {
+  display: none;
+}
+
+.records-heading {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: var(--accent);
+}
+
+.records-msg {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.records-msg:empty {
+  display: none;
+}
+
+.record-form {
+  display: flex;
+  gap: 6px;
+}
+
+.record-form input {
+  width: 140px;
+  background: var(--canvas-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  user-select: text;
+}
+
+.record-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.record-form button,
+#play-btn {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#play-btn {
+  margin-top: 4px;
+  padding: 10px 36px;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.record-form button:hover,
+#play-btn:hover {
+  background: var(--accent-hover);
+}
+
+.records-table {
+  border-collapse: collapse;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  min-width: 260px;
+}
+
+.records-table th {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--label);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.records-table td {
+  padding: 3px 8px;
+  color: var(--text);
+}
+
+.records-table td:nth-child(2) {
+  text-align: left;
+}
+
+.records-table td:nth-child(n+3) {
+  text-align: right;
+}
+
+.records-table tr.records-new td {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 700;
+}
+
+.records-empty {
+  text-align: center;
+  color: var(--muted) !important;
+  padding: 8px !important;
+}
+
+.records-marks {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.records-mark-new {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.records-reset {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.records-reset:hover {
+  background: var(--danger);
+  color: var(--accent-contrast);
+}
