@@ -34,11 +34,12 @@ Ver también: [Framework de pruebas](framework-pruebas.md).
 
 ## Consumo de tokens
 
-Solo dos workflows usan el modelo. El workflow QA no usa Claude.
+Tres workflows usan el modelo. El workflow QA no usa Claude.
 
 | Workflow | Cuándo gasta tokens | Límites |
 |---|---|---|
-| `claude.yml` | Solo cuando alguien escribe `@claude` | Modelo de `.claude/settings.json`, **presupuesto de 40 turnos por issue** (suma de todas las ejecuciones), sin los comentarios de `github-actions[bot]` en el contexto |
+| `claude.yml` | Solo cuando alguien escribe `@claude` | Modelo de `.claude/settings.json`, **presupuesto de 40 turnos por issue** (suma de todas las ejecuciones). Lee los comentarios del issue, incluido el diagnóstico de la fase 0 |
+| `claude-issue-triage.yml` | Al abrir un issue o editar su título o descripción | Mismo modelo, máximo 10 turnos, solo lectura (`Read`, `Grep`, `Glob`). No corre por ediciones de etiquetas ni por bots |
 | `claude-code-review.yml` | Al abrir una PR con cambios de código | Mismo modelo, máximo 15 turnos. No corre en cada push, ni en PRs de `qa` a `main`, ni en borradores, ni si solo cambian evidencia, docs o imágenes |
 
 Para revisar de nuevo una PR después de cambios, comentar `@claude revisa esta PR`.

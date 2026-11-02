@@ -106,9 +106,6 @@ jobs:
           # Muestra el avance como lista de tareas con casillas mientras Claude trabaja
           track_progress: true
 
-          # No cargar en el contexto los comentarios largos de evidencia QA y de modelo
-          exclude_comments_by_actor: 'github-actions[bot]'
-
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
             actions: read
