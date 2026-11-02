@@ -68,6 +68,10 @@ jobs:
             el gravity de `loop` sin puntos a propósito, tamaños de canvas).
             **Información faltante:** solo si el issue es ambiguo; indica qué datos pedir al autor.
 
+            El comentario debe estar escrito en Markdown que GitHub (GitHub Flavored Markdown) renderice
+            correctamente: separa cada sección con una línea en blanco, usa listas con `-`, código en línea
+            con comillas invertidas y bloques de código con ``` y lenguaje.
+
             Reglas: no modifiques código, no crees ramas ni PRs; solo labels y el comentario de diagnóstico.
           claude_args: |
             --allowedTools "Read,Glob,Grep,Bash(gh issue view:*),Bash(gh label list:*),Bash(gh issue edit:*),Bash(gh issue comment:*)"
