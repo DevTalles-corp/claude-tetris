@@ -112,6 +112,7 @@ test('las piezas nuevas completan líneas, suman puntos y suben de nivel', async
     board = createBoard();
     // Fila inferior llena salvo la columna 4; el bloque 1×1 la completa
     for (let c = 0; c < COLS; c++) if (c !== 4) board[ROWS - 1][c] = 1;
+    board[10][0] = 1; // un bloque suelto: sin él el tablero queda vacío y cuenta como Perfect Clear (issue #48)
     lines = 9; score = 0; level = 1;
     current = { type: SINGLE, shape: [[SINGLE]], x: 4, y: 0 };
     current.y = ghostY();
@@ -130,15 +131,16 @@ test('tras un Tetris, la pieza siguiente es el bloque 1×1', async ({ page }) =>
     // 4 filas inferiores llenas salvo la columna 9; una I vertical las completa
     for (let f = ROWS - 4; f < ROWS; f++)
       for (let c = 0; c < 9; c++) board[f][c] = 2;
+    board[10][0] = 2; // un bloque suelto: sin él el tablero queda vacío y cuenta como Perfect Clear (issue #48)
     lines = 0; score = 0; level = 1;
     const vertical = rotateCW(PIECES[1]); // la columna 2 de la matriz queda llena
     current = { type: 1, shape: vertical, x: 7, y: 0 };
     current.y = ghostY();
     lockPiece();
     draw();
-    return { lines, score, siguiente: next.type, tableroVacio: board.flat().every((v) => v === 0) };
+    return { lines, score, siguiente: next.type, filasInferioresVacias: board.slice(-4).flat().every((v) => v === 0) };
   });
-  expect(r).toEqual({ lines: 4, score: 800, siguiente: 11, tableroVacio: true });
+  expect(r).toEqual({ lines: 4, score: 800, siguiente: 11, filasInferioresVacias: true });
   await capturar(page, 'recompensa-1x1-tras-tetris');
 });
 
