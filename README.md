@@ -46,6 +46,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Sistema de puntuación** clásico de Tetris (100 / 300 / 500 / 800 multiplicado por nivel).
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Pausa** y **Game Over** con opción de reinicio.
+- **Skins** visuales seleccionables sin recargar: **Retro**, **Neon**, **Pastel** y **Pixel art**.
 
 ---
 
@@ -110,6 +111,19 @@ Aporta el aspecto visual con estética _retro arcade_: tipografía monoespaciada
 
 El botón **Tema claro / Tema oscuro** junto al título cambia entre ambos temas (es un `role="switch"` accesible con teclado). La preferencia se guarda en `localStorage` (`tetris-theme`). `game.js` lee de las variables CSS los colores que pinta el canvas (cuadrícula, brillo y borde de bloques, opacidad del ghost) y repinta al cambiar de tema, también en pausa o game over.
 
+El selector de **skin** (`<select id="skin-select">`) junto al botón de tema cambia la apariencia de los bloques. La preferencia se guarda en `localStorage` (`tetris-skin`; un valor desconocido vuelve a Retro) y el cambio se aplica al instante, también en pausa o game over:
+
+| Skin      | Aspecto                                                                                   |
+| --------- | ----------------------------------------------------------------------------------------- |
+| Retro     | Bloques cuadrados de colores planos (el estilo original).                                 |
+| Neon      | Fondo negro en los canvas y bloques con resplandor (`shadowBlur`) del color de la pieza.  |
+| Pastel    | Colores suaves y bordes redondeados (trazados con `arcTo`).                               |
+| Pixel art | Textura de píxeles de 3×3 px con biselado, fija para que no parpadee.                     |
+
+Las skins conviven con el tema claro/oscuro. La skin Neon añade `data-skin="neon"` a `<html>`, y `:root[data-skin="neon"]` sobrescribe `--canvas-bg`, `--grid`, `--border`, `--block-highlight`, `--block-edge` y `--ghost-alpha` en ambos temas (y fuerza texto claro en los botones de la barra de título).
+
+Cada bloque se prerenderiza una vez por skin, color, tamaño y tema en un tile (canvas fuera de pantalla) que `drawBlock` copia con `drawImage`, así el glow y la textura no se recalculan en cada frame. Mientras el selector tiene el foco, las teclas del juego (flechas, `Espacio`, `P`, `X`) le quitan el foco y actúan sobre la partida.
+
 ### 3. `game.js`
 
 Contiene toda la lógica del juego. A grandes rasgos:
@@ -124,6 +138,7 @@ Contiene toda la lógica del juego. A grandes rasgos:
 - **Limpieza de líneas** (`clearLines`): recorre el tablero de abajo hacia arriba; cada fila completa se elimina y se inserta una vacía en la cima.
 - **Puntuación**: usa la tabla clásica `[0, 100, 300, 500, 800]` multiplicada por el nivel actual; el hard drop suma 2 puntos por celda recorrida y el soft drop 1 punto por fila.
 - **Nivel y velocidad**: el nivel sube cada 10 líneas; la velocidad de caída se calcula como `max(100, 1000 − (level − 1) × 90)` milisegundos.
+- **Skins** (`SKINS`, `applySkin`): cada skin define una paleta de 11 entradas alineada por índice con `COLORS` y una función `drawCell`. `drawBlock` delega en la skin activa; la bomba y el rayo conservan su dibujo pero usan el color de la paleta activa (`palette`).
 - **Ghost piece** (`ghostY`): proyecta la posición final de la pieza actual hacia abajo y la dibuja con la opacidad del tema (`--ghost-alpha`: 0.2 en oscuro, 0.4 en claro).
 
 ### Flujo del juego
@@ -181,7 +196,8 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `COLS`         | Columnas del tablero                     | `10`                  |
 | `ROWS`         | Filas del tablero                        | `20`                  |
 | `BLOCK`        | Tamaño en píxeles de cada celda          | `30`                  |
-| `COLORS`       | Paleta de colores por tipo de pieza      | 8 colores + bomba     |
+| `COLORS`       | Paleta de colores por tipo de pieza (skin Retro) | 8 colores + bomba + rayo |
+| `SKINS`        | Paleta y función de dibujo de cada skin  | `retro`, `neon`, `pastel`, `pixel` |
 | `LINE_SCORES`  | Puntos por 1, 2, 3 o 4 líneas eliminadas | `[0,100,300,500,800]` |
 | `dropInterval` | Velocidad inicial de caída en ms         | `1000`                |
 | `BOMB_EVERY`   | Cada cuántas líneas aparece una bomba    | `5`                   |

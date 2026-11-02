@@ -96,6 +96,38 @@ body {
   border-color: var(--accent);
 }
 
+/* ---- Skins ---- */
+#skin-select {
+  background: var(--canvas-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#skin-select:hover {
+  border-color: var(--accent);
+}
+
+/* :root[...] gana a [data-theme="light"] por especificidad */
+:root[data-skin="neon"] {
+  --canvas-bg: #000000;
+  --grid: #101018;
+  --border: #2a2a3a;
+  --block-highlight: rgba(255, 255, 255, 0.12);
+  --block-edge: transparent;
+  --ghost-alpha: 0.3;
+}
+
+/* los botones usan --canvas-bg: texto claro también en tema claro */
+:root[data-skin="neon"] #skin-select,
+:root[data-skin="neon"] #theme-toggle {
+  color: #e0e0e0;
+}
+
 .wrapper {
   position: relative;
 }

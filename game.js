@@ -259,7 +259,7 @@ function drawBomb(context, x, y, size, alpha) {
   context.arc(cx + rad * 1.2, cy - rad * 1.25, size * 0.08, 0, Math.PI * 2);
   context.fill();
   // cuerpo
-  context.fillStyle = COLORS[BOMB];
+  context.fillStyle = palette[BOMB];
   context.beginPath();
   context.arc(cx, cy, rad, 0, Math.PI * 2);
   context.fill();
@@ -277,7 +277,7 @@ function drawBomb(context, x, y, size, alpha) {
 function drawLightning(context, x, y, size, alpha) {
   const px = x * size, py = y * size;
   context.globalAlpha = alpha ?? 1;
-  context.fillStyle = COLORS[LIGHTNING];
+  context.fillStyle = palette[LIGHTNING];
   context.beginPath();
   context.moveTo(px + size * 0.6, py + size * 0.06);
   context.lineTo(px + size * 0.22, py + size * 0.56);
@@ -293,20 +293,143 @@ function drawLightning(context, x, y, size, alpha) {
   context.globalAlpha = 1;
 }
 
-function drawBlock(context, x, y, colorIndex, size, alpha) {
-  if (!colorIndex) return;
-  if (colorIndex === BOMB) return drawBomb(context, x, y, size, alpha);
-  if (colorIndex === LIGHTNING) return drawLightning(context, x, y, size, alpha);
-  const color = COLORS[colorIndex];
-  context.globalAlpha = alpha ?? 1;
+// ---- Skins ----
+// Cada skin aporta una paleta alineada por índice con COLORS y una función que
+// dibuja una celda en (px, py). Las celdas se prerenderizan en tiles cacheados.
+const SKIN_KEY = 'tetris-skin';
+const TILE_PAD = 16; // margen del tile para que quepa el glow de Neon
+const skinSelect = document.getElementById('skin-select');
+const tileCache = new Map();
+
+function drawRetroCell(context, px, py, size, color) {
   context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+  context.fillRect(px + 1, py + 1, size - 2, size - 2);
   // highlight
   context.fillStyle = theme.highlight;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  context.fillRect(px + 1, py + 1, size - 2, 4);
   context.strokeStyle = theme.edge;
   context.lineWidth = 1;
-  context.strokeRect(x * size + 1.5, y * size + 1.5, size - 3, size - 3);
+  context.strokeRect(px + 1.5, py + 1.5, size - 3, size - 3);
+}
+
+function drawNeonCell(context, px, py, size, color) {
+  context.shadowColor = color;
+  context.shadowBlur = size * 0.5;
+  context.globalAlpha = 0.3;
+  context.fillStyle = color;
+  context.fillRect(px + 3, py + 3, size - 6, size - 6);
+  context.globalAlpha = 1;
+  context.strokeStyle = color;
+  context.lineWidth = 2;
+  context.strokeRect(px + 3, py + 3, size - 6, size - 6);
+  context.shadowBlur = 0;
+  context.fillStyle = color;
+  context.fillRect(px + size * 0.4, py + size * 0.4, size * 0.2, size * 0.2);
+}
+
+function roundedPath(context, x, y, w, h, r) {
+  context.beginPath();
+  context.moveTo(x + r, y);
+  context.arcTo(x + w, y, x + w, y + h, r);
+  context.arcTo(x + w, y + h, x, y + h, r);
+  context.arcTo(x, y + h, x, y, r);
+  context.arcTo(x, y, x + w, y, r);
+  context.closePath();
+}
+
+function drawPastelCell(context, px, py, size, color) {
+  const r = size * 0.25;
+  roundedPath(context, px + 1.5, py + 1.5, size - 3, size - 3, r);
+  context.fillStyle = color;
+  context.fill();
+  context.strokeStyle = theme.edge;
+  context.lineWidth = 1;
+  context.stroke();
+  // brillo suave en la esquina superior
+  roundedPath(context, px + size * 0.2, py + size * 0.15, size * 0.35, size * 0.18, size * 0.09);
+  context.fillStyle = theme.highlight;
+  context.fill();
+}
+
+function drawPixelCell(context, px, py, size, color) {
+  const p = Math.max(2, Math.round(size / 10)); // tamaño del "píxel"
+  const n = Math.floor(size / p);
+  context.fillStyle = color;
+  context.fillRect(px, py, size, size);
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      let shade = null;
+      if (i === 0 || j === 0) shade = 'rgba(255,255,255,0.35)';
+      else if (i === n - 1 || j === n - 1) shade = 'rgba(0,0,0,0.35)';
+      else if ((i * 7 + j * 13) % 5 === 0) shade = 'rgba(0,0,0,0.18)';
+      else if ((i * 3 + j * 11) % 7 === 0) shade = 'rgba(255,255,255,0.18)';
+      if (!shade) continue;
+      context.fillStyle = shade;
+      context.fillRect(px + i * p, py + j * p, p, p);
+    }
+  }
+}
+
+const SKINS = {
+  retro: { palette: COLORS, drawCell: drawRetroCell },
+  neon: {
+    palette: [null, '#00f0ff', '#fff200', '#d500f9', '#39ff14', '#ff1744', '#2979ff', '#ff9100', '#e0e0e0', '#ff1744', '#ffff00'],
+    drawCell: drawNeonCell,
+    glow: true,
+  },
+  pastel: {
+    palette: [null, '#a8e6ef', '#fff1a8', '#d7b8f3', '#b9e8c0', '#f7b5b5', '#b5d3f7', '#ffd1a8', '#d6c7bd', '#f4a6a6', '#fff3a0'],
+    drawCell: drawPastelCell,
+  },
+  pixel: {
+    palette: [null, '#3cbcfc', '#f8b800', '#9878f8', '#58d854', '#e40058', '#0058f8', '#fc7460', '#ac7c00', '#f83800', '#fce0a8'],
+    drawCell: drawPixelCell,
+  },
+};
+
+let skinName = 'retro';
+let skin = SKINS.retro;
+let palette = skin.palette;
+
+// el tile depende también del tema (brillo y borde de los bloques)
+function cellTile(color, size) {
+  const key = [skinName, color, size, theme.highlight, theme.edge].join('|');
+  let tile = tileCache.get(key);
+  if (!tile) {
+    tile = document.createElement('canvas');
+    tile.width = tile.height = size + 2 * TILE_PAD;
+    skin.drawCell(tile.getContext('2d'), TILE_PAD, TILE_PAD, size, color);
+    tileCache.set(key, tile);
+  }
+  return tile;
+}
+
+function applySkin(name) {
+  if (!Object.prototype.hasOwnProperty.call(SKINS, name)) name = 'retro';
+  skinName = name;
+  skin = SKINS[name];
+  palette = skin.palette;
+  document.documentElement.setAttribute('data-skin', name);
+  skinSelect.value = name;
+  // vuelve a leer las variables CSS (la skin puede sobrescribirlas) y repinta
+  applyTheme(document.documentElement.hasAttribute('data-theme') ? 'light' : 'dark');
+}
+
+function drawBlock(context, x, y, colorIndex, size, alpha) {
+  if (!colorIndex) return;
+  if (colorIndex === BOMB || colorIndex === LIGHTNING) {
+    context.save();
+    if (skin.glow) {
+      context.shadowColor = palette[colorIndex];
+      context.shadowBlur = size * 0.5;
+    }
+    if (colorIndex === BOMB) drawBomb(context, x, y, size, alpha);
+    else drawLightning(context, x, y, size, alpha);
+    context.restore();
+    return;
+  }
+  context.globalAlpha = alpha ?? 1;
+  context.drawImage(cellTile(palette[colorIndex], size), x * size - TILE_PAD, y * size - TILE_PAD);
   context.globalAlpha = 1;
 }
 
@@ -345,14 +468,14 @@ function draw() {
     const x1 = Math.min(COLS - 1, current.x + BOMB_RADIUS);
     const y1 = Math.min(ROWS - 1, gy + BOMB_RADIUS);
     ctx.globalAlpha = theme.ghostAlpha;
-    ctx.fillStyle = COLORS[BOMB];
+    ctx.fillStyle = palette[BOMB];
     ctx.fillRect(x0 * BLOCK, y0 * BLOCK, (x1 - x0 + 1) * BLOCK, (y1 - y0 + 1) * BLOCK);
     ctx.globalAlpha = 1;
   }
   if (current.type === LIGHTNING) {
     // fila y columna que se limpiarán
     ctx.globalAlpha = theme.ghostAlpha;
-    ctx.fillStyle = COLORS[LIGHTNING];
+    ctx.fillStyle = palette[LIGHTNING];
     ctx.fillRect(0, gy * BLOCK, COLS * BLOCK, BLOCK);
     ctx.fillRect(current.x * BLOCK, 0, BLOCK, ROWS * BLOCK);
     ctx.globalAlpha = 1;
@@ -498,5 +621,23 @@ themeToggle.addEventListener('click', () => {
 let savedTheme = null;
 try { savedTheme = localStorage.getItem(THEME_KEY); } catch (e) {}
 applyTheme(savedTheme);
+
+// las teclas del juego no manipulan el selector: le quitan el foco y siguen al juego
+const GAME_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'KeyP', 'KeyX'];
+skinSelect.addEventListener('keydown', e => {
+  if (!GAME_KEYS.includes(e.code)) return;
+  e.preventDefault();
+  skinSelect.blur();
+});
+
+skinSelect.addEventListener('change', () => {
+  try { localStorage.setItem(SKIN_KEY, skinSelect.value); } catch (e) {}
+  applySkin(skinSelect.value);
+  skinSelect.blur(); // que las flechas/Space vuelvan al juego
+});
+
+let savedSkin = null;
+try { savedSkin = localStorage.getItem(SKIN_KEY); } catch (e) {}
+applySkin(savedSkin);
 
 init();
