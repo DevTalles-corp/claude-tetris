@@ -87,7 +87,7 @@ jobs:
             ${{ github.event.issue.body }}
             </descripcion>
           claude_args: |
-            --model ${{ steps.modelo.outputs.model }} --max-turns 10 --allowedTools "Read,Grep,Glob"
+            --model ${{ steps.modelo.outputs.model }} --max-turns 20 --allowedTools "Read,Grep,Glob"
             --json-schema '{"type":"object","properties":{"tipo":{"type":"string","enum":["bug","enhancement","documentation","question"]},"areas":{"type":"array","minItems":1,"items":{"type":"string","enum":["area:juego","area:qa","area:docs","area:workflows"]}},"prioridad":{"type":"string","enum":["prioridad:alta","prioridad:media","prioridad:baja"]},"diagnostico":{"type":"string","description":"Qué pasa, en una o dos frases cortas"},"area_afectada":{"type":"array","description":"Hasta 4 archivos o funciones","items":{"type":"object","properties":{"archivo":{"type":"string","description":"archivo o archivo:línea"},"detalle":{"type":"string","description":"Qué hay ahí, en una frase corta"}},"required":["archivo","detalle"]}},"causa_raiz":{"type":"string","description":"Por qué pasa, en una o dos frases cortas"},"propuesta_solucion":{"type":"array","description":"Hasta 5 pasos cortos, en orden","items":{"type":"string"}},"riesgos":{"type":"array","description":"Hasta 3 riesgos cortos","items":{"type":"string"}}},"required":["tipo","areas","prioridad","diagnostico","area_afectada","causa_raiz","propuesta_solucion","riesgos"]}'
 
       - name: Aplicar etiquetas y publicar diagnóstico
