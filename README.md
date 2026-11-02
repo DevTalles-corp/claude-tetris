@@ -49,6 +49,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Menú de pausa** (`P` o `Esc`) con **Reanudar**, **Reiniciar** (nueva partida sin recargar), **Ver controles** y selector de **Nivel inicial** (1–10) para la próxima partida.
 - **Game Over** con opción de reinicio.
 - **Récords locales**: top 5 con nombre, mejor combo y líneas máximas, guardados en el navegador (ver [Récords](#récords)).
+- **Skins** visuales seleccionables sin recargar: **Retro**, **Neon**, **Pastel** y **Pixel art**.
 
 ---
 
@@ -138,6 +139,19 @@ Aporta el aspecto visual con estética _retro arcade_: tipografía monoespaciada
 
 El botón **Tema claro / Tema oscuro** junto al título cambia entre ambos temas (es un `role="switch"` accesible con teclado). La preferencia se guarda en `localStorage` (`tetris-theme`). `game.js` lee de las variables CSS los colores que pinta el canvas (cuadrícula, brillo y borde de bloques, opacidad del ghost) y repinta al cambiar de tema, también en pausa o game over.
 
+El selector de **skin** (`<select id="skin-select">`) junto al botón de tema cambia la apariencia de los bloques. La preferencia se guarda en `localStorage` (`tetris-skin`; un valor desconocido vuelve a Retro) y el cambio se aplica al instante, también en pausa o game over:
+
+| Skin      | Aspecto                                                                                   |
+| --------- | ----------------------------------------------------------------------------------------- |
+| Retro     | Bloques cuadrados de colores planos (el estilo original).                                 |
+| Neon      | Fondo negro en los canvas y bloques con resplandor (`shadowBlur`) del color de la pieza.  |
+| Pastel    | Colores suaves y bordes redondeados (trazados con `arcTo`).                               |
+| Pixel art | Textura de píxeles de 3×3 px con biselado, fija para que no parpadee.                     |
+
+Las skins conviven con el tema claro/oscuro. La skin Neon añade `data-skin="neon"` a `<html>`, y `:root[data-skin="neon"]` sobrescribe `--canvas-bg`, `--grid`, `--border`, `--block-highlight`, `--block-edge` y `--ghost-alpha` en ambos temas (y fuerza texto claro en los botones de la barra de título).
+
+Cada bloque se prerenderiza una vez por skin, color, tamaño y tema en un tile (canvas fuera de pantalla) que `drawBlock` copia con `drawImage`, así el glow y la textura no se recalculan en cada frame. Mientras el selector tiene el foco, las teclas del juego (flechas, `Espacio`, `P`, `Esc`, `X`) le quitan el foco y actúan sobre la partida.
+
 ### 3. `game.js`
 
 Contiene toda la lógica del juego. A grandes rasgos:
@@ -154,6 +168,7 @@ Contiene toda la lógica del juego. A grandes rasgos:
 - **Nivel y velocidad**: la partida empieza en el nivel inicial elegido en el menú de pausa (guardado en `localStorage`, clave `tetris-start-level`); después sube uno cada 10 líneas: `nivel inicial + ⌊lines / 10⌋`. La velocidad de caída (`speedForLevel`) se calcula como `max(100, 1000 − (level − 1) × 90)` milisegundos.
 - **Menú de pausa** (`openPauseMenu`, `closePauseMenu`): `togglePause()` abre y cierra `#pause-menu`. Cambiar el nivel inicial no altera la partida en curso (usa `gameStartLevel`, fijado en `init()`); al cerrar el menú, las teclas aún pulsadas pasan a `blockedKeys` y el juego ignora su autorrepetición hasta el `keyup`. Mientras está abierto, `Tab` queda atrapado dentro del menú.
 - **Récords** (sección `Récords locales` al final): `trackCombo` se llama desde `lockPiece` tras `clearLines`; `endGame` llama a `finishRecords()`, que guarda marcas y la fila del top (protegido para ejecutarse una vez por partida); `init` llama a `resetRecordsState()`.
+- **Skins** (`SKINS`, `applySkin`): cada skin define una paleta de 11 entradas alineada por índice con `COLORS` y una función `drawCell`. `drawBlock` delega en la skin activa; la bomba y el rayo conservan su dibujo pero usan el color de la paleta activa (`palette`).
 - **Ghost piece** (`ghostY`): proyecta la posición final de la pieza actual hacia abajo y la dibuja con la opacidad del tema (`--ghost-alpha`: 0.2 en oscuro, 0.4 en claro).
 
 ### Flujo del juego
@@ -212,7 +227,8 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `COLS`         | Columnas del tablero                     | `10`                  |
 | `ROWS`         | Filas del tablero                        | `20`                  |
 | `BLOCK`        | Tamaño en píxeles de cada celda          | `30`                  |
-| `COLORS`       | Paleta de colores por tipo de pieza      | 8 colores + bomba     |
+| `COLORS`       | Paleta de colores por tipo de pieza (skin Retro) | 8 colores + bomba + rayo |
+| `SKINS`        | Paleta y función de dibujo de cada skin  | `retro`, `neon`, `pastel`, `pixel` |
 | `LINE_SCORES`  | Puntos por 1, 2, 3 o 4 líneas eliminadas | `[0,100,300,500,800]` |
 | `dropInterval` | Velocidad inicial de caída en ms (según el nivel inicial) | `1000`  |
 | `MAX_START_LEVEL` | Nivel inicial máximo del selector     | `10`                  |
