@@ -14,7 +14,7 @@ Open `index.html` directly, or serve statically: `python -m http.server 8000`.
 
 - `index.html`: two canvases (`#board` 300x600, `#next-canvas` 120x120), HUD spans, `#overlay` for PAUSA / GAME OVER.
 - `game.js`: all logic, single global script (`'use strict'`), module-level mutable state (`board`, `current`, `next`, `score`, ...) reset by `init()`.
-- `style.css`: dark theme only.
+- `style.css`: colors are CSS variables on `:root` (dark, default); `[data-theme="light"]` overrides them. `#theme-toggle` (top-right) sets `data-theme` on `<html>`; the choice is not persisted. `game.js` has `COLORS_LIGHT` and reads `--grid` in `drawGrid`.
 
 Key points spanning the code:
 - Board is `ROWS x COLS` matrix; cell is `0` or color/piece index 1–7. `PIECES` and `COLORS` share the same index; piece matrices embed their own index as cell value.
