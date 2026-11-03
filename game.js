@@ -11,11 +11,8 @@ const COLORS = [
   '#ba68c8', // T - purple
   '#81c784', // S - green
   '#e57373', // Z - red
-  '#90caf9', // J - pale blue
+  '#7986cb', // J - indigo
   '#ffb74d', // L - orange
-  '#a1887f', // N - tuerca (nut)
-  '#ff5252', // B - bomba (nunca se guarda en el tablero)
-  '#ffeb3b', // R - rayo (nunca se guarda en el tablero)
 ];
 
 const PIECES = [
@@ -27,23 +24,11 @@ const PIECES = [
   [[5,5,0],[0,5,5],[0,0,0]],                  // Z
   [[6,0,0],[6,6,6],[0,0,0]],                  // J
   [[0,0,7],[7,7,7],[0,0,0]],                  // L
-  [[8,8,8],[8,0,8],[8,8,8]],                  // N (tuerca)
-  [[9]],                                       // B (bomba)
-  [[10]],                                      // R (rayo)
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
-const BOMB = 9;              // tipo de la pieza bomba; randomPiece() nunca la genera
-const BOMB_EVERY = 5;        // cada cuántas líneas se gana una bomba
-const BOMB_RADIUS = 1;       // 1 => área de 3x3 centrada donde cae la bomba
-const BOMB_BLOCK_SCORE = 10; // puntos por bloque destruido (× nivel)
-
-const LIGHTNING = 10;             // tipo de la pieza rayo; randomPiece() nunca la genera
-const LIGHTNING_EVERY = 4;        // cada cuántas líneas se gana un rayo
-const LIGHTNING_BLOCK_SCORE = 10; // puntos por bloque destruido (× nivel)
-
-const canvas =document.getElementById('board');
+const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
 const nextCtx = nextCanvas.getContext('2d');
@@ -54,65 +39,17 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
-const themeToggle = document.getElementById('theme-toggle');
-
-const THEME_KEY = 'tetris-theme';
-let theme = { grid: '#22222e', highlight: 'rgba(255,255,255,0.12)', edge: 'transparent', ghostAlpha: 0.2 };
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
-let nextBombAt, pendingBombs;
-let nextLightningAt, pendingLightnings;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
 }
 
 function randomPiece() {
-  const type = Math.floor(Math.random() * 8) + 1;
+  const type = Math.floor(Math.random() * 7) + 1;
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
-}
-
-function bombPiece() {
-  const shape = PIECES[BOMB].map(row => [...row]);
-  return { type: BOMB, shape, x: Math.floor(COLS / 2), y: 0 };
-}
-
-function lightningPiece() {
-  const shape = PIECES[LIGHTNING].map(row => [...row]);
-  return { type: LIGHTNING, shape, x: Math.floor(COLS / 2), y: 0 };
-}
-
-// Vacía la columna y elimina la fila donde cae el rayo (con gravedad: lo de arriba baja).
-// No cuenta en LINES ni en el nivel, así que no encadena más bombas ni rayos.
-function strike() {
-  let destroyed = 0;
-  for (let r = 0; r < ROWS; r++) {
-    if (board[r][current.x]) { board[r][current.x] = 0; destroyed++; }
-  }
-  if (current.y >= 0 && current.y < ROWS) {
-    destroyed += board[current.y].filter(v => v !== 0).length;
-    board.splice(current.y, 1);
-    board.unshift(new Array(COLS).fill(0));
-  }
-  score += destroyed * LIGHTNING_BLOCK_SCORE * level;
-  updateHUD();
-}
-
-// Destruye los bloques fijados en el área (2·BOMB_RADIUS+1)² centrada en la bomba.
-// No aplica gravedad: los bloques de arriba quedan flotando.
-function explode() {
-  let destroyed = 0;
-  for (let r = current.y - BOMB_RADIUS; r <= current.y + BOMB_RADIUS; r++) {
-    if (r < 0 || r >= ROWS) continue;
-    for (let c = current.x - BOMB_RADIUS; c <= current.x + BOMB_RADIUS; c++) {
-      if (c < 0 || c >= COLS || !board[r][c]) continue;
-      board[r][c] = 0;
-      destroyed++;
-    }
-  }
-  score += destroyed * BOMB_BLOCK_SCORE * level;
-  updateHUD();
 }
 
 function collide(shape, ox, oy) {
@@ -169,16 +106,8 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = gameStartLevel + Math.floor(lines / 10);
-    dropInterval = speedForLevel(level);
-    while (lines >= nextBombAt) {
-      pendingBombs++;
-      nextBombAt += BOMB_EVERY;
-    }
-    while (lines >= nextLightningAt) {
-      pendingLightnings++;
-      nextLightningAt += LIGHTNING_EVERY;
-    }
+    level = Math.floor(lines / 10) + 1;
+    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     updateHUD();
   }
 }
@@ -207,30 +136,14 @@ function softDrop() {
 }
 
 function lockPiece() {
-  if (current.type === BOMB) {
-    explode();
-  } else if (current.type === LIGHTNING) {
-    strike();
-  } else {
-    merge();
-    const linesBefore = lines;
-    clearLines();
-    trackCombo(lines - linesBefore);
-  }
+  merge();
+  clearLines();
   spawn();
 }
 
 function spawn() {
   current = next;
-  if (pendingLightnings > 0) {
-    pendingLightnings--;
-    next = lightningPiece();
-  } else if (pendingBombs > 0) {
-    pendingBombs--;
-    next = bombPiece();
-  } else {
-    next = randomPiece();
-  }
+  next = randomPiece();
   if (collide(current.shape, current.x, current.y)) {
     endGame();
   }
@@ -243,200 +156,20 @@ function updateHUD() {
   levelEl.textContent = level;
 }
 
-function drawBomb(context, x, y, size, alpha) {
-  const cx = (x + 0.5) * size;
-  const cy = (y + 0.56) * size;
-  const rad = size * 0.34;
-  context.globalAlpha = alpha ?? 1;
-  // mecha
-  context.strokeStyle = '#8d6e63';
-  context.lineWidth = Math.max(1.5, size * 0.07);
-  context.beginPath();
-  context.moveTo(cx + rad * 0.5, cy - rad * 0.8);
-  context.quadraticCurveTo(cx + rad * 0.9, cy - rad * 1.4, cx + rad * 1.2, cy - rad * 1.25);
-  context.stroke();
-  // chispa
-  context.fillStyle = '#ffd54f';
-  context.beginPath();
-  context.arc(cx + rad * 1.2, cy - rad * 1.25, size * 0.08, 0, Math.PI * 2);
-  context.fill();
-  // cuerpo
-  context.fillStyle = palette[BOMB];
-  context.beginPath();
-  context.arc(cx, cy, rad, 0, Math.PI * 2);
-  context.fill();
-  context.strokeStyle = theme.edge;
-  context.lineWidth = 1;
-  context.stroke();
-  // brillo
-  context.fillStyle = theme.highlight;
-  context.beginPath();
-  context.arc(cx - rad * 0.35, cy - rad * 0.35, rad * 0.3, 0, Math.PI * 2);
-  context.fill();
-  context.globalAlpha = 1;
-}
-
-function drawLightning(context, x, y, size, alpha) {
-  const px = x * size, py = y * size;
-  context.globalAlpha = alpha ?? 1;
-  context.fillStyle = palette[LIGHTNING];
-  context.beginPath();
-  context.moveTo(px + size * 0.6, py + size * 0.06);
-  context.lineTo(px + size * 0.22, py + size * 0.56);
-  context.lineTo(px + size * 0.46, py + size * 0.56);
-  context.lineTo(px + size * 0.36, py + size * 0.94);
-  context.lineTo(px + size * 0.78, py + size * 0.4);
-  context.lineTo(px + size * 0.54, py + size * 0.4);
-  context.closePath();
-  context.fill();
-  context.strokeStyle = '#f57f17';
-  context.lineWidth = 1.5;
-  context.stroke();
-  context.globalAlpha = 1;
-}
-
-// ---- Skins ----
-// Cada skin aporta una paleta alineada por índice con COLORS y una función que
-// dibuja una celda en (px, py). Las celdas se prerenderizan en tiles cacheados.
-const SKIN_KEY = 'tetris-skin';
-const TILE_PAD = 16; // margen del tile para que quepa el glow de Neon
-const skinSelect = document.getElementById('skin-select');
-const tileCache = new Map();
-
-function drawRetroCell(context, px, py, size, color) {
-  context.fillStyle = color;
-  context.fillRect(px + 1, py + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = theme.highlight;
-  context.fillRect(px + 1, py + 1, size - 2, 4);
-  context.strokeStyle = theme.edge;
-  context.lineWidth = 1;
-  context.strokeRect(px + 1.5, py + 1.5, size - 3, size - 3);
-}
-
-function drawNeonCell(context, px, py, size, color) {
-  context.shadowColor = color;
-  context.shadowBlur = size * 0.5;
-  context.globalAlpha = 0.3;
-  context.fillStyle = color;
-  context.fillRect(px + 3, py + 3, size - 6, size - 6);
-  context.globalAlpha = 1;
-  context.strokeStyle = color;
-  context.lineWidth = 2;
-  context.strokeRect(px + 3, py + 3, size - 6, size - 6);
-  context.shadowBlur = 0;
-  context.fillStyle = color;
-  context.fillRect(px + size * 0.4, py + size * 0.4, size * 0.2, size * 0.2);
-}
-
-function roundedPath(context, x, y, w, h, r) {
-  context.beginPath();
-  context.moveTo(x + r, y);
-  context.arcTo(x + w, y, x + w, y + h, r);
-  context.arcTo(x + w, y + h, x, y + h, r);
-  context.arcTo(x, y + h, x, y, r);
-  context.arcTo(x, y, x + w, y, r);
-  context.closePath();
-}
-
-function drawPastelCell(context, px, py, size, color) {
-  const r = size * 0.25;
-  roundedPath(context, px + 1.5, py + 1.5, size - 3, size - 3, r);
-  context.fillStyle = color;
-  context.fill();
-  context.strokeStyle = theme.edge;
-  context.lineWidth = 1;
-  context.stroke();
-  // brillo suave en la esquina superior
-  roundedPath(context, px + size * 0.2, py + size * 0.15, size * 0.35, size * 0.18, size * 0.09);
-  context.fillStyle = theme.highlight;
-  context.fill();
-}
-
-function drawPixelCell(context, px, py, size, color) {
-  const p = Math.max(2, Math.round(size / 10)); // tamaño del "píxel"
-  const n = Math.floor(size / p);
-  context.fillStyle = color;
-  context.fillRect(px, py, size, size);
-  for (let i = 0; i < n; i++) {
-    for (let j = 0; j < n; j++) {
-      let shade = null;
-      if (i === 0 || j === 0) shade = 'rgba(255,255,255,0.35)';
-      else if (i === n - 1 || j === n - 1) shade = 'rgba(0,0,0,0.35)';
-      else if ((i * 7 + j * 13) % 5 === 0) shade = 'rgba(0,0,0,0.18)';
-      else if ((i * 3 + j * 11) % 7 === 0) shade = 'rgba(255,255,255,0.18)';
-      if (!shade) continue;
-      context.fillStyle = shade;
-      context.fillRect(px + i * p, py + j * p, p, p);
-    }
-  }
-}
-
-const SKINS = {
-  retro: { palette: COLORS, drawCell: drawRetroCell },
-  neon: {
-    palette: [null, '#00f0ff', '#fff200', '#d500f9', '#39ff14', '#ff1744', '#2979ff', '#ff9100', '#e0e0e0', '#ff1744', '#ffff00'],
-    drawCell: drawNeonCell,
-    glow: true,
-  },
-  pastel: {
-    palette: [null, '#a8e6ef', '#fff1a8', '#d7b8f3', '#b9e8c0', '#f7b5b5', '#b5d3f7', '#ffd1a8', '#d6c7bd', '#f4a6a6', '#fff3a0'],
-    drawCell: drawPastelCell,
-  },
-  pixel: {
-    palette: [null, '#3cbcfc', '#f8b800', '#9878f8', '#58d854', '#e40058', '#0058f8', '#fc7460', '#ac7c00', '#f83800', '#fce0a8'],
-    drawCell: drawPixelCell,
-  },
-};
-
-let skinName = 'retro';
-let skin = SKINS.retro;
-let palette = skin.palette;
-
-// el tile depende también del tema (brillo y borde de los bloques)
-function cellTile(color, size) {
-  const key = [skinName, color, size, theme.highlight, theme.edge].join('|');
-  let tile = tileCache.get(key);
-  if (!tile) {
-    tile = document.createElement('canvas');
-    tile.width = tile.height = size + 2 * TILE_PAD;
-    skin.drawCell(tile.getContext('2d'), TILE_PAD, TILE_PAD, size, color);
-    tileCache.set(key, tile);
-  }
-  return tile;
-}
-
-function applySkin(name) {
-  if (!Object.prototype.hasOwnProperty.call(SKINS, name)) name = 'retro';
-  skinName = name;
-  skin = SKINS[name];
-  palette = skin.palette;
-  document.documentElement.setAttribute('data-skin', name);
-  skinSelect.value = name;
-  // vuelve a leer las variables CSS (la skin puede sobrescribirlas) y repinta
-  applyTheme(document.documentElement.hasAttribute('data-theme') ? 'light' : 'dark');
-}
-
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  if (colorIndex === BOMB || colorIndex === LIGHTNING) {
-    context.save();
-    if (skin.glow) {
-      context.shadowColor = palette[colorIndex];
-      context.shadowBlur = size * 0.5;
-    }
-    if (colorIndex === BOMB) drawBomb(context, x, y, size, alpha);
-    else drawLightning(context, x, y, size, alpha);
-    context.restore();
-    return;
-  }
+  const color = COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
-  context.drawImage(cellTile(palette[colorIndex], size), x * size - TILE_PAD, y * size - TILE_PAD);
+  context.fillStyle = color;
+  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+  // highlight
+  context.fillStyle = 'rgba(255,255,255,0.12)';
+  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
   context.globalAlpha = 1;
 }
 
 function drawGrid() {
-  ctx.strokeStyle = theme.grid;
+  ctx.strokeStyle = '#22222e';
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -463,29 +196,10 @@ function draw() {
 
   // ghost
   const gy = ghostY();
-  if (current.type === BOMB) {
-    // área de explosión donde caerá la bomba
-    const x0 = Math.max(0, current.x - BOMB_RADIUS);
-    const y0 = Math.max(0, gy - BOMB_RADIUS);
-    const x1 = Math.min(COLS - 1, current.x + BOMB_RADIUS);
-    const y1 = Math.min(ROWS - 1, gy + BOMB_RADIUS);
-    ctx.globalAlpha = theme.ghostAlpha;
-    ctx.fillStyle = palette[BOMB];
-    ctx.fillRect(x0 * BLOCK, y0 * BLOCK, (x1 - x0 + 1) * BLOCK, (y1 - y0 + 1) * BLOCK);
-    ctx.globalAlpha = 1;
-  }
-  if (current.type === LIGHTNING) {
-    // fila y columna que se limpiarán
-    ctx.globalAlpha = theme.ghostAlpha;
-    ctx.fillStyle = palette[LIGHTNING];
-    ctx.fillRect(0, gy * BLOCK, COLS * BLOCK, BLOCK);
-    ctx.fillRect(current.x * BLOCK, 0, BLOCK, ROWS * BLOCK);
-    ctx.globalAlpha = 1;
-  }
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       if (current.shape[r][c])
-        drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, theme.ghostAlpha);
+        drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, 0.2);
 
   // current piece
   for (let r = 0; r < current.shape.length; r++)
@@ -497,33 +211,11 @@ function drawNext() {
   const NB = 30;
   nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
   const shape = next.shape;
-  // la bomba (1x1) se centra exacto; el resto conserva su alineación
-  const center = (next.type === BOMB || next.type === LIGHTNING) ? n => (4 - n) / 2 : n => Math.floor((4 - n) / 2);
-  const offX = center(shape[0].length);
-  const offY = center(shape.length);
+  const offX = Math.floor((4 - shape[0].length) / 2);
+  const offY = Math.floor((4 - shape.length) / 2);
   for (let r = 0; r < shape.length; r++)
     for (let c = 0; c < shape[r].length; c++)
       drawBlock(nextCtx, offX + c, offY + r, shape[r][c], NB);
-}
-
-function applyTheme(name) {
-  const light = name === 'light';
-  if (light) document.documentElement.setAttribute('data-theme', 'light');
-  else document.documentElement.removeAttribute('data-theme');
-  themeToggle.setAttribute('aria-checked', String(light));
-  themeToggle.textContent = light ? 'Tema oscuro' : 'Tema claro';
-  const css = getComputedStyle(document.documentElement);
-  theme = {
-    grid: css.getPropertyValue('--grid').trim(),
-    highlight: css.getPropertyValue('--block-highlight').trim(),
-    edge: css.getPropertyValue('--block-edge').trim(),
-    ghostAlpha: parseFloat(css.getPropertyValue('--ghost-alpha')),
-  };
-  // el loop no corre en pausa ni en game over: repintar a mano
-  if (current && next) {
-    draw();
-    drawNext();
-  }
 }
 
 function endGame() {
@@ -532,19 +224,19 @@ function endGame() {
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   overlay.classList.remove('hidden');
-  finishRecords();
 }
 
 function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
-    closePauseMenu();
     lastTime = performance.now();
     loop(lastTime);
   } else {
     cancelAnimationFrame(animId);
-    openPauseMenu();
+    overlayTitle.textContent = 'PAUSA';
+    overlayScore.textContent = '';
+    overlay.classList.remove('hidden');
   }
 }
 
@@ -564,114 +256,15 @@ function loop(ts) {
   animId = requestAnimationFrame(loop);
 }
 
-// ---- Menú de pausa ----
-const START_LEVEL_KEY = 'tetris-start-level';
-const MAX_START_LEVEL = 10;
-const pauseMenu = document.getElementById('pause-menu');
-const resumeBtn = document.getElementById('pause-resume');
-const pauseRestartBtn = document.getElementById('pause-restart');
-const controlsToggle = document.getElementById('pause-controls-toggle');
-const pauseControls = document.getElementById('pause-controls');
-const startLevelSelect = document.getElementById('start-level');
-
-let startLevel = 1;     // preferencia del selector: aplica a la próxima partida
-let gameStartLevel = 1; // nivel inicial de la partida en curso
-const heldKeys = new Set();    // teclas pulsadas ahora mismo
-const blockedKeys = new Set(); // ignoradas por el juego hasta su keyup
-
-function openPauseMenu() {
-  pauseControls.hidden = true;
-  controlsToggle.setAttribute('aria-expanded', 'false');
-  pauseMenu.classList.remove('hidden');
-  resumeBtn.focus();
-}
-
-function closePauseMenu() {
-  if (pauseMenu.contains(document.activeElement)) document.activeElement.blur();
-  pauseMenu.classList.add('hidden');
-  // lo que siga pulsado al volver no debe mover la pieza
-  heldKeys.forEach(code => blockedKeys.add(code));
-}
-
-function speedForLevel(lvl) {
-  return Math.max(100, 1000 - (lvl - 1) * 90);
-}
-
-const GAME_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyX', 'Space'];
-
-window.addEventListener('keydown', e => {
-  heldKeys.add(e.code);
-  // una pulsación nueva (no autorrepetición) nunca está bloqueada; cubre keyups perdidos
-  if (!e.repeat) blockedKeys.delete(e.code);
-  if (!paused) return;
-  if (e.code === 'Tab') trapFocus(e);
-  // con el menú abierto, las teclas de juego no deben desplazar la página
-  else if (GAME_KEYS.includes(e.code) && !pauseMenu.contains(e.target)) e.preventDefault();
-}, true);
-window.addEventListener('keyup', e => {
-  heldKeys.delete(e.code);
-  blockedKeys.delete(e.code);
-}, true);
-window.addEventListener('blur', () => {
-  heldKeys.clear();
-  blockedKeys.clear();
-});
-
-// mantiene el foco de Tab dentro del menú de pausa
-function trapFocus(e) {
-  const items = [...pauseMenu.querySelectorAll('button, select')];
-  const first = items[0], last = items[items.length - 1];
-  const inside = pauseMenu.contains(document.activeElement);
-  if (e.shiftKey && (!inside || document.activeElement === first)) {
-    e.preventDefault();
-    last.focus();
-  } else if (!e.shiftKey && (!inside || document.activeElement === last)) {
-    e.preventDefault();
-    first.focus();
-  }
-}
-
-resumeBtn.addEventListener('click', () => {
-  if (paused) togglePause();
-});
-
-pauseRestartBtn.addEventListener('click', init);
-
-controlsToggle.addEventListener('click', () => {
-  const open = pauseControls.hidden;
-  pauseControls.hidden = !open;
-  controlsToggle.setAttribute('aria-expanded', String(open));
-});
-
-for (let n = 1; n <= MAX_START_LEVEL; n++) startLevelSelect.add(new Option(String(n), String(n)));
-
-startLevelSelect.addEventListener('change', () => {
-  startLevel = Number(startLevelSelect.value);
-  try { localStorage.setItem(START_LEVEL_KEY, String(startLevel)); } catch (e) {}
-});
-
-try {
-  const saved = Number(localStorage.getItem(START_LEVEL_KEY));
-  if (Number.isInteger(saved) && saved >= 1 && saved <= MAX_START_LEVEL) startLevel = saved;
-} catch (e) {}
-startLevelSelect.value = String(startLevel);
-
 function init() {
-  resetRecordsState();
   board = createBoard();
   score = 0;
   lines = 0;
-  gameStartLevel = startLevel;
-  level = gameStartLevel;
+  level = 1;
   paused = false;
   gameOver = false;
-  closePauseMenu();
-  dropInterval = speedForLevel(level);
+  dropInterval = 1000;
   dropAccum = 0;
-  nextBombAt = BOMB_EVERY;
-  pendingBombs = 0;
-  nextLightningAt = LIGHTNING_EVERY;
-  pendingLightnings = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
@@ -682,13 +275,8 @@ function init() {
 }
 
 document.addEventListener('keydown', e => {
-  // récords: sin partida (pantalla de inicio) o escribiendo el nombre
-  if (!current || e.target instanceof HTMLInputElement) return;
-  if (e.code === 'KeyP' || e.code === 'Escape') {
-    if (!e.repeat) togglePause();
-    return;
-  }
-  if (paused || gameOver || blockedKeys.has(e.code)) return;
+  if (e.code === 'KeyP') { togglePause(); return; }
+  if (paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
@@ -713,213 +301,4 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 
-themeToggle.addEventListener('click', () => {
-  const name = document.documentElement.hasAttribute('data-theme') ? 'dark' : 'light';
-  try { localStorage.setItem(THEME_KEY, name); } catch (e) {}
-  applyTheme(name);
-  themeToggle.blur(); // que Space/Enter no vuelvan a activar el botón
-});
-
-let savedTheme = null;
-try { savedTheme = localStorage.getItem(THEME_KEY); } catch (e) {}
-applyTheme(savedTheme);
-
-// las teclas del juego no manipulan el selector: le quitan el foco y siguen al juego
-const SKIN_PASSTHROUGH_KEYS = [...GAME_KEYS, 'KeyP', 'Escape'];
-skinSelect.addEventListener('keydown', e => {
-  if (!SKIN_PASSTHROUGH_KEYS.includes(e.code)) return;
-  e.preventDefault();
-  skinSelect.blur();
-});
-
-skinSelect.addEventListener('change', () => {
-  try { localStorage.setItem(SKIN_KEY, skinSelect.value); } catch (e) {}
-  applySkin(skinSelect.value);
-  skinSelect.blur(); // que las flechas/Space vuelvan al juego
-});
-
-let savedSkin = null;
-try { savedSkin = localStorage.getItem(SKIN_KEY); } catch (e) {}
-applySkin(savedSkin);
-
-// ---- Récords locales ----
-// localStorage `tetris-records`: { top: [{name, score, lines, level}], bestCombo, maxLines }.
-// Combo: bloqueos consecutivos de piezas normales que limpian líneas (bomba y rayo no cuentan ni cortan).
-const RECORDS_KEY = 'tetris-records';
-const RECORDS_MAX = 5;
-const RECORD_NAME_MAX = 12;
-const RECORD_DEFAULT_NAME = 'Jugador';
-
-const startOverlay = document.getElementById('start-overlay');
-const startRecordsEl = document.getElementById('start-records');
-const playBtn = document.getElementById('play-btn');
-const overRecords = document.getElementById('over-records');
-const overRecordsTable = document.getElementById('over-records-table');
-const recordMsg = document.getElementById('record-msg');
-const recordForm = document.getElementById('record-form');
-const recordName = document.getElementById('record-name');
-
-let combo = 0, bestComboGame = 0;
-let recordsHandled = false;
-let recordIndex = -1;   // fila de la partida actual en el top (-1 si no entró)
-let nameEditable = false;
-let newMarks = { combo: false, lines: false };
-
-function emptyRecords() {
-  return { top: [], bestCombo: 0, maxLines: 0 };
-}
-
-function loadRecords() {
-  let data;
-  try { data = JSON.parse(localStorage.getItem(RECORDS_KEY)); } catch (e) { return emptyRecords(); }
-  if (!data || typeof data !== 'object') return emptyRecords();
-  const num = v => (Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0);
-  const top = (Array.isArray(data.top) ? data.top : [])
-    .filter(r => r && typeof r === 'object' && Number.isFinite(r.score))
-    .map(r => ({
-      name: (typeof r.name === 'string' && r.name.trim()) ? r.name.trim().slice(0, RECORD_NAME_MAX) : RECORD_DEFAULT_NAME,
-      score: num(r.score),
-      lines: num(r.lines),
-      level: num(r.level),
-    }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, RECORDS_MAX);
-  return { top, bestCombo: num(data.bestCombo), maxLines: num(data.maxLines) };
-}
-
-function saveRecords(data) {
-  try { localStorage.setItem(RECORDS_KEY, JSON.stringify(data)); } catch (e) {}
-}
-
-function trackCombo(cleared) {
-  combo = cleared > 0 ? combo + 1 : 0;
-  if (combo > bestComboGame) bestComboGame = combo;
-}
-
-function renderRecords(container, data, highlight) {
-  const table = document.createElement('table');
-  table.className = 'records-table';
-  const head = table.createTHead().insertRow();
-  for (const label of ['#', 'Nombre', 'Puntos', 'Líneas']) {
-    const th = document.createElement('th');
-    th.textContent = label;
-    head.appendChild(th);
-  }
-  const body = table.createTBody();
-  if (!data.top.length) {
-    const cell = body.insertRow().insertCell();
-    cell.colSpan = 4;
-    cell.className = 'records-empty';
-    cell.textContent = 'Sin récords todavía';
-  }
-  data.top.forEach((r, i) => {
-    const row = body.insertRow();
-    if (i === highlight) row.className = 'records-new';
-    for (const value of [i + 1, r.name, r.score.toLocaleString(), r.lines]) {
-      row.insertCell().textContent = value;
-    }
-  });
-
-  const marks = document.createElement('p');
-  marks.className = 'records-marks';
-  // highlight === null: pantalla de inicio, sin resaltar marcas nuevas
-  const comboEl = document.createElement('span');
-  comboEl.textContent = `Mejor combo: ${data.bestCombo}`;
-  if (newMarks.combo && highlight !== null) comboEl.className = 'records-mark-new';
-  const maxLinesEl = document.createElement('span');
-  maxLinesEl.textContent = `Líneas máx.: ${data.maxLines}`;
-  if (newMarks.lines && highlight !== null) maxLinesEl.className = 'records-mark-new';
-  marks.append(comboEl, maxLinesEl);
-
-  container.replaceChildren(table, marks);
-}
-
-// Al terminar la partida: guarda marcas y, si entra en el top, la fila con el nombre por defecto
-// (así no se pierde si se reinicia o se cierra sin pulsar Guardar). Guardar solo la renombra.
-// endGame() puede llamarse varias veces por partida (el loop sigue corriendo), de ahí recordsHandled.
-function finishRecords() {
-  if (recordsHandled) return;
-  recordsHandled = true;
-  const data = loadRecords();
-  newMarks = { combo: bestComboGame > data.bestCombo, lines: lines > data.maxLines };
-  data.bestCombo = Math.max(data.bestCombo, bestComboGame);
-  data.maxLines = Math.max(data.maxLines, lines);
-
-  recordIndex = -1;
-  const qualifies = score > 0 &&
-    (data.top.length < RECORDS_MAX || score > data.top[data.top.length - 1].score);
-  if (qualifies) {
-    let idx = data.top.findIndex(r => r.score < score);
-    if (idx === -1) idx = data.top.length;
-    data.top.splice(idx, 0, { name: RECORD_DEFAULT_NAME, score, lines, level });
-    data.top.length = Math.min(data.top.length, RECORDS_MAX);
-    recordIndex = idx;
-  }
-  saveRecords(data);
-
-  nameEditable = qualifies;
-  recordName.value = RECORD_DEFAULT_NAME;
-  recordForm.hidden = !qualifies;
-  recordMsg.textContent = qualifies
-    ? `¡Puesto #${recordIndex + 1} en el top ${RECORDS_MAX}! Escribe tu nombre:`
-    : (newMarks.combo || newMarks.lines ? '¡Nueva marca personal!' : '');
-  renderRecords(overRecordsTable, data, recordIndex);
-  overRecords.hidden = false;
-}
-
-function saveRecordName() {
-  if (!nameEditable) return;
-  nameEditable = false;
-  const name = recordName.value.trim().slice(0, RECORD_NAME_MAX) || RECORD_DEFAULT_NAME;
-  const data = loadRecords();
-  const row = data.top[recordIndex];
-  if (row && row.score === score) {
-    row.name = name;
-    saveRecords(data);
-  }
-  recordName.blur();
-  recordForm.hidden = true;
-  recordMsg.textContent = `¡Puesto #${recordIndex + 1} en el top ${RECORDS_MAX}!`;
-  renderRecords(overRecordsTable, data, recordIndex);
-}
-
-function resetRecordsState() {
-  combo = 0;
-  bestComboGame = 0;
-  recordsHandled = false;
-  recordIndex = -1;
-  nameEditable = false;
-  newMarks = { combo: false, lines: false };
-  recordName.blur();
-  overRecords.hidden = true;
-}
-
-function clearRecords() {
-  if (!confirm('¿Borrar todos los récords?')) return;
-  try { localStorage.removeItem(RECORDS_KEY); } catch (e) {}
-  recordIndex = -1;
-  nameEditable = false;
-  newMarks = { combo: false, lines: false };
-  recordForm.hidden = true;
-  recordMsg.textContent = '';
-  renderRecords(startRecordsEl, emptyRecords(), null);
-  renderRecords(overRecordsTable, emptyRecords(), null);
-}
-
-recordForm.addEventListener('submit', e => {
-  e.preventDefault();
-  saveRecordName();
-});
-
-for (const btn of document.querySelectorAll('.records-reset')) {
-  btn.addEventListener('click', () => { clearRecords(); btn.blur(); });
-}
-
-playBtn.addEventListener('click', () => {
-  playBtn.blur(); // que Space no vuelva a pulsar el botón durante la partida
-  startOverlay.classList.add('hidden');
-  init();
-});
-
-// Pantalla de inicio: el juego no arranca hasta pulsar Jugar
-renderRecords(startRecordsEl, loadRecords(), null);
+init();
