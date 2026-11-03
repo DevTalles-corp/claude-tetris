@@ -102,7 +102,7 @@ Define la estructura visual:
 
 ### 2. `style.css`
 
-Aporta el aspecto visual con estética _dark / retro arcade_: fondo oscuro, tipografía monoespaciada para los marcadores y _backdrop blur_ en los overlays.
+Aporta el aspecto visual con estética _dark / retro arcade_: fondo oscuro, tipografía monoespaciada para los marcadores y _backdrop blur_ en los overlays. Los colores son variables CSS: el juego inicia en modo oscuro y el botón ☀️/🌙 (arriba a la derecha) alterna a un modo claro de tonos suaves (sin `#000` ni `#FFF`). La elección no se guarda entre sesiones.
 
 ### 3. `game.js`
 

@@ -1,3 +1,42 @@
+/* ---- Temas ---- */
+:root {
+  --bg: #0f0f17;
+  --surface: #1a1a25;
+  --border: #2a2a3a;
+  --text: #e0e0e0;
+  --muted: #555570;
+  --muted-text: #888;
+  --accent: #7aa2f7;
+  --accent-hover: #9bbdff;
+  --accent-contrast: #0f0f17;
+  --danger: #e57373;
+  --grid: #22222e;
+  --kbd-bg: #22223a;
+  --kbd-border: #3a3a5a;
+  --kbd-text: #aaa;
+  --overlay-bg: rgba(10, 10, 20, 0.75);
+  --shadow: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="light"] {
+  --bg: #e9e6df;
+  --surface: #f4f2ec;
+  --border: #c8c3b6;
+  --text: #2b2d38;
+  --muted: #5a5d6b;
+  --muted-text: #4f5260;
+  --accent: #2f4fa8;
+  --accent-hover: #3d62c9;
+  --accent-contrast: #f4f2ec;
+  --danger: #b33a3a;
+  --grid: #dedad0;
+  --kbd-bg: #e1ddd2;
+  --kbd-border: #b5b0a2;
+  --kbd-text: #3a3d4a;
+  --overlay-bg: rgba(233, 230, 223, 0.8);
+  --shadow: rgba(60, 55, 40, 0.25);
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -5,8 +44,8 @@
 }
 
 body {
-  background: #0f0f17;
-  color: #e0e0e0;
+  background: var(--bg);
+  color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
   display: flex;
   align-items: center;
@@ -19,6 +58,15 @@ body {
   position: relative;
 }
 
+.title {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
 .game-container {
   display: flex;
   gap: 20px;
@@ -27,10 +75,10 @@ body {
 
 #board {
   display: block;
-  border: 1px solid #2a2a3a;
-  background: #1a1a25;
+  border: 1px solid var(--border);
+  background: var(--surface);
   border-radius: 4px;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 40px var(--shadow);
 }
 
 /* ---- Panel lateral ---- */
@@ -51,7 +99,7 @@ body {
 .label {
   font-size: 10px;
   letter-spacing: 2px;
-  color: #555570;
+  color: var(--muted);
   font-weight: 600;
 }
 
@@ -59,14 +107,14 @@ body {
   font-family: 'Courier New', Courier, monospace;
   font-size: 26px;
   font-weight: 700;
-  color: #7aa2f7;
+  color: var(--accent);
   letter-spacing: 1px;
 }
 
 #next-canvas {
   display: block;
-  border: 1px solid #2a2a3a;
-  background: #1a1a25;
+  border: 1px solid var(--border);
+  background: var(--surface);
   border-radius: 4px;
 }
 
@@ -80,20 +128,20 @@ body {
 
 .controls li {
   font-size: 12px;
-  color: #888;
+  color: var(--muted-text);
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
 kbd {
-  background: #22223a;
-  border: 1px solid #3a3a5a;
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
   border-radius: 3px;
   padding: 1px 6px;
   font-size: 11px;
   font-family: inherit;
-  color: #aaa;
+  color: var(--kbd-text);
 }
 
 /* ---- Overlay ---- */
@@ -103,7 +151,7 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(10, 10, 20, 0.75);
+  background: var(--overlay-bg);
   backdrop-filter: blur(4px);
   border-radius: 4px;
 }
@@ -124,19 +172,19 @@ kbd {
   font-size: 28px;
   font-weight: 800;
   letter-spacing: 4px;
-  color: #e57373;
+  color: var(--danger);
 }
 
 #overlay-score {
   font-family: 'Courier New', Courier, monospace;
   font-size: 14px;
-  color: #7aa2f7;
+  color: var(--accent);
 }
 
 #restart-btn {
   margin-top: 8px;
-  background: #7aa2f7;
-  color: #0f0f17;
+  background: var(--accent);
+  color: var(--accent-contrast);
   border: none;
   border-radius: 6px;
   padding: 10px 28px;
@@ -148,5 +196,42 @@ kbd {
 }
 
 #restart-btn:hover {
-  background: #9bbdff;
+  background: var(--accent-hover);
 }
+
+/* ---- Botón de tema ---- */
+#theme-toggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+#theme-toggle:hover {
+  border-color: var(--accent);
+}
+
+#theme-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+#theme-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Modo oscuro: se muestra el sol (pasar a claro); modo claro: la luna */
+#theme-toggle .icon-moon { display: none; }
+[data-theme="light"] #theme-toggle .icon-sun { display: none; }
+[data-theme="light"] #theme-toggle .icon-moon { display: block; }

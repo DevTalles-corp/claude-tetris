@@ -1,0 +1,82 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    # Ignorar issues creados/editados por bots (evita loops)
+    if: github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          create() { gh label create "$1" --color "$2" --description "$3" --force --repo "$GITHUB_REPOSITORY"; }
+          create bug               d73a4a "Algo no funciona como se espera"
+          create enhancement       a2eeef "Nueva funcionalidad o mejora"
+          create question          d876e3 "Pregunta o duda"
+          create documentation     0075ca "Cambios en README / docs"
+          create gameplay          fbca04 "Lógica del juego: piezas, rotación, líneas, puntaje"
+          create ui                c5def5 "HTML / CSS / apariencia"
+          create performance       5319e7 "Rendimiento o fluidez"
+          create needs-info        cfd3d7 "Falta información para diagnosticar"
+          create priority:high     b60205 "Prioridad alta"
+          create priority:medium   e99695 "Prioridad media"
+          create priority:low      c2e0c6 "Prioridad baja"
+
+      - name: Analyze issue with Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            ISSUE: #${{ github.event.issue.number }}
+            EVENTO: ${{ github.event.action }}
+
+            Eres un asistente de triage. Analiza el issue #${{ github.event.issue.number }}
+            (usa `gh issue view ${{ github.event.issue.number }}`) y explora el código del
+            repositorio (index.html, game.js, style.css, CLAUDE.md) para diagnosticar.
+
+            ## 1. Labels
+            Aplica con `gh issue edit ${{ github.event.issue.number }} --add-label ...`
+            solo labels existentes de esta lista:
+            - Tipo (exactamente uno): bug, enhancement, question, documentation
+            - Área (cero o más): gameplay, ui, performance
+            - Prioridad (exactamente una): priority:high, priority:medium, priority:low
+            - needs-info: si falta información para diagnosticar
+            Si el evento es "edited", quita con `--remove-label` los labels que ya no apliquen.
+            No toques labels fuera de esta lista.
+
+            ## 2. Diagnóstico
+            Publica UN comentario en el issue, en español, que comience con la línea
+            `<!-- claude-triage -->`. Si ya existe un comentario con ese marcador
+            (revisa `gh issue view --json comments`), actualízalo con
+            `gh issue comment --edit-last` en vez de crear otro. Estructura:
+            - **Resumen**: qué se reporta, en 1-2 líneas.
+            - **Diagnóstico**: causa probable, citando archivos y líneas (`game.js:123`).
+            - **Archivos afectados**
+            - **Solución propuesta**: pasos concretos de implementación.
+            - **Riesgos / casos borde**
+            - **Información faltante**: preguntas al autor, si aplica.
+
+            No modifiques código, no abras PRs, no cierres el issue. Solo labels y comentario.
+          claude_args: |
+            --allowed-tools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*),Read,Grep,Glob"
