@@ -331,6 +331,7 @@ function loop(ts) {
       lockPiece();
     }
   }
+  if (gameOver) return; // endGame() ocurrió dentro de este frame: no re-programar
   draw();
   animId = requestAnimationFrame(loop);
 }
