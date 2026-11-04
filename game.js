@@ -39,6 +39,19 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const pauseBtn = document.getElementById('pause-btn');
+const themeToggle =document.getElementById('theme-toggle');
+const editUserBtn = document.getElementById('edit-user-btn');
+const userModal = document.getElementById('user-modal');
+const userForm = document.getElementById('user-form');
+const usernameInput = document.getElementById('username-input');
+const scoreboardEl = document.getElementById('scoreboard');
+
+const MAX_NAME = 12;
+const MAX_SCORES = 10;
+let modalOpen = false;
+
+let gridColor = '#22222e';
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
@@ -169,7 +182,7 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = gridColor;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -218,18 +231,84 @@ function drawNext() {
       drawBlock(nextCtx, offX + c, offY + r, shape[r][c], NB);
 }
 
+function getUsername() {
+  try { return (localStorage.getItem('username') || '').trim().slice(0, MAX_NAME); } catch (e) { return ''; }
+}
+
+function setUsername(name) {
+  name = name.trim().slice(0, MAX_NAME);
+  if (!name) return false;
+  try { localStorage.setItem('username', name); } catch (e) {}
+  return true;
+}
+
+function loadScores() {
+  try {
+    const data = JSON.parse(localStorage.getItem('scoreboard'));
+    if (!Array.isArray(data)) return [];
+    return data
+      .filter(e => e && typeof e.name === 'string' && typeof e.score === 'number' && Number.isFinite(e.score))
+      .slice(0, MAX_SCORES);
+  } catch (e) {
+    return [];
+  }
+}
+
+function addScore(name, value) {
+  if (!name || value < 1) return;
+  const scores = loadScores();
+  // Inserta antes del primer puntaje estrictamente menor: un empate queda debajo
+  let idx = scores.findIndex(e => e.score < value);
+  if (idx === -1) {
+    if (scores.length >= MAX_SCORES) return;
+    idx = scores.length;
+  }
+  scores.splice(idx, 0, { name, score: value });
+  try { localStorage.setItem('scoreboard', JSON.stringify(scores.slice(0, MAX_SCORES))); } catch (e) {}
+  renderScoreboard();
+}
+
+function renderScoreboard() {
+  scoreboardEl.textContent = '';
+  for (const e of loadScores()) {
+    const li = document.createElement('li');
+    li.textContent = `${e.name} - ${e.score}`;
+    scoreboardEl.appendChild(li);
+  }
+}
+
+function openUserModal(editing) {
+  modalOpen = true;
+  if (editing && !paused && !gameOver) togglePause();
+  usernameInput.value = editing ? getUsername() : '';
+  userModal.classList.remove('hidden');
+  usernameInput.focus();
+  usernameInput.select();
+}
+
 function endGame() {
   gameOver = true;
+  addScore(getUsername(), score);
   cancelAnimationFrame(animId);
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   overlay.classList.remove('hidden');
+  updatePauseBtn();
+}
+
+function updatePauseBtn() {
+  pauseBtn.textContent = paused ? '▶️' : '⏸️';
+  pauseBtn.setAttribute('aria-label', paused ? 'Reanudar' : 'Pausar');
+  pauseBtn.title = paused ? 'Reanudar' : 'Pausar';
+  pauseBtn.disabled = gameOver;
 }
 
 function togglePause() {
   if (gameOver) return;
   paused = !paused;
+  updatePauseBtn();
   if (!paused) {
+    overlay.classList.add('hidden');
     lastTime = performance.now();
     loop(lastTime);
   } else {
@@ -252,6 +331,7 @@ function loop(ts) {
       lockPiece();
     }
   }
+  if (gameOver) return; // endGame() ocurrió dentro de este frame: no re-programar
   draw();
   animId = requestAnimationFrame(loop);
 }
@@ -270,11 +350,13 @@ function init() {
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  updatePauseBtn();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
 document.addEventListener('keydown', e => {
+  if (modalOpen) return;
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
@@ -301,4 +383,46 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 
-init();
+pauseBtn.addEventListener('click', () => {
+  togglePause();
+  pauseBtn.blur(); // evita que Space/Enter reactiven el botón durante el juego
+});
+
+userForm.addEventListener('submit', e => {
+  e.preventDefault();
+  if (!setUsername(usernameInput.value)) return;
+  const firstTime = !board;
+  modalOpen = false;
+  userModal.classList.add('hidden');
+  usernameInput.blur();
+  if (firstTime) init();
+});
+
+editUserBtn.addEventListener('click', () => {
+  openUserModal(true);
+  editUserBtn.blur();
+});
+
+function applyTheme(theme, save) {
+  document.documentElement.dataset.theme = theme;
+  gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim();
+  themeToggle.textContent = theme === 'light' ? '🌙' : '☀️';
+  themeToggle.setAttribute('aria-label', theme === 'light' ? 'Activar modo oscuro' : 'Activar modo claro');
+  if (save) {
+    try { localStorage.setItem('theme', theme); } catch (e) {}
+  }
+  // Redibuja para que pausa/game over reflejen el nuevo tema
+  if (current) draw();
+}
+
+themeToggle.addEventListener('click', () => {
+  applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light', true);
+  themeToggle.blur(); // evita que Space/Enter reactiven el botón durante el juego
+});
+
+applyTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark', false);
+
+renderScoreboard();
+
+if (getUsername()) init();
+else openUserModal(false);

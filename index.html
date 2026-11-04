@@ -5,11 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
   <link rel="stylesheet" href="style.css" />
+  <script>
+    // Aplica el tema antes de pintar para evitar parpadeo
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
 </head>
 <body>
+  <button id="theme-toggle" type="button" aria-label="Cambiar tema" title="Cambiar tema"></button>
+
+  <header class="title-bar">
+    <h1>TETRIS</h1>
+    <span class="author">por <a href="https://github.com/925ctrl" target="_blank" rel="noopener">925ctrl (Emerlive)</a></span>
+  </header>
+
   <div class="wrapper">
     <div class="game-container">
-      <canvas id="board" width="300" height="600"></canvas>
+      <div class="side-buttons">
+        <button id="pause-btn" type="button" aria-label="Pausar" title="Pausar"></button>
+        <button id="edit-user-btn" type="button" aria-label="Editar usuario" title="Editar usuario">✎</button>
+      </div>
+      <canvas id="board"width="300" height="600"></canvas>
 
       <aside class="panel">
         <div class="panel-section">
@@ -41,6 +63,11 @@
           </ul>
         </div>
       </aside>
+
+      <section class="scoreboard">
+        <span class="label">SCOREBOARD</span>
+        <ol id="scoreboard"></ol>
+      </section>
     </div>
 
     <div id="overlay" class="overlay hidden">
@@ -50,6 +77,14 @@
         <button id="restart-btn">Reiniciar</button>
       </div>
     </div>
+  </div>
+
+  <div id="user-modal" class="user-modal hidden" role="dialog" aria-modal="true" aria-labelledby="user-modal-title">
+    <form id="user-form" class="user-modal-box" autocomplete="off">
+      <span class="label" id="user-modal-title">NOMBRE DE USUARIO</span>
+      <input id="username-input" type="text" maxlength="12" required autocomplete="off" spellcheck="false" placeholder="Tu nombre" />
+      <button id="user-save-btn" type="submit">Guardar</button>
+    </form>
   </div>
 
   <script src="game.js"></script>

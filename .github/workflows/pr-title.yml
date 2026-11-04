@@ -1,0 +1,27 @@
+name: PR Title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  validate:
+    name: Validar título del PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Validar formato Conventional Commits
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          RE='^(feat|fix|perf|docs|style|refactor|test|build|ci|chore)(\([a-z0-9._/-]+\))?!?: [^ ].*$'
+
+          if [[ ! "$TITLE" =~ $RE ]]; then
+            echo "::error title=Título de PR inválido::«$TITLE» no sigue Conventional Commits. Formato: <tipo>(<scope opcional>)[!]: <descripción>. Tipos: feat, fix, perf, docs, style, refactor, test, build, ci, chore. Ejemplos: 'feat: añadir pausa', 'fix(board): corregir colisión', 'feat!: nuevo sistema de puntos'."
+            exit 1
+          fi
+
+          echo "Título válido: $TITLE"
