@@ -307,7 +307,7 @@ document.addEventListener('keydown', e => {
   if (e.target instanceof HTMLInputElement) return;
   // pantalla de inicio: Enter empieza, T cambia el tema, el resto se ignora
   if (!started) {
-    if (e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); startGame(); }
+    if ((e.code === 'Enter' || e.code === 'NumpadEnter') && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); startGame(); }
     else if (e.code === 'KeyT') toggleTheme();
     return;
   }
@@ -373,6 +373,7 @@ function loadRecords() {
     if (data && Array.isArray(data.top)) {
       rec.top = data.top
         .filter(e => e && typeof e.name === 'string' && Number.isFinite(e.score))
+        .map(e => ({ ...e, name: e.name.slice(0, 12), lines: Number(e.lines) || 0 }))
         .sort((a, b) => b.score - a.score)
         .slice(0, MAX_RECORDS);
     }
@@ -495,8 +496,8 @@ function clearRecords() {
   try { localStorage.removeItem(RECORDS_KEY); } catch (e) {}
   showStartRecords();
   if (!goRecords.classList.contains('hidden')) {
-    // la partida terminada ya no tiene récords guardados contra los que compararse
-    showGameOverRecords();
+    // solo refresca la tabla; no reabre el guardado ni re-escribe combo/líneas
+    renderRecords(goTable, loadRecords(), null);
   }
 }
 
