@@ -205,6 +205,124 @@ kbd {
   background: var(--accent-hover);
 }
 
+/* ---- Récords ---- */
+#start-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: var(--accent);
+}
+
+.records-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.records-box.hidden,
+.name-form.hidden {
+  display: none;
+}
+
+.records-table {
+  border-collapse: collapse;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.records-table td {
+  padding: 3px 8px;
+  text-align: left;
+}
+
+.records-table td:nth-child(3) {
+  text-align: right;
+  color: var(--accent);
+}
+
+.records-table tr.highlight {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+
+.records-table tr.highlight td:nth-child(3) {
+  color: var(--on-accent);
+}
+
+.records-empty,
+.records-stats {
+  font-size: 12px;
+  color: var(--controls-text);
+}
+
+.records-msg {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.name-form {
+  display: flex;
+  gap: 6px;
+}
+
+.name-form input {
+  width: 130px;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--board-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  user-select: text;
+}
+
+.name-form input:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+#start-btn,
+#save-btn {
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+
+#start-btn:hover,
+#save-btn:hover {
+  background: var(--accent-hover);
+}
+
+.clear-records-btn {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.clear-records-btn:hover {
+  background: var(--danger);
+  color: var(--on-accent);
+}
+
+.start-hint {
+  font-size: 11px;
+  color: var(--muted);
+}
+
 /* ---- Toggle de tema ---- */
 .theme-toggle {
   position: fixed;

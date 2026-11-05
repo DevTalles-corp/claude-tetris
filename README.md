@@ -45,6 +45,12 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Pausa** y **Game Over** con opción de reinicio.
 - **Tema claro / oscuro**: oscuro por defecto; el switch (arriba a la derecha) o la tecla `T` lo alternan. La elección se guarda en `localStorage`.
 
+- **Tabla de récords local**: top 5 puntuaciones con nombre (máx. 12 caracteres), guardadas en `localStorage` (clave `tetris-records`, formato `{ top: [{name, score, lines, level, date}], bestCombo, maxLines }`).
+  - Pantalla de inicio con la tabla y el botón **Jugar** (también `Enter`).
+  - Al terminar la partida, si la puntuación entra en el top se pide el nombre y la entrada guardada se resalta en la tabla.
+  - Se muestran también el **mejor combo** (locks consecutivos que limpian líneas) y las **líneas máximas** conseguidas.
+  - Botón **Borrar récords** (pide confirmación).
+
 ---
 
 ## Cómo ejecutar el juego
