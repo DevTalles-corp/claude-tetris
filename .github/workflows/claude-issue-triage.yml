@@ -4,23 +4,15 @@ on:
   issues:
     types: [opened, edited]
 
-concurrency:
-  group: triage-${{ github.event.issue.number }}
-  cancel-in-progress: true
-
 jobs:
   triage:
-    # opened: siempre. edited: solo si cambió título o cuerpo. Ignora bots.
-    if: |
-      github.event.issue.user.type != 'Bot' &&
-      (github.event.action == 'opened' ||
-       github.event.changes.title != null ||
-       github.event.changes.body != null)
+    if: github.event.sender.type != 'Bot'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       issues: write
       id-token: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,28 +23,62 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_args: '--allowedTools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh api:*),Read,Glob,Grep"'
+          claude_args: '--allowed-tools "Bash(gh issue *),Bash(gh label *),Read,Glob,Grep"'
           prompt: |
-            Eres un asistente de triaje de issues para este repositorio (Tetris en JS vanilla + Canvas; ver CLAUDE.md).
+            Analiza el issue #${{ github.event.issue.number }} del repositorio ${{ github.repository }}.
 
-            Issue a analizar: ${{ github.repository }}#${{ github.event.issue.number }}
-            Acción del evento: ${{ github.event.action }}
+            Título del issue: ${{ github.event.issue.title }}
 
-            Pasos:
-            1. Lee el issue con `gh issue view ${{ github.event.issue.number }} --json title,body,labels,comments`.
-            2. Ejecuta `gh label list` y elige SOLO labels que ya existan en el repo (ej. bug, enhancement, documentation, question). Aplícalos con `gh issue edit ${{ github.event.issue.number }} --add-label "..."`. Si la acción es `edited`, quita con `--remove-label` los labels que Claude asignó antes y ya no apliquen.
-            3. Explora el código (Read/Glob/Grep sobre game.js, index.html, style.css, CLAUDE.md) para localizar el área afectada.
-            4. Redacta un diagnóstico en español, en markdown, con estas secciones:
-               - **Resumen**
-               - **Tipo / Labels**
-               - **Área afectada** (archivo:línea y funciones, p. ej. `lockPiece`, `clearLines`, `draw`)
-               - **Causa probable / análisis**
-               - **Propuesta de implementación** (pasos concretos)
-               - **Riesgos / dudas abiertas**
-            5. Publica el diagnóstico como comentario. La primera línea del comentario debe ser el marcador `<!-- claude-triage -->`.
-               Antes, busca si ya existe un comentario con ese marcador: `gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments`.
-               Si existe, actualízalo con `gh api -X PATCH repos/${{ github.repository }}/issues/comments/<id> -f body=...`; si no, créalo con `gh issue comment`. Nunca crees comentarios duplicados.
+            Sigue estos pasos en orden:
 
-            Reglas: no modifiques código, no cierres el issue, no crees labels nuevos.
-            Formato: todo comentario que publiques debe estar en Markdown válido para GitHub (GFM): encabezados, listas, `código` en línea y bloques de código con ``` y lenguaje. Sin HTML salvo el marcador `<!-- claude-triage -->`.
+            1. Lee el contenido completo del issue:
+               `gh issue view ${{ github.event.issue.number }}`
+
+            2. Revisa los labels ya existentes en el repo:
+               `gh label list`
+
+            3. Asigna entre 1 y 4 labels apropiados al issue:
+               `gh issue edit ${{ github.event.issue.number }} --add-label "<label>"`
+               Categorías sugeridas: bug, feature, enhancement, question, documentation,
+               ui, gameplay, performance, refactor, good-first-issue, priority/high, priority/medium, priority/low.
+               Si un label necesario no existe, créalo primero:
+               `gh label create "<name>" --color <hex> --description "<descripción>"`
+
+            4. Explora los archivos del repositorio que sean relevantes para el issue
+               usando las herramientas Read, Glob y Grep según necesites.
+
+            5. Publica UN comentario de diagnóstico en el issue:
+               `gh issue comment ${{ github.event.issue.number }} --body "<contenido>"`
+
+               El contenido debe estar escrito en Markdown compatible con GitHub (GFM):
+               usa encabezados con `##`, listas con `-`, bloques de código con triple backtick,
+               negritas con `**`, y referencias a archivos como `ruta/archivo.js:42`.
+               No uses HTML ni sintaxis que GitHub no renderice en comentarios de issues.
+
+               El comentario debe tener exactamente esta estructura en español:
+
+               ## 🔍 Diagnóstico automático
+
+               **Categoría:** <tipo: bug / feature / mejora / pregunta / documentación>
+               <2-4 líneas describiendo el issue y su impacto>
+
+               ## 📁 Área del código afectada
+               <lista de archivos, funciones o constantes relevantes con referencias file:línea>
+
+               ## 🧠 Causa raíz / análisis técnico
+               <explicación técnica de por qué ocurre el problema o por qué falta la funcionalidad>
+
+               ## 🛠️ Propuesta de solución
+               <pasos concretos de implementación numerados, indicando qué archivos tocar y qué cambiar>
+
+               ## ⚠️ Riesgos y consideraciones
+               <regresiones posibles, edge cases, dependencias a tener en cuenta>
+
+               ---
+               *Diagnóstico generado automáticamente por Claude. Verificar antes de implementar.*
+
+            Notas importantes:
+            - Si el issue es ambiguo o le falta información, pídela en el comentario en lugar de inventar.
+            - Si ya existe un comentario previo de diagnóstico de Claude (caso de issue editado),
+              edita ese comentario en lugar de crear uno nuevo para no duplicar.
+            - Sé técnico y preciso: este diagnóstico será usado directamente como base para implementar la solución.
