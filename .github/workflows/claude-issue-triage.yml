@@ -55,3 +55,4 @@ jobs:
                Si existe, actualízalo con `gh api -X PATCH repos/${{ github.repository }}/issues/comments/<id> -f body=...`; si no, créalo con `gh issue comment`. Nunca crees comentarios duplicados.
 
             Reglas: no modifiques código, no cierres el issue, no crees labels nuevos.
+            Formato: todo comentario que publiques debe estar en Markdown válido para GitHub (GFM): encabezados, listas, `código` en línea y bloques de código con ``` y lenguaje. Sin HTML salvo el marcador `<!-- claude-triage -->`.
