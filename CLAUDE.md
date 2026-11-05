@@ -14,7 +14,7 @@ Open `index.html` directly, or serve statically: `python -m http.server 8000` (o
 
 Three files, all loaded by `index.html` (`<script src="game.js">`, no modules):
 
-- `index.html` — fixed DOM ids that `game.js` looks up at load: `board` (300x600 canvas), `next-canvas` (120x120), `score`, `lines`, `level`, `overlay`, `overlay-title`, `overlay-score`, `restart-btn`. Renaming any breaks the game.
+- `index.html` — fixed DOM ids that `game.js` looks up at load: `board` (300x600 canvas), `next-canvas` (120x120), `score`, `lines`, `level`, `overlay`, `overlay-title`, `overlay-score`, `restart-btn`, plus pause menu ids `pause-menu`, `pause-controls`, `pause-controls-btn`, `pause-resume`, `pause-restart`, `pause-level-value`, `pause-level-down`, `pause-level-up`. Renaming any breaks the game.
 - `style.css` — layout/theme only.
 - `game.js` (~300 lines) — all logic, global scope:
   - Constants: `COLS=10`, `ROWS=20`, `BLOCK=30` (canvas size = COLS/ROWS × BLOCK; keep in sync with canvas attrs in HTML), `COLORS`, `PIECES`, `LINE_SCORES`.

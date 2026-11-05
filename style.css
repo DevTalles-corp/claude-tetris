@@ -205,6 +205,108 @@ kbd {
   background: var(--accent-hover);
 }
 
+/* ---- Menú de pausa ---- */
+.pause-box {
+  gap: 10px;
+  width: 200px;
+}
+
+.pause-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.menu-btn {
+  width: 100%;
+  background: var(--kbd-bg);
+  color: var(--text);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.menu-btn:hover,
+.menu-btn:focus-visible,
+.menu-btn:focus {
+  background: var(--accent);
+  color: var(--on-accent);
+  outline: none;
+}
+
+.pause-controls {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-start;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--board-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  width: 100%;
+}
+
+.pause-controls li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pause-controls.hidden {
+  display: none;
+}
+
+.menu-level {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.menu-level:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+
+.menu-level button {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--kbd-border);
+  border-radius: 4px;
+  background: var(--kbd-bg);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.menu-level button:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+#pause-level-value {
+  font-family: 'Courier New', Courier, monospace;
+  color: var(--accent);
+  min-width: 18px;
+  text-align: center;
+}
+
 /* ---- Toggle de tema ---- */
 .theme-toggle {
   position: fixed;
