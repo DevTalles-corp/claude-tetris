@@ -77,11 +77,20 @@ body {
   letter-spacing: 1px;
 }
 
-#next-canvas {
+#next-canvas,
+#hold-canvas {
   display: block;
   border: 1px solid #2a2a3a;
   background: #1a1a25;
   border-radius: 4px;
+}
+
+#hold-canvas {
+  transition: opacity 0.15s;
+}
+
+#hold-canvas.locked {
+  opacity: 0.35;
 }
 
 /* ---- Controles ---- */
