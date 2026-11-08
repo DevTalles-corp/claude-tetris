@@ -22,8 +22,27 @@
     <div class="game-container">
       <canvas id="board" width="300" height="600"></canvas>
 
+      <!-- Feedback de combos: se rellena desde game.js (solo presentación) -->
+      <div id="hud-stack">
+        <div id="combo-hud" class="hud" hidden>
+          <span class="label">COMBO</span>
+          <span class="value" id="combo-value">×1</span>
+        </div>
+        <div id="b2b-hud" class="hud" hidden>
+          <span class="b2b-badge" id="b2b-badge"></span>
+        </div>
+      </div>
+      <div id="toasts" aria-live="polite"></div>
+      <div id="flash"></div>
+
       <aside class="panel">
-        <button id="theme-toggle" type="button" aria-label="Cambiar tema"></button>
+        <div class="panel-top">
+          <button id="theme-toggle" type="button" aria-label="Cambiar tema"></button>
+          <div class="sound-row">
+            <button id="sound-toggle" type="button" aria-label="Activar o desactivar el sonido"></button>
+            <input id="volume" type="range" min="0" max="100" step="5" aria-label="Volumen">
+          </div>
+        </div>
 
         <div class="panel-section">
           <span class="label">SCORE</span>

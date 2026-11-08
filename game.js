@@ -38,6 +38,13 @@ const PIECES = [
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
+// Scoring system (see scoreMove). All values are multiplied by the level, except the combo.
+const TSPIN_SCORES = [400, 800, 1200, 1600];  // T-spin with 0, 1, 2, 3 lines
+const TSPIN_MINI_SCORES = [100, 200, 400];    // T-spin Mini with 0, 1, 2 lines
+const PERFECT_CLEAR_SCORES = [0, 800, 1200, 1800, 2000]; // empty board after clearing 1-4 lines
+const B2B_MULTIPLIER = 1.5;                   // applies to the base points of an eligible clear
+const MAX_COMBO_MULTIPLIER = 8;               // cap for the combo multiplier
+
 // Special pieces (indices into PIECES). The 7 classic pieces stay the main set.
 const PENTOMINOES = [8, 9, 10];  // +, U, Y
 const SINGLE = 11;               // always the next piece after a Tetris
@@ -58,7 +65,7 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 
-let board, current, next, score, lines, level, pieces, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bonusSingle, lastSpecial;
+let board, current, next, score, lines, level, pieces, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bonusSingle, lastSpecial, combo, b2b, lastRotated;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -116,6 +123,8 @@ function tryRotate() {
     if (!collide(rotated, current.x + kick, current.y)) {
       current.shape = rotated;
       current.x += kick;
+      current.rot = ((current.rot || 0) + 1) % 4; // 0 = spawn orientation (a T points up)
+      lastRotated = true;                         // a T-spin needs a rotation as the last move
       return;
     }
   }
@@ -138,14 +147,91 @@ function clearLines() {
       r++;
     }
   }
+  return cleared;
+}
+
+// ---- Game events ----
+// The rules emit events; visuals and sound subscribe (see "Feedback" below), so the rules
+// can change without rewriting the animations.
+const gameListeners = [];
+function onGameEvent(fn) { gameListeners.push(fn); }
+function emit(event) { for (const fn of gameListeners) fn(event); }
+
+// ---- Scoring (single place where every bonus is combined) ----
+// points = round((base x B2B + perfect clear) x combo)
+//  - base: LINE_SCORES, or the T-spin table, times the level
+//  - B2B only multiplies the base; perfect clear is added without B2B
+//  - the combo multiplier (capped) multiplies the total
+// A T-spin with no lines scores its base points, breaks the combo and leaves B2B untouched.
+// Pure function: it reads nothing from the game state, so it can be tested on its own.
+function scoreMove({ cleared, tspin, perfect, combo: comboIn, b2b: b2bIn, level: lvl }) {
+  const events = [];
+  const table = tspin === 'mini' ? TSPIN_MINI_SCORES : tspin ? TSPIN_SCORES : LINE_SCORES;
+  let base = (table[cleared] || 0) * lvl;
+
+  const eligible = cleared > 0 && (cleared === 4 || Boolean(tspin));
+  let b2bOut = b2bIn;
+  let b2bApplied = false;
+  if (cleared > 0) {
+    if (eligible) {
+      b2bApplied = b2bIn >= 1;
+      b2bOut = b2bIn + 1;
+    } else {
+      b2bOut = 0;
+    }
+  }
+  if (b2bApplied) base = Math.round(base * B2B_MULTIPLIER);
+
+  const perfectBonus = perfect ? (PERFECT_CLEAR_SCORES[cleared] || 0) * lvl : 0;
+  const comboOut = cleared > 0 ? comboIn + 1 : 0;
+  const multiplier = cleared > 0 ? Math.min(comboOut, MAX_COMBO_MULTIPLIER) : 1;
+  const points = Math.round((base + perfectBonus) * multiplier);
+
+  if (tspin) events.push({ type: 'tspin', variant: tspin, cleared, label: tspinLabel(tspin, cleared) });
+  if (cleared > 0) events.push({ type: 'combo', combo: comboOut, multiplier });
+  else if (comboIn > 0) events.push({ type: 'combo-break', previous: comboIn });
+  if (cleared > 0 && eligible) events.push({ type: b2bApplied ? 'b2b' : 'b2b-start', chain: b2bOut });
+  else if (cleared > 0 && b2bIn > 0) events.push({ type: 'b2b-break', previous: b2bIn });
+  if (perfect) events.push({ type: 'perfect-clear', cleared, bonus: perfectBonus });
+  events.push({ type: 'score', points, cleared });
+
+  return { points, combo: comboOut, multiplier, b2b: b2bOut, b2bApplied, perfectBonus, events };
+}
+
+function tspinLabel(variant, cleared) {
+  const names = ['', ' SINGLE', ' DOUBLE', ' TRIPLE'];
+  return variant === 'mini' ? 'T-SPIN MINI' + (cleared > 1 ? names[cleared] : '') : 'T-SPIN' + names[cleared];
+}
+
+// T-spin: the last move was a rotation of a T piece and at least 3 of the 4 corners of its
+// 3x3 box are occupied (wall, floor or block). Normal if both corners on the side the T
+// points to are occupied; otherwise Mini. (The wall-kick exception of the guideline is not applied.)
+function detectTSpin() {
+  if (current.type !== 3 || !lastRotated) return null;
+  const occupied = (dx, dy) => {
+    const x = current.x + dx, y = current.y + dy;
+    return x < 0 || x >= COLS || y >= ROWS || (y >= 0 && board[y][x] !== 0);
+  };
+  const corners = [occupied(0, 0), occupied(2, 0), occupied(0, 2), occupied(2, 2)]; // TL, TR, BL, BR
+  if (corners.filter(Boolean).length < 3) return null;
+  const front = [[0, 1], [1, 3], [2, 3], [0, 2]][current.rot || 0]; // up, right, down, left
+  return corners[front[0]] && corners[front[1]] ? 'normal' : 'mini';
+}
+
+// Applies the result of a lock: score, combo, B2B, lines, level and the events.
+function settleMove(cleared, tspin) {
+  const perfect = cleared > 0 && board.every(row => row.every(v => v === 0));
+  const result = scoreMove({ cleared, tspin, perfect, combo, b2b, level });
+  score += result.points;
+  combo = result.combo;
+  b2b = result.b2b;
   if (cleared) {
     lines += cleared;
-    score += (LINE_SCORES[cleared] || 0) * level;
     if (cleared === 4) bonusSingle = true; // reward: the next generated piece is the 1x1 block
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
-    updateHUD();
   }
+  result.events.forEach(emit);
 }
 
 function ghostY() {
@@ -157,6 +243,7 @@ function ghostY() {
 function hardDrop() {
   const gy = ghostY();
   score += (gy - current.y) * 2;
+  if (gy > current.y) lastRotated = false;
   current.y = gy;
   lockPiece();
 }
@@ -164,6 +251,7 @@ function hardDrop() {
 function softDrop() {
   if (!collide(current.shape, current.x, current.y + 1)) {
     current.y++;
+    lastRotated = false;
     score += 1;
     updateHUD();
   } else {
@@ -172,14 +260,16 @@ function softDrop() {
 }
 
 function lockPiece() {
+  const tspin = detectTSpin(); // needs the board before the piece is merged
   merge();
   pieces++;
-  clearLines();
+  settleMove(clearLines(), tspin);
   updateHUD();
   spawn();
 }
 
 function spawn() {
+  lastRotated = false;
   current = next;
   next = randomPiece();
   if (collide(current.shape, current.x, current.y)) {
@@ -287,6 +377,7 @@ function loop(ts) {
     dropAccum = 0;
     if (!collide(current.shape, current.x, current.y + 1)) {
       current.y++;
+      lastRotated = false;
     } else {
       lockPiece();
     }
@@ -309,6 +400,10 @@ function init() {
   dropAccum = 0;
   bonusSingle = false;
   lastSpecial = false;
+  combo = 0;
+  b2b = 0;
+  lastRotated = false;
+  emit({ type: 'reset' });
   lastTime = performance.now();
   next = randomPiece();
   spawn();
@@ -319,14 +414,15 @@ function init() {
 }
 
 document.addEventListener('keydown', e => {
+  if (e.target.id === 'volume' && e.code.startsWith('Arrow')) return; // the slider uses the arrows
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
-      if (!collide(current.shape, current.x - 1, current.y)) current.x--;
+      if (!collide(current.shape, current.x - 1, current.y)) { current.x--; lastRotated = false; }
       break;
     case 'ArrowRight':
-      if (!collide(current.shape, current.x + 1, current.y)) current.x++;
+      if (!collide(current.shape, current.x + 1, current.y)) { current.x++; lastRotated = false; }
       break;
     case 'ArrowDown':
       softDrop();
@@ -361,5 +457,150 @@ themeBtn.addEventListener('click', () => {
 });
 
 applyTheme(document.documentElement.getAttribute('data-theme'));
+
+// ---- Feedback: visuals and sound ----
+// Only subscribes to game events (onGameEvent) and never changes the game state, so the
+// scoring rules can change without rewriting the animations.
+const comboHud = document.getElementById('combo-hud');
+const comboValue = document.getElementById('combo-value');
+const b2bHud = document.getElementById('b2b-hud');
+const b2bBadge = document.getElementById('b2b-badge');
+const toastsEl = document.getElementById('toasts');
+const flashEl = document.getElementById('flash');
+const soundBtn = document.getElementById('sound-toggle');
+const volumeInput = document.getElementById('volume');
+
+const MAX_TOASTS = 3;          // avoids flooding the screen in fast games
+const TOAST_MS = 1300;         // keep in sync with the toast-life animation
+const COMBO_FEEDBACK_MIN = 2;  // combo x1 is a normal clear: no toast or sound
+
+// ---- Visuals ----
+function showToast(text, kind) {
+  while (toastsEl.children.length >= MAX_TOASTS) toastsEl.firstElementChild.remove();
+  const el = document.createElement('div');
+  el.className = `toast toast-${kind}`;
+  el.textContent = text;
+  toastsEl.appendChild(el);
+  setTimeout(() => el.remove(), TOAST_MS);
+}
+
+function intensityLevel(multiplier) {
+  return multiplier >= MAX_COMBO_MULTIPLIER ? 3 : multiplier >= 5 ? 2 : multiplier >= 3 ? 1 : 0;
+}
+
+function renderEvent(e) {
+  switch (e.type) {
+    case 'reset':
+      comboHud.hidden = true;
+      b2bHud.hidden = true;
+      toastsEl.replaceChildren();
+      break;
+    case 'combo':
+      comboHud.hidden = false;
+      comboHud.dataset.nivel = intensityLevel(e.multiplier);
+      comboValue.textContent = `×${e.multiplier}`;
+      comboValue.classList.remove('pulse');
+      void comboValue.offsetWidth; // restarts the animation
+      comboValue.classList.add('pulse');
+      if (e.combo >= COMBO_FEEDBACK_MIN) showToast(`COMBO ×${e.multiplier}`, 'combo');
+      break;
+    case 'combo-break':
+      comboHud.hidden = true;
+      comboHud.dataset.nivel = 0;
+      break;
+    case 'tspin':
+      showToast(e.label, 'tspin');
+      break;
+    case 'b2b-start':
+      b2bHud.hidden = false;
+      b2bBadge.textContent = 'B2B ACTIVADO';
+      showToast('B2B ACTIVADO', 'b2b');
+      break;
+    case 'b2b':
+      b2bHud.hidden = false;
+      b2bBadge.textContent = `B2B x${e.chain}`;
+      showToast('BACK-TO-BACK', 'b2b');
+      break;
+    case 'b2b-break':
+      b2bHud.hidden = true;
+      break;
+    case 'perfect-clear':
+      showToast('PERFECT CLEAR', 'perfect');
+      flashEl.classList.remove('on');
+      void flashEl.offsetWidth;
+      flashEl.classList.add('on');
+      break;
+  }
+}
+
+// ---- Sound (Web Audio, no files). soundLog keeps the last sounds, for the tests. ----
+const sound = { enabled: true, volume: 0.4 };
+const soundLog = [];
+let audioCtx = null;
+
+try {
+  if (localStorage.getItem('sound') === 'off') sound.enabled = false;
+  const v = parseFloat(localStorage.getItem('volume'));
+  if (v >= 0 && v <= 1) sound.volume = v;
+} catch (e) { /* almacenamiento no disponible */ }
+
+function beep(freq, start, duration, type, gain) {
+  const osc = audioCtx.createOscillator();
+  const amp = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  const t = audioCtx.currentTime + start;
+  amp.gain.setValueAtTime(0.0001, t);
+  amp.gain.exponentialRampToValueAtTime(Math.max(gain, 0.0002), t + 0.01);
+  amp.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+  osc.connect(amp).connect(audioCtx.destination);
+  osc.start(t);
+  osc.stop(t + duration + 0.02);
+}
+
+function playSound(name, intensity = 0) {
+  if (!sound.enabled || sound.volume <= 0) return;
+  soundLog.push({ name, intensity, volume: sound.volume });
+  if (soundLog.length > 20) soundLog.shift();
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const g = sound.volume * (0.2 + 0.04 * Math.min(intensity, MAX_COMBO_MULTIPLIER)); // louder with the combo
+    if (name === 'combo') beep(440 * 2 ** (Math.min(intensity, 12) / 12), 0, 0.1, 'triangle', g);
+    if (name === 'tspin') { beep(660, 0, 0.09, 'square', g * 0.6); beep(990, 0.09, 0.14, 'square', g * 0.6); }
+    if (name === 'b2b') { beep(523, 0, 0.1, 'sine', g); beep(784, 0.1, 0.18, 'sine', g); }
+    if (name === 'perfect') [523, 659, 784, 1047].forEach((f, i) => beep(f, i * 0.1, 0.22, 'sine', g));
+  } catch (err) { /* sin audio disponible */ }
+}
+
+function soundEvent(e) {
+  if (e.type === 'combo' && e.combo >= COMBO_FEEDBACK_MIN) playSound('combo', e.multiplier);
+  else if (e.type === 'tspin') playSound('tspin', e.cleared);
+  else if (e.type === 'b2b' || e.type === 'b2b-start') playSound('b2b', e.chain);
+  else if (e.type === 'perfect-clear') playSound('perfect', e.cleared);
+}
+
+function refreshSoundControls() {
+  soundBtn.textContent = sound.enabled && sound.volume > 0 ? '🔊' : '🔇';
+  volumeInput.value = Math.round(sound.volume * 100);
+}
+
+soundBtn.addEventListener('click', () => {
+  sound.enabled = !sound.enabled;
+  try { localStorage.setItem('sound', sound.enabled ? 'on' : 'off'); } catch (e) { /* sin almacenamiento */ }
+  refreshSoundControls();
+  soundBtn.blur(); // so Space/Enter does not toggle it during the game
+});
+
+volumeInput.addEventListener('input', () => {
+  sound.volume = volumeInput.value / 100;
+  try { localStorage.setItem('volume', String(sound.volume)); } catch (e) { /* sin almacenamiento */ }
+  refreshSoundControls();
+});
+volumeInput.addEventListener('change', () => volumeInput.blur());
+
+refreshSoundControls();
+onGameEvent(renderEvent);
+onGameEvent(soundEvent);
 
 init();
