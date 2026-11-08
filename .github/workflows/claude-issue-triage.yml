@@ -1,0 +1,60 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    # Lo omitimos si el autor es un bot o si el issue menciona @claude
+    # (de ese caso ya se encarga claude.yml; así evitamos ejecutarlo dos veces).
+    # En "edited" solo lo ejecutamos si cambió el título o la descripción.
+    if: |
+      github.event.sender.type != 'Bot' &&
+      !contains(github.event.issue.body, '@claude') &&
+      !contains(github.event.issue.title, '@claude') &&
+      (github.event.action == 'opened' ||
+       github.event.changes.body != null || github.event.changes.title != null)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Triage y diagnóstico con Claude
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Mismo secreto que claude.yml y claude-code-review.yml
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            ISSUE: #${{ github.event.issue.number }}
+            EVENTO: ${{ github.event.action }}
+
+            Eres el encargado de hacer el triage de este repositorio (un Tetris en JS vanilla; lee CLAUDE.md).
+            1. Lee el issue: `gh issue view <n> --comments`.
+            2. Revisa los labels disponibles con `gh label list` y aplica SOLO los que ya existen
+               con `gh issue edit <n> --add-label ...` (tipo: bug/enhancement/documentation/question;
+               además, si aplica: good first issue, accessibility, duplicate, invalid).
+               Si EVENTO es "edited", quita los labels de tipo que ya no correspondan.
+            3. Diagnostica el problema leyendo el código (index.html, style.css, game.js):
+               causa probable, archivos/funciones implicados (con file:line), propuesta de solución
+               paso a paso, riesgos/casos borde y cómo verificarlo. NO modifiques código.
+            4. Publica el diagnóstico en español como comentario. La primera línea del comentario
+               debe ser exactamente `<!-- claude-triage -->`.
+               Si ya existe un comentario con ese marcador, actualízalo
+               (`gh issue comment <n> --edit-last`) en vez de crear otro.
+            Si falta información para diagnosticar, aplica el label `question` y lista en el comentario
+            qué datos faltan.
+          claude_args: |
+            --allowedTools "Read,Glob,Grep,Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*)"
