@@ -1,0 +1,67 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+# Una sola ejecución por issue; si se edita mientras corre, se cancela la anterior
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    # Ignora ediciones hechas por bots (evita bucles)
+    if: github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Analizar issue con Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Eres un asistente de triage para el repositorio ${{ github.repository }}
+            (un Tetris en JavaScript vanilla: index.html, style.css, game.js).
+            Analiza el issue #${{ github.event.issue.number }}
+            (evento: ${{ github.event.action }}). Lee su título, cuerpo y comentarios con
+            `gh issue view ${{ github.event.issue.number }} --comments`, y revisa el código
+            del repositorio para fundamentar el diagnóstico.
+
+            Tareas:
+            1. Etiquetas: ejecuta `gh label list` y asigna con
+               `gh issue edit ${{ github.event.issue.number }} --add-label "<label>"`
+               las etiquetas que apliquen, usando SOLO etiquetas que ya existen
+               (bug, enhancement, documentation, question, duplicate, invalid,
+               good first issue, help wanted, wontfix). No crees etiquetas nuevas.
+               Si es una edición, quita con --remove-label las etiquetas que Claude puso
+               antes y que ya no aplican.
+            2. Diagnóstico: publica UN solo comentario (en español) con
+               `gh issue comment ${{ github.event.issue.number }} --edit-last --create-if-none --body "<texto>"`
+               para que, si el issue se edita, se actualice el mismo comentario en vez de crear otro.
+               Estructura del comentario:
+               ## 🤖 Diagnóstico automático
+               - **Resumen:** qué se pide o qué falla, en 1-2 frases.
+               - **Tipo y prioridad:** tipo de issue y prioridad sugerida (alta/media/baja) con motivo.
+               - **Análisis técnico:** archivos y funciones probablemente involucrados
+                 (`archivo:línea`), causa probable o dónde habría que implementar el cambio.
+               - **Propuesta de solución:** pasos concretos para implementarlo.
+               - **Información faltante:** preguntas al autor si el issue es ambiguo
+                 (omite la sección si no hay).
+               - **Posibles duplicados:** issues abiertos similares (`gh issue list`), si los hay.
+
+            Reglas: NO modifiques archivos del repositorio, NO edites el título ni el
+            cuerpo del issue, NO cierres el issue y NO abras PRs. Solo etiquetas y el
+            comentario de diagnóstico.
+          claude_args: |
+            --allowedTools "Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*),Read,Grep,Glob"
