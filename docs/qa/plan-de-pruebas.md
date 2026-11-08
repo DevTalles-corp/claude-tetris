@@ -48,6 +48,19 @@ Verificar que cada cambio de Tetris funciona en el navegador antes de llegar a `
 | TC-23 | Recompensa del Tetris | Tras eliminar 4 líneas a la vez, la pieza siguiente es el 1×1 (issue #42) | `recompensa-1x1-tras-tetris.png` |
 | TC-24 | Frecuencias | En 20 000 piezas: hueco entre 0,5 y 1,5 %, pentominós entre 6 y 10 %, ninguna especial seguida y el 1×1 solo como recompensa (issue #42) | — |
 | TC-25 | Fin de partida | Un cuadrado hueco que no cabe al aparecer dispara GAME OVER (issue #42) | `game-over-con-cuadrado-hueco.png` |
+| TC-26 | Combo encadenado | 9 líneas seguidas suman 100, 200 … 800, 800 (tope ×8); fijar sin línea vuelve el combo a 0 (issue #48) | `combo-en-el-tope-x8.png` |
+| TC-27 | Contador de combo | `#combo-hud` se ve con `×3` tras tres eliminaciones y se oculta al fijar sin línea (issue #48) | `contador-combo-activo.png`, `contador-combo-oculto-al-romperse.png` |
+| TC-28 | T-spin doble con el teclado | Girar en el aire, bajar con ↓, girar dentro de la ranura y soltar: `T-SPIN DOUBLE` y 1200 + 17 puntos (issue #48) | `tspin-doble.png` |
+| TC-29 | T-spin Mini | Con 3 esquinas ocupadas pero no las dos del frente, el giro da `T-SPIN MINI` y 200 puntos con 1 línea (issue #48) | `tspin-mini.png` |
+| TC-30 | Sin giro no hay T-spin | Girar en el aire y caer con Espacio en un hueco de 3 esquinas da un doble normal (334 puntos), sin aviso (issue #48) | `sin-giro-no-es-tspin.png` |
+| TC-31 | Back-to-Back | Tetris (`B2B ACTIVADO`, 800), pieza sin línea (B2B sigue), Tetris (×1,5: 1200), T-spin doble (`B2B x3`) y una línea normal lo rompe (issue #48) | `b2b-x3-tras-tspin.png`, `b2b-roto-con-linea-normal.png` |
+| TC-32 | Perfect Clear | Dejar el tablero vacío suma (100 + 800) × combo 2 = 1800, con aviso `PERFECT CLEAR` y destello (issue #48) | `perfect-clear-con-combo.png` |
+| TC-33 | Fórmula de puntuación | 11 jugadas en `scoreMove` cumplen `round((base × B2B + perfectClear) × combo)` y ningún tipo de evento se repite en una jugada (issue #48) | — |
+| TC-34 | Avisos e intensidad | Nunca hay más de 3 avisos a la vez; el contador pasa por las intensidades 0, 1, 2 y 3 y late en cada eliminación (issue #48) | `avisos-limitados-e-intensidad-maxima.png` |
+| TC-35 | Sonido | Combo (desde ×2), T-spin, B2B y Perfect Clear suenan; 🔊/🔇 silencia sin tocar el volumen, y el volumen al 20 % o en 0 funciona aparte (issue #48) | `controles-de-sonido-volumen-20.png` |
+| TC-36 | Eventos separados | Sin la capa visual ni sonora, un Tetris emite `combo`, `b2b-start` y `score` y puntúa igual; `scoreMove` no cambia el estado (issue #48) | `reglas-sin-capa-visual.png` |
+| TC-37 | Piezas especiales y niveles | Combo con la cruz `+` y el cuadrado hueco, subida al nivel 2 en mitad del combo y el 1×1 sigue tras el Tetris (issue #48) | `combo-con-piezas-especiales.png` |
+| TC-38 | GAME OVER y reinicio | Con combo y B2B activos la partida termina; Reiniciar deja combo, B2B y avisos en 0 (issue #48) | `game-over-con-combo-activo.png`, `reinicio-limpia-combo-y-b2b.png` |
 
 Cada requerimiento agrega sus propios casos con un ID nuevo en `tests/issue-N.spec.js`.
 
