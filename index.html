@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <main class="page">
+  <h1 class="title">TETRIS</h1>
   <div class="wrapper">
     <div class="game-container">
       <canvas id="board" width="300" height="600"></canvas>
@@ -30,6 +32,24 @@
           <canvas id="next-canvas" width="120" height="120"></canvas>
         </div>
 
+        <div class="panel-section">
+          <span class="label">TEMA</span>
+          <button id="theme-btn" class="theme-toggle" type="button" aria-label="Cambiar entre modo claro y oscuro">
+            <span id="theme-icon" aria-hidden="true">☀️</span>
+            <span id="theme-text">Modo claro</span>
+          </button>
+        </div>
+
+        <div class="panel-section">
+          <label class="label" for="skin-select">SKIN</label>
+          <select id="skin-select" class="skin-select">
+            <option value="retro">Retro</option>
+            <option value="neon">Neon</option>
+            <option value="pastel">Pastel</option>
+            <option value="pixel">Pixel art</option>
+          </select>
+        </div>
+
         <div class="panel-section controls">
           <span class="label">CONTROLS</span>
           <ul>
@@ -51,6 +71,7 @@
       </div>
     </div>
   </div>
+  </main>
 
   <script src="game.js"></script>
 </body>
