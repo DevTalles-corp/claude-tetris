@@ -50,11 +50,15 @@ jobs:
             3. Diagnostica el problema leyendo el código (index.html, style.css, game.js):
                causa probable, archivos/funciones implicados (con file:line), propuesta de solución
                paso a paso, riesgos/casos borde y cómo verificarlo. NO modifiques código.
-            4. Publica el diagnóstico en español como comentario. La primera línea del comentario
-               debe ser exactamente `<!-- claude-triage -->`.
+            4. Publica el diagnóstico en español como comentario. El comentario DEBE estar en formato
+               Markdown: usa encabezados (`##`), listas, **negritas**, bloques de código con lenguaje
+               (```js) y referencias `archivo:línea` entre backticks. Estructura sugerida:
+               `## Diagnóstico`, `### Causa probable`, `### Archivos implicados`,
+               `### Solución propuesta`, `### Riesgos y casos borde`, `### Cómo verificar`.
+               La primera línea del comentario debe ser exactamente `<!-- claude-triage -->`.
                Si ya existe un comentario con ese marcador, actualízalo
                (`gh issue comment <n> --edit-last`) en vez de crear otro.
             Si falta información para diagnosticar, aplica el label `question` y lista en el comentario
-            qué datos faltan.
+            qué datos faltan (también en Markdown, como lista).
           claude_args: |
             --allowedTools "Read,Glob,Grep,Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*)"
