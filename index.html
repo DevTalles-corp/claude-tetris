@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <main class="page">
+  <h1 class="title">TETRIS</h1>
   <div class="wrapper">
     <div class="game-container">
       <canvas id="board" width="300" height="600"></canvas>
@@ -30,6 +32,14 @@
           <canvas id="next-canvas" width="120" height="120"></canvas>
         </div>
 
+        <div class="panel-section">
+          <span class="label">TEMA</span>
+          <button id="theme-btn" class="theme-toggle" type="button" aria-label="Cambiar entre modo claro y oscuro">
+            <span id="theme-icon" aria-hidden="true">☀️</span>
+            <span id="theme-text">Modo claro</span>
+          </button>
+        </div>
+
         <div class="panel-section controls">
           <span class="label">CONTROLS</span>
           <ul>
@@ -43,14 +53,28 @@
       </aside>
     </div>
 
-    <div id="overlay" class="overlay hidden">
+    <div id="overlay" class="overlay">
       <div class="overlay-box">
-        <p id="overlay-title">GAME OVER</p>
+        <p id="overlay-title">TETRIS</p>
         <p id="overlay-score"></p>
-        <button id="restart-btn">Reiniciar</button>
+        <form id="name-form" class="name-form hidden" autocomplete="off">
+          <label for="name-input">Entraste al top 5. Tu nombre:</label>
+          <div class="name-row">
+            <input id="name-input" type="text" maxlength="12" value="Jugador" />
+            <button id="save-btn" type="submit">Guardar</button>
+          </div>
+        </form>
+        <div id="records" class="records">
+          <span class="label">MEJORES PUNTUACIONES</span>
+          <ol id="records-list"></ol>
+          <p id="records-extra"></p>
+        </div>
+        <button id="restart-btn">Jugar</button>
+        <button id="reset-records-btn" type="button">Resetear records</button>
       </div>
     </div>
   </div>
+  </main>
 
   <script src="game.js"></script>
 </body>
