@@ -15,6 +15,28 @@ body {
   user-select: none;
 }
 
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.title {
+  font-size: 48px;
+  font-weight: 800;
+  letter-spacing: 10px;
+  padding-left: 10px; /* compensa el letter-spacing final */
+  line-height: 1;
+}
+
+.title span:nth-child(1) { color: #e57373; }
+.title span:nth-child(2) { color: #ffb74d; }
+.title span:nth-child(3) { color: #fff176; }
+.title span:nth-child(4) { color: #81c784; }
+.title span:nth-child(5) { color: #4dd0e1; }
+.title span:nth-child(6) { color: #ba68c8; }
+
 .wrapper {
   position: relative;
 }
