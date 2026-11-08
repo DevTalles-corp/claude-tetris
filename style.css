@@ -146,6 +146,29 @@ body {
   border-color: var(--accent);
 }
 
+/* ---- Skins ---- */
+.skin-select {
+  background: var(--board-bg);
+  color: var(--text);
+  border: 1px solid var(--board-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.skin-select:hover {
+  border-color: var(--accent);
+}
+
+/* Neon fuerza fondo oscuro aunque el tema sea claro */
+[data-skin="neon"] #board,
+[data-skin="neon"] #next-canvas {
+  background: #000;
+  border-color: #1f2a44;
+  box-shadow: 0 0 40px rgba(0, 240, 255, 0.15);
+}
+
 /* ---- Controles ---- */
 .controls ul {
   list-style: none;
