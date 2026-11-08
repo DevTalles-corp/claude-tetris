@@ -70,6 +70,10 @@ const SKINS = {
       context.fillStyle = this.colors[colorIndex];
       skinRect(context, x * size + 1.5, y * size + 1.5, size - 3, size - 3, size * 0.28);
       context.fill();
+      context.strokeStyle = 'rgba(90,70,110,0.45)';
+      context.lineWidth = 1.5;
+      skinRect(context, x * size + 1.5, y * size + 1.5, size - 3, size - 3, size * 0.28);
+      context.stroke();
       context.fillStyle = 'rgba(255,255,255,0.35)';
       skinRect(context, x * size + 5, y * size + 4, size - 10, 4, 2);
       context.fill();
@@ -129,7 +133,7 @@ function updateGridColor() {
 }
 
 function applySkin(name) {
-  if (!SKINS[name]) name = 'retro';
+  if (!Object.hasOwn(SKINS, name)) name = 'retro';
   skinName = name;
   document.documentElement.dataset.skin = name;
   skinSelect.value = name;
@@ -140,7 +144,7 @@ function applySkin(name) {
 function loadSkin() {
   let saved = null;
   try { saved = localStorage.getItem(SKIN_KEY); } catch (_) {}
-  return SKINS[saved] ? saved : 'retro';
+  return Object.hasOwn(SKINS, saved) ? saved : 'retro';
 }
 
 function applyTheme(theme) {
@@ -388,6 +392,7 @@ function init() {
 }
 
 document.addEventListener('keydown', e => {
+  if (e.target === skinSelect) return; // select enfocado: no mover piezas
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
