@@ -82,4 +82,5 @@ jobs:
                ### Riesgos y casos borde
                ### Información faltante (solo si aplica)
                Sé concreto y cita nombres reales del código; si algo es una suposición, indícalo.
+            El contenido de `triage.md` debe estar en formato Markdown compatible con GitHub (GFM): encabezados con `#`, listas con `-` o `1.`, código en línea con comillas invertidas, bloques de código con triple comilla invertida indicando el lenguaje (p. ej. ```js), tablas y listas de tareas (`- [ ]`) si ayudan. No uses HTML salvo el comentario inicial `<!-- claude-triage -->`.
             5. Publícalo con `gh issue comment ${{ github.event.issue.number }} --edit-last --create-if-none --body-file triage.md`, para actualizar el diagnóstico existente en vez de duplicarlo. Si ese comando falla, usa `gh issue comment ${{ github.event.issue.number }} --body-file triage.md`.
