@@ -19,6 +19,26 @@ body {
   position: relative;
 }
 
+/* Contenedor interior: el overlay solo cubre el juego, no el título */
+.stage {
+  position: relative;
+}
+
+/* ---- Título ---- */
+.title {
+  text-align: center;
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: 10px;
+  margin-bottom: 16px;
+  padding-left: 10px; /* compensa el letter-spacing final */
+}
+
+.title span {
+  color: var(--c);
+  text-shadow: 0 0 12px var(--c);
+}
+
 .game-container {
   display: flex;
   gap: 20px;
