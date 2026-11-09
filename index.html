@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
   <link rel="stylesheet" href="style.css" />
+  <script>
+    // Aplica el tema guardado antes de pintar para evitar destellos
+    try {
+      if (localStorage.getItem('theme') === 'light') document.documentElement.dataset.theme = 'light';
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <div class="wrapper">
@@ -44,6 +50,10 @@
             <li><kbd>Space</kbd> caída</li>
             <li><kbd>P</kbd> pausa</li>
           </ul>
+        </div>
+
+        <div class="panel-section">
+          <button id="theme-toggle" type="button" aria-pressed="false">Modo claro</button>
         </div>
       </aside>
     </div>
