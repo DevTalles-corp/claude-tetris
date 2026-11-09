@@ -61,6 +61,16 @@ Verificar que cada cambio de Tetris funciona en el navegador antes de llegar a `
 | TC-36 | Eventos separados | Sin la capa visual ni sonora, un Tetris emite `combo`, `b2b-start` y `score` y puntúa igual; `scoreMove` no cambia el estado (issue #48) | `reglas-sin-capa-visual.png` |
 | TC-37 | Piezas especiales y niveles | Combo con la cruz `+` y el cuadrado hueco, subida al nivel 2 en mitad del combo y el 1×1 sigue tras el Tetris (issue #48) | `combo-con-piezas-especiales.png` |
 | TC-38 | GAME OVER y reinicio | Con combo y B2B activos la partida termina; Reiniciar deja combo, B2B y avisos en 0 (issue #48) | `game-over-con-combo-activo.png`, `reinicio-limpia-combo-y-b2b.png` |
+| TC-49 | Tabla al cargar | Con `localStorage` vacío, `#records` (RÉCORDS) se ve con «Sin récords todavía» y `Mejor combo: 0 · Líneas máximas: 0`, debajo del tablero y del panel (560×800 y 1080×1920), y el juego arranca solo (issue #54) | `tabla-vacia-al-cargar.png` |
+| TC-50 | Récords guardados al cargar | Con 6 récords desordenados en `localStorage`, la tabla muestra los 5 mejores ordenados por puntos, con líneas, nivel y combo, y los máximos guardados (issue #54) | `tabla-con-records-al-cargar.png` |
+| TC-51 | GAME OVER con récord | Jugando con Espacio hasta el GAME OVER: `¡Nuevo récord! Puesto #1`, campo de nombre enfocado, botón Guardar y la fila resaltada en las dos tablas; `#overlay-score` no cambia (issue #54) | `game-over-nuevo-record.png` |
+| TC-52 | Escribir el nombre | Las teclas en un campo de texto no mueven, bajan ni pausan; Espacio mantenido no llena el campo; «Ana Pepa» se escribe completo, Enter lo guarda y un segundo envío o `endGame` no duplica la partida (issue #54) | `nombre-guardado-con-enter.png` |
+| TC-53 | Nombre vacío y largo | Guardar con el campo vacío guarda «Jugador»; un nombre largo se corta a 12 letras (issue #54) | `nombre-vacio-y-nombre-largo.png` |
+| TC-54 | Reiniciar sin guardar | La puntuación queda guardada como «Jugador», el formulario y el resaltado desaparecen, el foco vuelve al juego, y en PAUSA no aparecen los récords (issue #54) | `reinicio-sin-guardar.png`, `pausa-sin-records.png` |
+| TC-55 | Posición en el top 5 | Con 5 récords, 3500 entra en el puesto 3 y saca al 5.º; un empate con el 5.º o 0 puntos no entran ni piden nombre (issue #54) | `record-puesto-3.png`, `sin-record-empate-con-el-quinto.png` |
+| TC-56 | Mejor combo y líneas máximas | Tres líneas seguidas y una pieza sin línea dejan `maxCombo` en 3; la tabla y los máximos muestran 3 y 3, una partida peor no los baja y `init()` vuelve `maxCombo` a 0 (issue #54) | `mejor-combo-y-lineas.png`, `maximos-se-conservan.png` |
+| TC-57 | Borrar récords | El botón pide confirmación en la página (sin `window.confirm`); Cancelar no borra y «Sí, borrar» vacía la tabla, los máximos y `localStorage` (issue #54) | `confirmar-borrado.png`, `records-borrados.png` |
+| TC-58 | Datos dañados y otra pestaña | JSON roto o registros con tipos incorrectos no rompen el juego: se ignoran o se sanean y la siguiente partida se guarda bien, sin errores en la página; un récord guardado desde otra pestaña se conserva al terminar la partida (issue #54) | `datos-danados-ignorados.png`, `record-de-otra-pestana-conservado.png` |
 
 Cada requerimiento agrega sus propios casos con un ID nuevo en `tests/issue-N.spec.js`.
 

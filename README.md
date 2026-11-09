@@ -23,6 +23,7 @@ Implementación del clásico **Tetris** en JavaScript vanilla, usando HTML5 Canv
     - [3. `game.js`](#3-gamejs)
     - [Flujo del juego](#flujo-del-juego)
   - [Combos y multiplicadores](#combos-y-multiplicadores)
+  - [Tabla de récords](#tabla-de-récords)
   - [Tecnologías](#tecnologías)
   - [Estructura del proyecto](#estructura-del-proyecto)
   - [Personalización](#personalización)
@@ -45,6 +46,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Efectos visuales y sonoros** para cada jugada, con un interruptor de sonido y control de volumen.
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Pausa** y **Game Over** con opción de reinicio.
+- **Tabla de récords local**: las 5 mejores puntuaciones con el nombre del jugador, el mejor combo y las líneas máximas, guardadas en el navegador (ver [Tabla de récords](#tabla-de-récords)).
 
 ---
 
@@ -91,6 +93,8 @@ Después abre `http://localhost:8000` en el navegador.
 
 En el panel, el botón **🔊 / 🔇** activa o desactiva el sonido y el deslizador ajusta el volumen. Las dos opciones se recuerdan entre partidas.
 
+En el GAME OVER con récord, se escribe el nombre y **Enter** lo guarda; mientras el campo tiene el foco, las teclas del juego no actúan.
+
 ---
 
 ## Cómo funciona
@@ -104,7 +108,8 @@ Define la estructura visual:
 - Un `<canvas id="board">` de **300 × 600** píxeles donde se renderiza el tablero.
 - Un panel lateral con `SCORE`, `LINES`, `LEVEL`, `PIEZAS` (número de piezas fijadas en el tablero), vista de la siguiente pieza, la lista de controles y los controles de sonido.
 - Sobre el tablero, el contador de combo, el indicador de B2B, los avisos flotantes y el destello del Perfect Clear. No mueven el diseño del panel.
-- Un overlay para los estados **PAUSA** y **GAME OVER**.
+- Un overlay para los estados **PAUSA** y **GAME OVER**. En GAME OVER muestra además el campo de nombre y la tabla de récords.
+- Debajo del tablero, la sección **RÉCORDS** con la tabla, el mejor combo, las líneas máximas y el botón **Borrar récords**.
 
 ### 2. `style.css`
 
@@ -183,6 +188,20 @@ Los avisos flotantes muestran como mucho 3 a la vez. El contador de combo brilla
 
 ---
 
+## Tabla de récords
+
+Las mejores puntuaciones se guardan en el navegador (`localStorage`, clave `records`), así que se conservan al recargar la página pero son propias de cada navegador.
+
+- **Dónde se ve**: el juego sigue arrancando solo al abrir la página; la sección **RÉCORDS** está siempre visible debajo del tablero, y la misma tabla aparece en el overlay de **GAME OVER** (no en el de PAUSA).
+- **Qué guarda**: las 5 mejores partidas (`MAX_RECORDS`) con nombre, puntos, líneas, nivel y mejor combo de la partida, ordenadas por puntos. Además, el **mejor combo** (la cadena más larga de piezas seguidas que eliminan líneas) y las **líneas máximas** de cualquier partida terminada, entre o no en la tabla.
+- **Al terminar una partida**: si la puntuación es mayor que 0 y entra en el top 5, aparece «¡Nuevo récord! Puesto #N», la fila se resalta en las dos tablas y se pide el nombre (hasta 12 caracteres). **Enter** o **Guardar** lo guardan; mientras se escribe, las teclas del juego (P, Espacio, flechas) no actúan.
+- **Si no se escribe nombre**: la partida se guarda en el momento del GAME OVER como «Jugador». Reiniciar (o cerrar la página) sin guardar conserva la puntuación con ese nombre; el campo solo sirve para ponerle nombre, una vez por partida.
+- **Empates**: una puntuación igual a otra ya guardada queda debajo; con la tabla llena tiene que superar a la 5.ª para entrar.
+- **Borrar récords**: el botón pide confirmación en la misma página («Sí, borrar» / «Cancelar») y borra la tabla y los máximos.
+- Si los datos guardados están dañados, se ignoran y el juego funciona con la tabla vacía.
+
+---
+
 ## Tecnologías
 
 - **HTML5** — marcado y dos elementos `<canvas>` (tablero y vista previa).
@@ -228,6 +247,9 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `B2B_MULTIPLIER` | Multiplicador de la base durante el Back-to-Back | `1.5` |
 | `MAX_COMBO_MULTIPLIER` | Tope del multiplicador de combo | `8` |
 | `MAX_TOASTS` | Avisos flotantes visibles a la vez | `3` |
+| `MAX_RECORDS` | Puntuaciones que guarda la tabla de récords | `5` |
+| `MAX_NAME_LENGTH` | Largo máximo del nombre del jugador | `12` |
+| `DEFAULT_PLAYER_NAME` | Nombre si no se escribe ninguno | `"Jugador"` |
 
 > Si cambias `COLS`, `ROWS` o `BLOCK`, recuerda ajustar también `width` y `height` del `<canvas id="board">` en `index.html` para que coincida (`COLS × BLOCK` × `ROWS × BLOCK`).
 

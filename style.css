@@ -373,3 +373,161 @@ kbd {
     100% { opacity: 0; }
   }
 }
+
+/* ---- Récords (tabla local, issue #54) ---- */
+#gameover-records[hidden],
+#record-form[hidden],
+#records-reset[hidden],
+#records-confirm[hidden] {
+  display: none;
+}
+
+#records {
+  width: 100%;
+  max-width: 482px;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.records-table th {
+  font-size: 10px;
+  letter-spacing: 1px;
+  font-weight: 600;
+  color: var(--label);
+  text-align: right;
+  padding: 2px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.records-table td {
+  font-family: 'Courier New', Courier, monospace;
+  text-align: right;
+  padding: 2px 6px;
+  color: var(--text);
+}
+
+.records-table th:nth-child(2),
+.records-table td:nth-child(2) {
+  text-align: left;
+  width: 100%;
+}
+
+.records-table th:first-child,
+.records-table td:first-child {
+  text-align: center;
+}
+
+.records-table .records-empty td {
+  text-align: center;
+  color: var(--muted);
+  font-family: inherit;
+  padding: 6px;
+}
+
+.records-table .record-current td {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 700;
+}
+
+.records-stats {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.records-stats strong {
+  font-family: 'Courier New', Courier, monospace;
+  color: var(--accent);
+}
+
+.records-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+#records-reset,
+#records-confirm button,
+#record-save {
+  background: var(--kbd-bg);
+  color: var(--text);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#records-reset:hover,
+#records-confirm button:hover,
+#record-save:hover {
+  border-color: var(--accent);
+}
+
+#records-confirm-yes {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+#gameover-records {
+  width: 400px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#gameover-message {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+#gameover-message.is-record {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #ffd54f;
+}
+
+:root[data-theme='light'] #gameover-message.is-record {
+  color: #b7791f;
+}
+
+#record-form {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+#record-name {
+  width: 160px;
+  background: var(--board-bg);
+  color: var(--text);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 14px;
+  user-select: text;
+}
+
+#record-name:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+#record-save {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+  font-weight: 700;
+}

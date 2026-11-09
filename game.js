@@ -65,7 +65,7 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 
-let board, current, next, score, lines, level, pieces, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bonusSingle, lastSpecial, combo, b2b, lastRotated;
+let board, current, next, score, lines, level, pieces, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bonusSingle, lastSpecial, combo, b2b, lastRotated, maxCombo;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -224,6 +224,7 @@ function settleMove(cleared, tspin) {
   const result = scoreMove({ cleared, tspin, perfect, combo, b2b, level });
   score += result.points;
   combo = result.combo;
+  maxCombo = Math.max(maxCombo, combo); // best combo of this game, for the records
   b2b = result.b2b;
   if (cleared) {
     lines += cleared;
@@ -353,6 +354,7 @@ function endGame() {
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   overlay.classList.remove('hidden');
+  recordGameOver(); // stores the game and shows the records table (see Records)
 }
 
 function togglePause() {
@@ -403,6 +405,8 @@ function init() {
   combo = 0;
   b2b = 0;
   lastRotated = false;
+  maxCombo = 0;
+  resetRecordsView(); // a new game hides the GAME OVER records form and highlight
   emit({ type: 'reset' });
   lastTime = performance.now();
   next = randomPiece();
@@ -415,8 +419,10 @@ function init() {
 
 document.addEventListener('keydown', e => {
   if (e.target.id === 'volume' && e.code.startsWith('Arrow')) return; // the slider uses the arrows
+  if (isTextEntry(e.target)) return; // typing a name must not move, drop or pause
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
+  if (e.code.startsWith('Arrow')) e.preventDefault(); // the page may scroll at small sizes
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) { current.x--; lastRotated = false; }
@@ -602,5 +608,200 @@ volumeInput.addEventListener('change', () => volumeInput.blur());
 refreshSoundControls();
 onGameEvent(renderEvent);
 onGameEvent(soundEvent);
+
+// ---- Records ----
+// Local top MAX_RECORDS scores in localStorage ('records'), plus the best combo and the most
+// lines of any finished game. A game is stored once, at GAME OVER, with DEFAULT_PLAYER_NAME;
+// the name field only renames that row, so restarting (or closing the page) without typing a
+// name keeps the score. Only reads the game state: it never changes score, combo or lines.
+const MAX_RECORDS = 5;
+const RECORDS_KEY = 'records';
+const MAX_NAME_LENGTH = 12;
+const DEFAULT_PLAYER_NAME = 'Jugador';
+
+const recordsTable = document.getElementById('records-table');
+const recordsStats = document.getElementById('records-stats');
+const recordsResetBtn = document.getElementById('records-reset');
+const recordsConfirm = document.getElementById('records-confirm');
+const gameoverRecords = document.getElementById('gameover-records');
+const gameoverMessage = document.getElementById('gameover-message');
+const gameoverTable = document.getElementById('gameover-table');
+const gameoverStats = document.getElementById('gameover-stats');
+const recordForm = document.getElementById('record-form');
+const recordName = document.getElementById('record-name');
+
+recordName.maxLength = MAX_NAME_LENGTH;
+
+let records = loadRecords();
+let recordIndex = -1;     // row of the current game in records.top, -1 if it did not qualify
+let recordedGame = false; // the current game is already stored (endGame runs it only once)
+
+function emptyRecords() {
+  return { top: [], bestCombo: 0, maxLines: 0 };
+}
+
+function toCount(v) {
+  return Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0;
+}
+
+// Reads and validates the stored records; corrupt or missing data gives an empty table.
+// Without storage it returns `fallback`, so the records of this session are kept in memory.
+function loadRecords(fallback = emptyRecords()) {
+  let raw;
+  try { raw = localStorage.getItem(RECORDS_KEY); } catch (e) { return fallback; }
+  let data = null;
+  try { data = JSON.parse(raw); } catch (e) { /* datos dañados */ }
+  if (!data || typeof data !== 'object') return emptyRecords();
+  const top = (Array.isArray(data.top) ? data.top : [])
+    .filter(r => r && typeof r === 'object' && Number.isFinite(r.score) && Math.floor(r.score) > 0)
+    .map(r => ({
+      name: (typeof r.name === 'string' && r.name.trim().slice(0, MAX_NAME_LENGTH)) || DEFAULT_PLAYER_NAME,
+      score: Math.floor(r.score),
+      lines: toCount(r.lines),
+      level: Math.max(1, toCount(r.level)),
+      maxCombo: toCount(r.maxCombo),
+      date: typeof r.date === 'string' ? r.date : '',
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_RECORDS);
+  return {
+    top,
+    bestCombo: Math.max(toCount(data.bestCombo), ...top.map(r => r.maxCombo)),
+    maxLines: Math.max(toCount(data.maxLines), ...top.map(r => r.lines)),
+  };
+}
+
+function saveRecords() {
+  try { localStorage.setItem(RECORDS_KEY, JSON.stringify(records)); } catch (e) { /* sin almacenamiento: solo en memoria */ }
+}
+
+// 0-based row the score would take, or -1 if it does not enter the table.
+// A tie goes below the older score, so it needs to beat the last row of a full table.
+function recordRank(points) {
+  if (points <= 0) return -1;
+  const rank = records.top.filter(r => r.score >= points).length;
+  return rank < MAX_RECORDS ? rank : -1;
+}
+
+function renderRecordTable(tbody) {
+  tbody.replaceChildren();
+  if (!records.top.length) {
+    const tr = tbody.insertRow();
+    tr.className = 'records-empty';
+    const td = tr.insertCell();
+    td.colSpan = 6;
+    td.textContent = 'Sin récords todavía';
+    return;
+  }
+  records.top.forEach((r, i) => {
+    const tr = tbody.insertRow();
+    if (i === recordIndex) tr.className = 'record-current';
+    const when = r.date ? new Date(r.date) : null;
+    if (when && !isNaN(when)) tr.title = when.toLocaleString();
+    for (const v of [i + 1, r.name, r.score.toLocaleString(), r.lines, r.level, r.maxCombo])
+      tr.insertCell().textContent = v;
+  });
+}
+
+function renderRecordStats(el) {
+  const comboEl = document.createElement('strong');
+  comboEl.className = 'best-combo';
+  comboEl.textContent = records.bestCombo;
+  const maxLinesEl = document.createElement('strong');
+  maxLinesEl.className = 'max-lines';
+  maxLinesEl.textContent = records.maxLines;
+  el.replaceChildren('Mejor combo: ', comboEl, ' · Líneas máximas: ', maxLinesEl);
+}
+
+function renderRecords() {
+  renderRecordTable(recordsTable);
+  renderRecordTable(gameoverTable);
+  renderRecordStats(recordsStats);
+  renderRecordStats(gameoverStats);
+}
+
+// Called from endGame(): stores the game and shows the table in the GAME OVER overlay.
+function recordGameOver() {
+  if (recordedGame) return;
+  recordedGame = true;
+  records = loadRecords(records); // another tab may have saved since this page loaded
+  records.bestCombo = Math.max(records.bestCombo, maxCombo);
+  records.maxLines = Math.max(records.maxLines, lines);
+  recordIndex = recordRank(score);
+  if (recordIndex >= 0) {
+    records.top.splice(recordIndex, 0,
+      { name: DEFAULT_PLAYER_NAME, score, lines, level, maxCombo, date: new Date().toISOString() });
+    records.top.length = Math.min(records.top.length, MAX_RECORDS);
+  }
+  saveRecords();
+  renderRecords();
+  const isRecord = recordIndex >= 0;
+  gameoverMessage.textContent = isRecord ? `¡Nuevo récord! Puesto #${recordIndex + 1}` : 'Sin récord esta vez';
+  gameoverMessage.classList.toggle('is-record', isRecord);
+  recordName.value = '';
+  recordForm.hidden = !isRecord;
+  gameoverRecords.hidden = false;
+  if (isRecord) recordName.focus({ preventScroll: true });
+}
+
+// Names the row of this game. The form hides afterwards, so a game is named only once.
+function saveRecordName() {
+  if (recordIndex < 0 || recordForm.hidden) return;
+  const name = recordName.value.trim().slice(0, MAX_NAME_LENGTH) || DEFAULT_PLAYER_NAME;
+  records.top[recordIndex].name = name;
+  saveRecords();
+  renderRecords();
+  recordForm.hidden = true;
+  recordName.blur();
+  gameoverMessage.textContent = `¡Nuevo récord! Puesto #${recordIndex + 1} · Guardado`;
+}
+
+// Called from init(): a new game hides the GAME OVER part and the highlighted row.
+function resetRecordsView() {
+  recordedGame = false;
+  recordIndex = -1;
+  if (overlay.contains(document.activeElement)) document.activeElement.blur(); // name field or Reiniciar: keys go back to the game
+  gameoverRecords.hidden = true;
+  renderRecords();
+}
+
+function clearRecords() {
+  records = emptyRecords();
+  try { localStorage.removeItem(RECORDS_KEY); } catch (e) { /* sin almacenamiento */ }
+  recordIndex = -1;
+  recordForm.hidden = true; // the row to name is gone
+  gameoverMessage.textContent = 'Récords borrados';
+  gameoverMessage.classList.remove('is-record');
+  renderRecords();
+}
+
+// Text fields and selects get the keys; the game ignores them (the volume slider is handled apart).
+function isTextEntry(el) {
+  return el instanceof HTMLElement && (el.isContentEditable || el.matches('textarea, select') ||
+    (el.matches('input') && el.type !== 'range'));
+}
+
+function showResetConfirm(show) {
+  recordsResetBtn.hidden = show;
+  recordsConfirm.hidden = !show;
+}
+
+// The key that ended the game may still be held: its auto-repeat must not fill the name.
+recordName.addEventListener('keydown', e => { if (e.repeat) e.preventDefault(); });
+recordName.addEventListener('input', () => { recordName.value = recordName.value.trimStart(); });
+recordForm.addEventListener('submit', e => {
+  e.preventDefault(); // Enter or Guardar: stay on the page
+  saveRecordName();
+});
+recordsResetBtn.addEventListener('click', () => { showResetConfirm(true); recordsResetBtn.blur(); });
+document.getElementById('records-confirm-yes').addEventListener('click', e => {
+  clearRecords();
+  showResetConfirm(false);
+  e.currentTarget.blur();
+});
+document.getElementById('records-confirm-no').addEventListener('click', e => {
+  showResetConfirm(false);
+  e.currentTarget.blur();
+});
 
 init();
