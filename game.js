@@ -13,6 +13,7 @@ const COLORS = [
   '#e57373', // Z - red
   '#9fa8da', // J - light indigo blue
   '#ffb74d', // L - orange
+  '#f48fb1', // Ring - pink
 ];
 
 const PIECES = [
@@ -24,9 +25,13 @@ const PIECES = [
   [[5,5,0],[0,5,5],[0,0,0]],                  // Z
   [[6,0,0],[6,6,6],[0,0,0]],                  // J
   [[0,0,7],[7,7,7],[0,0,0]],                  // L
+  [[8,8,8],[8,0,8],[8,8,8]],                  // Ring (hueco central)
 ];
 
-const LINE_SCORES = [0, 100, 300, 500, 800];
+const RING = 8;
+const RING_CHANCE = 0.05; // probabilidad de la pieza anillo; las otras 7 se reparten el resto
+
+const LINE_SCORES =[0, 100, 300, 500, 800];
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -49,7 +54,7 @@ function createBoard() {
 }
 
 function randomPiece() {
-  const type = Math.floor(Math.random() * 7) + 1;
+  const type = Math.random() < RING_CHANCE ? RING : Math.floor(Math.random() * 7) + 1;
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
 }

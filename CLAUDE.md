@@ -16,7 +16,7 @@ Three files: `index.html` (DOM + two canvases + overlay), `style.css`, and `game
 
 Things that span the file and aren't obvious from a skim:
 
-- **Piece/board encoding**: board cells and piece matrices store a color index 1–7 (0 = empty) that indexes both `COLORS` and `PIECES` — adding a piece means adding to both arrays in the same position and changing the `* 7` in `randomPiece`.
+- **Piece/board encoding**: board cells and piece matrices store a color index 1–8 (0 = empty) that indexes both `COLORS` and `PIECES` — adding a piece means adding to both arrays in the same position and updating `randomPiece` (the 7 standard pieces are uniform via `* 7`; the ring piece, index 8, is rarer and chosen via `RING_CHANCE`).
 - **Piece lifecycle**: `lockPiece()` = `merge()` → `clearLines()` → `spawn()`. Game over is detected inside `spawn()` (new piece collides immediately) and calls `endGame()`. Hard drop, soft drop and the gravity tick in `loop()` all funnel into `lockPiece()`.
 - **Game loop**: `requestAnimationFrame` `loop(ts)` accumulates `dropAccum` against `dropInterval`. Pause/game over/restart cancel and restart the rAF via the shared `animId`; `init()` is both the first start and the restart handler. Resuming from pause must reset `lastTime` to avoid a huge `dt`.
 - **Scoring/levels** are computed in `clearLines()` (`LINE_SCORES[cleared] * level`, level = lines/10 + 1, `dropInterval = max(100, 1000 - (level-1)*90)`); soft/hard drop points are added in `softDrop()`/`hardDrop()`. Note `init()` hardcodes the initial `dropInterval = 1000`.
