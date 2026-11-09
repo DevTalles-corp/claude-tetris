@@ -23,6 +23,7 @@ Implementación del clásico **Tetris** en JavaScript vanilla, usando HTML5 Canv
     - [3. `game.js`](#3-gamejs)
     - [Flujo del juego](#flujo-del-juego)
   - [Combos y multiplicadores](#combos-y-multiplicadores)
+  - [Skins](#skins)
   - [Tecnologías](#tecnologías)
   - [Estructura del proyecto](#estructura-del-proyecto)
   - [Personalización](#personalización)
@@ -43,6 +44,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Vista previa** de la siguiente pieza.
 - **Sistema de puntuación** clásico de Tetris (100 / 300 / 500 / 800 multiplicado por nivel), con **combo encadenado**, **T-spin** (normal y Mini), **Back-to-Back** y **Perfect Clear** (ver [Combos y multiplicadores](#combos-y-multiplicadores)).
 - **Efectos visuales y sonoros** para cada jugada, con un interruptor de sonido y control de volumen.
+- **Skins** del tablero: Retro, Neón, Pastel y Pixel art, con la preferencia guardada (ver [Skins](#skins)).
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Pausa** y **Game Over** con opción de reinicio.
 
@@ -89,7 +91,7 @@ Después abre `http://localhost:8000` en el navegador.
 | `Espacio` | Hard drop (caída instantánea)     |
 | `P`       | Pausar / reanudar                 |
 
-En el panel, el botón **🔊 / 🔇** activa o desactiva el sonido y el deslizador ajusta el volumen. Las dos opciones se recuerdan entre partidas.
+En el panel, el botón **🔊 / 🔇** activa o desactiva el sonido y el deslizador ajusta el volumen. Las dos opciones se recuerdan entre partidas. El selector **SKIN** cambia el aspecto del tablero y de la vista NEXT (ver [Skins](#skins)).
 
 ---
 
@@ -183,6 +185,23 @@ Los avisos flotantes muestran como mucho 3 a la vez. El contador de combo brilla
 
 ---
 
+## Skins
+
+El selector **SKIN** del panel cambia el aspecto del tablero y de la vista NEXT al instante, sin recargar la página ni tocar la partida:
+
+| Skin | Aspecto |
+| --- | --- |
+| **Retro** (por defecto) | Bloques cuadrados de colores planos con un brillo arriba. El fondo y la cuadrícula salen del tema claro u oscuro. |
+| **Neón** | Fondo negro, colores saturados y bloques con contorno luminoso (`shadowBlur`). |
+| **Pastel** | Colores suaves sobre fondo lavanda oscuro, con esquinas redondeadas y un brillo suave. |
+| **Pixel art** | Colores de 8 bits con una textura de píxeles sobre cada bloque: bisel claro y oscuro y un tramado en damero. |
+
+La elección se guarda en `localStorage` (clave `skin`); si el valor guardado no es una skin conocida, se usa Retro. El botón de tema claro/oscuro sigue controlando la página; la skin solo cambia los canvas. La pieza fantasma se ve en todas las skins.
+
+Cada skin vive en `SKINS` (`game.js`) con su paleta de 12 colores, su fondo, su cuadrícula y su función de dibujo de bloque. `applySkin(nombre)` copia la paleta dentro de `COLORS`, cambia la función que usa `drawBlock` y redibuja el tablero y NEXT.
+
+---
+
 ## Tecnologías
 
 - **HTML5** — marcado y dos elementos `<canvas>` (tablero y vista previa).
@@ -202,7 +221,7 @@ Los avisos flotantes muestran como mucho 3 a la vez. El contador de combo brilla
 03-tetris/
 ├── index.html      # Estructura del DOM y canvas
 ├── style.css       # Estilos del juego (dark theme)
-├── game.js         # Toda la lógica del Tetris (~600 líneas)
+├── game.js         # Toda la lógica del Tetris (~750 líneas)
 └── README.md
 ```
 
@@ -217,7 +236,8 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `COLS`         | Columnas del tablero                     | `10`                  |
 | `ROWS`         | Filas del tablero                        | `20`                  |
 | `BLOCK`        | Tamaño en píxeles de cada celda          | `30`                  |
-| `COLORS`       | Paleta de colores por tipo de pieza      | 12 colores (7 + 5 especiales) |
+| `COLORS`       | Paleta activa por tipo de pieza (la copia `applySkin` desde la skin elegida) | 12 colores (7 + 5 especiales) |
+| `SKINS`        | Skins: paleta, fondo, cuadrícula y función de dibujo de cada una (`retro`, `neon`, `pastel`, `pixel`) | `retro` |
 | `LINE_SCORES`  | Puntos por 1, 2, 3 o 4 líneas eliminadas | `[0,100,300,500,800]` |
 | `dropInterval` | Velocidad inicial de caída en ms         | `1000`                |
 | `PENTOMINO_CHANCE` | Probabilidad de que la pieza generada sea un pentominó | `0.08` |

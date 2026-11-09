@@ -20,6 +20,40 @@ const COLORS = [
   '#a1887f', // hollow square - brown (special)
 ];
 
+// Visual skins (see the "Skins" section). COLORS always holds the active skin's palette:
+// applySkin() copies it into the same array, so every drawing function keeps reading COLORS.
+// background/grid null = take them from CSS (--board-bg behind the canvas, --grid).
+const SKINS = {
+  retro: {
+    palette: COLORS.slice(), // the original colors, unchanged
+    background: null,
+    grid: null,
+    block: drawRetroBlock,
+  },
+  neon: {
+    palette: [null, '#00f0ff', '#fff200', '#d500f9', '#39ff14', '#ff1744', '#2979ff', '#ff9100',
+      '#ff00aa', '#00ffc8', '#c6ff00', '#e0e0ff', '#ff6e40'],
+    background: '#000000',
+    grid: '#0b1d29',
+    block: drawNeonBlock,
+  },
+  pastel: {
+    palette: [null, '#a8e6ef', '#fff1a8', '#d7b8f3', '#b9f2c3', '#ffb3ba', '#bcd4ff', '#ffd6a5',
+      '#ffc4dd', '#a8e0d8', '#e6f5a8', '#cfd8dc', '#d7c4b7'],
+    background: '#2d2a3e',
+    grid: '#3a364e',
+    block: drawPastelBlock,
+  },
+  pixel: {
+    palette: [null, '#3cbcfc', '#fcd848', '#a44cf0', '#58d854', '#e83c3c', '#4878f8', '#fc9838',
+      '#f878f8', '#00b8a8', '#b8f818', '#bcbcbc', '#ac7c00'],
+    background: '#101020',
+    grid: '#1e1e36',
+    block: drawPixelBlock,
+  },
+};
+let activeSkin = SKINS.retro;
+
 const PIECES = [
   null,
   [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
@@ -287,18 +321,13 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  activeSkin.block(context, x * size, y * size, size, COLORS[colorIndex]); // see "Skins"
   context.globalAlpha = 1;
 }
 
 function drawGrid() {
-  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim();
+  ctx.strokeStyle = activeSkin.grid || getComputedStyle(document.documentElement).getPropertyValue('--grid').trim();
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -316,6 +345,7 @@ function drawGrid() {
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  fillSkinBackground(ctx, canvas);
   drawGrid();
 
   // board
@@ -339,6 +369,7 @@ function draw() {
 function drawNext() {
   const NB = 30;
   nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+  fillSkinBackground(nextCtx, nextCanvas);
   const shape = next.shape;
   const offX = Math.floor((4 - shape[0].length) / 2);
   const offY = Math.floor((4 - shape.length) / 2);
@@ -415,6 +446,8 @@ function init() {
 
 document.addEventListener('keydown', e => {
   if (e.target.id === 'volume' && e.code.startsWith('Arrow')) return; // the slider uses the arrows
+  // the skin list uses the arrows too, and Space opens it, so it can be used from the keyboard
+  if (e.target.id === 'skin-select' && (e.code.startsWith('Arrow') || e.code === 'Space')) return;
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
@@ -457,6 +490,118 @@ themeBtn.addEventListener('click', () => {
 });
 
 applyTheme(document.documentElement.getAttribute('data-theme'));
+
+// ---- Skins ----
+// Purely visual: a skin only changes COLORS, the board background, the grid and how drawBlock
+// paints a cell. It never touches the game state. The light/dark theme keeps styling the page.
+const skinSelect = document.getElementById('skin-select');
+
+// Each block function paints one cell whose top-left pixel is (px, py). drawBlock has already
+// set globalAlpha (0.2 for the ghost) and resets it afterwards.
+function drawRetroBlock(context, px, py, size, color) {
+  context.fillStyle = color;
+  context.fillRect(px + 1, py + 1, size - 2, size - 2);
+  // highlight
+  context.fillStyle = 'rgba(255,255,255,0.12)';
+  context.fillRect(px + 1, py + 1, size - 2, 4);
+}
+
+// Dim core and a bright outline with a glow (shadowBlur). The glow is costly, so each
+// (color, size) is drawn once into a cached sprite with room around it for the glow; the
+// sprite's shadowBlur is reset so it never leaks into other drawing.
+const neonSprites = {};
+function neonSprite(color, size) {
+  const key = color + '/' + size;
+  if (neonSprites[key]) return neonSprites[key];
+  const pad = size; // the glow spreads into the neighboring cells
+  const sprite = document.createElement('canvas');
+  sprite.width = sprite.height = size + 2 * pad;
+  const g = sprite.getContext('2d');
+  g.globalAlpha = 0.35;
+  g.fillStyle = color;
+  g.fillRect(pad + 3, pad + 3, size - 6, size - 6);
+  g.globalAlpha = 1;
+  g.shadowColor = color;
+  g.shadowBlur = size / 2;
+  g.strokeStyle = color;
+  g.lineWidth = 2;
+  g.strokeRect(pad + 4, pad + 4, size - 8, size - 8);
+  g.shadowBlur = 0;
+  return (neonSprites[key] = sprite);
+}
+
+function drawNeonBlock(context, px, py, size, color) {
+  context.drawImage(neonSprite(color, size), px - size, py - size);
+}
+
+// Soft colors with rounded corners, plus a soft shine on top.
+function drawPastelBlock(context, px, py, size, color) {
+  context.beginPath();
+  context.roundRect(px + 1, py + 1, size - 2, size - 2, size / 4);
+  context.fillStyle = color;
+  context.fill();
+  context.beginPath();
+  context.roundRect(px + size * 0.2, py + size * 0.15, size * 0.6, size * 0.2, size * 0.1);
+  context.fillStyle = 'rgba(255,255,255,0.35)';
+  context.fill();
+}
+
+// 8-bit look: flat color plus a cached overlay with a bevel and a checkered dither.
+const pixelTextures = {};
+function pixelTexture(s) {
+  if (pixelTextures[s]) return pixelTextures[s];
+  const tex = document.createElement('canvas');
+  tex.width = tex.height = s;
+  const g = tex.getContext('2d');
+  const p = Math.max(1, Math.floor(s / 7)); // size of one "pixel" of the texture
+  g.fillStyle = 'rgba(0,0,0,0.16)';
+  for (let i = 1; i * p < s - p; i++)
+    for (let j = 1; j * p < s - p; j++)
+      if ((i + j) % 2 === 0) g.fillRect(i * p, j * p, p, p);
+  g.fillStyle = 'rgba(255,255,255,0.4)';
+  g.fillRect(0, 0, s, p);
+  g.fillRect(0, 0, p, s);
+  g.fillStyle = 'rgba(0,0,0,0.35)';
+  g.fillRect(0, s - p, s, p);
+  g.fillRect(s - p, 0, p, s);
+  g.fillStyle = 'rgba(255,255,255,0.6)';
+  g.fillRect(p, p, p, p);
+  return (pixelTextures[s] = tex);
+}
+
+function drawPixelBlock(context, px, py, size, color) {
+  context.fillStyle = color;
+  context.fillRect(px + 1, py + 1, size - 2, size - 2);
+  context.drawImage(pixelTexture(size - 2), px + 1, py + 1);
+}
+
+// Called by draw() and drawNext() right after clearing. Retro leaves the canvas transparent
+// so the CSS background (--board-bg) shows through, as before.
+function fillSkinBackground(context, cnv) {
+  if (!activeSkin.background) return;
+  context.fillStyle = activeSkin.background;
+  context.fillRect(0, 0, cnv.width, cnv.height);
+}
+
+function applySkin(name) {
+  if (!Object.hasOwn(SKINS, name)) name = 'retro';
+  activeSkin = SKINS[name];
+  activeSkin.palette.forEach((color, i) => { COLORS[i] = color; }); // same array, new colors
+  document.documentElement.setAttribute('data-skin', name);
+  skinSelect.value = name;
+  try { localStorage.setItem('skin', name); } catch (e) { /* almacenamiento no disponible */ }
+  if (current) draw();
+  if (next) drawNext();
+}
+
+skinSelect.addEventListener('change', () => {
+  applySkin(skinSelect.value);
+  skinSelect.blur(); // so the arrow keys move the piece again instead of changing the skin
+});
+
+let savedSkin = null;
+try { savedSkin = localStorage.getItem('skin'); } catch (e) { /* almacenamiento no disponible */ }
+applySkin(savedSkin);
 
 // ---- Feedback: visuals and sound ----
 // Only subscribes to game events (onGameEvent) and never changes the game state, so the

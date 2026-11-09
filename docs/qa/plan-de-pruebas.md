@@ -61,6 +61,16 @@ Verificar que cada cambio de Tetris funciona en el navegador antes de llegar a `
 | TC-36 | Eventos separados | Sin la capa visual ni sonora, un Tetris emite `combo`, `b2b-start` y `score` y puntúa igual; `scoreMove` no cambia el estado (issue #48) | `reglas-sin-capa-visual.png` |
 | TC-37 | Piezas especiales y niveles | Combo con la cruz `+` y el cuadrado hueco, subida al nivel 2 en mitad del combo y el 1×1 sigue tras el Tetris (issue #48) | `combo-con-piezas-especiales.png` |
 | TC-38 | GAME OVER y reinicio | Con combo y B2B activos la partida termina; Reiniciar deja combo, B2B y avisos en 0 (issue #48) | `game-over-con-combo-activo.png`, `reinicio-limpia-combo-y-b2b.png` |
+| TC-59 | Selector de skins | `#skin-select` muestra Retro, Neón, Pastel y Pixel art; sin preferencia guardada empieza en Retro (issue #55) | `selector-de-skins.png` |
+| TC-60 | Retro sin cambios | Retro (también al volver desde Neón) dibuja el tablero píxel a píxel igual que el código anterior a las skins, con fondo del CSS (issue #55) | `skin-retro.png` |
+| TC-61 | Skin Neón | Fondo negro, contorno del color de la pieza, brillo (`shadowBlur`) en la celda vecina y `shadowBlur` vuelve a 0 (issue #55) | `skin-neon.png` |
+| TC-62 | Skin Pastel | Colores suaves y esquina del bloque redondeada (se ve el fondo de la skin), lados rectos llenos (issue #55) | `skin-pastel.png` |
+| TC-63 | Skin Pixel art | Cada bloque tiene textura: bisel claro arriba, oscuro abajo y tramado en damero (issue #55) | `skin-pixel-art.png` |
+| TC-64 | Pieza fantasma | En las cuatro skins la celda del fantasma se distingue de una celda vacía (issue #55) | `fantasma-retro.png`, `fantasma-neon.png`, `fantasma-pastel.png`, `fantasma-pixel.png` |
+| TC-65 | Vista NEXT | NEXT usa la misma skin: fondo, color y forma del bloque de cada una (issue #55) | `next-neon.png`, `next-pixel-art.png` |
+| TC-66 | Cambio sin recargar | Elegir otra skin no recarga la página ni cambia la partida, redibuja en el acto y suelta el foco: las flechas vuelven a mover la pieza (issue #55) | `cambio-sin-recargar.png` |
+| TC-67 | Preferencia guardada | La skin elegida queda en `localStorage` (`skin`) y se aplica al recargar, también en NEXT (issue #55) | `neon-tras-recargar.png` |
+| TC-68 | Skin desconocida y foco | Una skin guardada desconocida vuelve a Retro; con el selector enfocado, ← y ↑ no mueven ni giran la pieza (issue #55) | `skin-desconocida-vuelve-a-retro.png` |
 
 Cada requerimiento agrega sus propios casos con un ID nuevo en `tests/issue-N.spec.js`.
 
