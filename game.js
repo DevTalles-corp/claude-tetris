@@ -33,6 +33,9 @@ const RING_CHANCE = 0.05; // probabilidad de la pieza anillo; las otras 7 se rep
 
 const LINE_SCORES =[0, 100, 300, 500, 800];
 
+const BOLT_SCORE_STEP = 2000; // puntos necesarios para cargar un rayo
+const BOLT_MS = 500;          // duración del efecto del rayo
+
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
@@ -40,6 +43,7 @@ const nextCtx = nextCanvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
+const boltEl = document.getElementById('bolt');
 const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
@@ -47,7 +51,7 @@ const restartBtn = document.getElementById('restart-btn');
 const themeBtn = document.getElementById('theme-toggle');
 let gridColor = '#22222e';
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bolt, nextBoltAt;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -145,6 +149,36 @@ function softDrop() {
 function lockPiece() {
   merge();
   clearLines();
+  if (tryStartBolt()) return; // spawn() se llama al terminar el rayo
+  spawn();
+}
+
+function tryStartBolt() {
+  if (score < nextBoltAt) return false;
+  const candidates = [];
+  for (let r = 0; r < ROWS; r++)
+    if (board[r].some(v => v)) candidates.push({ kind: 'row', index: r });
+  for (let c = 0; c < COLS; c++)
+    if (board.some(row => row[c])) candidates.push({ kind: 'col', index: c });
+  if (!candidates.length) return false; // tablero vacío: el rayo queda pendiente
+  const pick = candidates[Math.floor(Math.random() * candidates.length)];
+  bolt = { ...pick, t: 0 };
+  nextBoltAt = (Math.floor(score / BOLT_SCORE_STEP) + 1) * BOLT_SCORE_STEP;
+  canvas.classList.add('shake');
+  updateHUD();
+  return true;
+}
+
+function finishBolt() {
+  if (bolt.kind === 'row') {
+    board.splice(bolt.index, 1);
+    board.unshift(new Array(COLS).fill(0));
+  } else {
+    for (let r = 0; r < ROWS; r++) board[r][bolt.index] = 0;
+  }
+  bolt = null;
+  canvas.classList.remove('shake');
+  updateHUD();
   spawn();
 }
 
@@ -161,6 +195,7 @@ function updateHUD() {
   scoreEl.textContent = score.toLocaleString();
   linesEl.textContent = lines;
   levelEl.textContent = level;
+  boltEl.textContent = Math.max(0, nextBoltAt - score).toLocaleString();
 }
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
@@ -201,6 +236,11 @@ function draw() {
     for (let c = 0; c < COLS; c++)
       drawBlock(ctx, c, r, board[r][c], BLOCK);
 
+  if (bolt) {
+    drawBolt();
+    return;
+  }
+
   // ghost
   const gy = ghostY();
   for (let r = 0; r < current.shape.length; r++)
@@ -212,6 +252,62 @@ function draw() {
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       drawBlock(ctx, current.x + c, current.y + r, current.shape[r][c], BLOCK);
+}
+
+function drawBolt() {
+  const p = Math.min(bolt.t / BOLT_MS, 1);
+  const isRow = bolt.kind === 'row';
+  const bx = isRow ? 0 : bolt.index * BLOCK;
+  const by = isRow ? bolt.index * BLOCK : 0;
+  const bw = isRow ? COLS * BLOCK : BLOCK;
+  const bh = isRow ? BLOCK : ROWS * BLOCK;
+
+  ctx.save();
+
+  // franja parpadeante
+  ctx.fillStyle = Math.random() < 0.5 ? '#ffffff' : '#fff176';
+  ctx.globalAlpha = (1 - p) * (0.5 + Math.random() * 0.5);
+  ctx.fillRect(bx, by, bw, bh);
+
+  // rayo en zigzag con chisporroteo
+  const len = isRow ? bw : bh;
+  const mid = (isRow ? by : bx) + BLOCK / 2;
+  const steps = 14;
+  ctx.globalAlpha = 1 - p * 0.6;
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = '#ffeb3b';
+  ctx.shadowBlur = 20;
+  for (const [color, width] of [['#fff59d', 5], ['#ffffff', 2]]) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const along = (len * i) / steps;
+      const off = mid + (i === 0 || i === steps ? 0 : (Math.random() - 0.5) * BLOCK * 1.2);
+      if (isRow) ctx.lineTo(along, off);
+      else ctx.lineTo(off, along);
+    }
+    ctx.stroke();
+  }
+
+  // destello general al inicio
+  if (p < 0.25) {
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 0.35 * (1 - p * 4);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // texto
+  ctx.shadowBlur = 10;
+  ctx.globalAlpha = 1 - p;
+  ctx.fillStyle = '#fff59d';
+  ctx.font = 'bold 36px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('¡RAYO!', canvas.width / 2, canvas.height / 2);
+
+  ctx.restore();
 }
 
 function drawNext() {
@@ -250,8 +346,13 @@ function togglePause() {
 function loop(ts) {
   const dt = ts - lastTime;
   lastTime = ts;
-  dropAccum += dt;
-  if (dropAccum >= dropInterval) {
+  if (bolt) {
+    bolt.t += dt;
+    if (bolt.t >= BOLT_MS) finishBolt();
+  } else {
+    dropAccum += dt;
+  }
+  if (!bolt && dropAccum >= dropInterval) {
     dropAccum = 0;
     if (!collide(current.shape, current.x, current.y + 1)) {
       current.y++;
@@ -273,6 +374,9 @@ function init() {
   gameOver = false;
   dropInterval = 1000;
   dropAccum = 0;
+  bolt = null;
+  nextBoltAt = BOLT_SCORE_STEP;
+  canvas.classList.remove('shake');
   lastTime = performance.now();
   next = randomPiece();
   spawn();
@@ -284,7 +388,7 @@ function init() {
 
 document.addEventListener('keydown', e => {
   if (e.code === 'KeyP') { togglePause(); return; }
-  if (paused || gameOver) return;
+  if (paused || gameOver || bolt) return;
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
