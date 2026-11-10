@@ -20,6 +20,40 @@ const COLORS = [
   '#a1887f', // hollow square - brown (special)
 ];
 
+// Visual skins (see the "Skins" section). COLORS always holds the active skin's palette:
+// applySkin() copies it into the same array, so every drawing function keeps reading COLORS.
+// background/grid null = take them from CSS (--board-bg behind the canvas, --grid).
+const SKINS = {
+  retro: {
+    palette: COLORS.slice(), // the original colors, unchanged
+    background: null,
+    grid: null,
+    block: drawRetroBlock,
+  },
+  neon: {
+    palette: [null, '#00f0ff', '#fff200', '#d500f9', '#39ff14', '#ff1744', '#2979ff', '#ff9100',
+      '#ff00aa', '#00ffc8', '#c6ff00', '#e0e0ff', '#ff6e40'],
+    background: '#000000',
+    grid: '#0b1d29',
+    block: drawNeonBlock,
+  },
+  pastel: {
+    palette: [null, '#a8e6ef', '#fff1a8', '#d7b8f3', '#b9f2c3', '#ffb3ba', '#bcd4ff', '#ffd6a5',
+      '#ffc4dd', '#a8e0d8', '#e6f5a8', '#cfd8dc', '#d7c4b7'],
+    background: '#2d2a3e',
+    grid: '#3a364e',
+    block: drawPastelBlock,
+  },
+  pixel: {
+    palette: [null, '#3cbcfc', '#fcd848', '#a44cf0', '#58d854', '#e83c3c', '#4878f8', '#fc9838',
+      '#f878f8', '#00b8a8', '#b8f818', '#bcbcbc', '#ac7c00'],
+    background: '#101020',
+    grid: '#1e1e36',
+    block: drawPixelBlock,
+  },
+};
+let activeSkin = SKINS.retro;
+
 const PIECES = [
   null,
   [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
@@ -65,7 +99,7 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 
-let board, current, next, score, lines, level, pieces, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bonusSingle, lastSpecial, combo, b2b, lastRotated;
+let board, current, next, score, lines, level, pieces, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bonusSingle, lastSpecial, combo, b2b, lastRotated, startLevel, freshKeys, maxCombo;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -218,18 +252,23 @@ function detectTSpin() {
   return corners[front[0]] && corners[front[1]] ? 'normal' : 'mini';
 }
 
+function dropIntervalFor(lvl) {
+  return Math.max(100, 1000 - (lvl - 1) * 90);
+}
+
 // Applies the result of a lock: score, combo, B2B, lines, level and the events.
 function settleMove(cleared, tspin) {
   const perfect = cleared > 0 && board.every(row => row.every(v => v === 0));
   const result = scoreMove({ cleared, tspin, perfect, combo, b2b, level });
   score += result.points;
   combo = result.combo;
+  maxCombo = Math.max(maxCombo, combo); // best combo of this game, for the records
   b2b = result.b2b;
   if (cleared) {
     lines += cleared;
     if (cleared === 4) bonusSingle = true; // reward: the next generated piece is the 1x1 block
-    level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    level = Math.max(startLevel, Math.floor(lines / 10) + 1); // never below the chosen start level
+    dropInterval = dropIntervalFor(level);
   }
   result.events.forEach(emit);
 }
@@ -287,18 +326,13 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  activeSkin.block(context, x * size, y * size, size, COLORS[colorIndex]); // see "Skins"
   context.globalAlpha = 1;
 }
 
 function drawGrid() {
-  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim();
+  ctx.strokeStyle = activeSkin.grid || getComputedStyle(document.documentElement).getPropertyValue('--grid').trim();
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -316,6 +350,7 @@ function drawGrid() {
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  fillSkinBackground(ctx, canvas);
   drawGrid();
 
   // board
@@ -339,6 +374,7 @@ function draw() {
 function drawNext() {
   const NB = 30;
   nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+  fillSkinBackground(nextCtx, nextCanvas);
   const shape = next.shape;
   const offX = Math.floor((4 - shape[0].length) / 2);
   const offY = Math.floor((4 - shape.length) / 2);
@@ -353,19 +389,25 @@ function endGame() {
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   overlay.classList.remove('hidden');
+  closePauseMenu(); // the GAME OVER overlay keeps only its title, score and Reiniciar
+  recordGameOver(); // stores the game and shows the records table (see Records)
 }
 
 function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    overlay.classList.add('hidden');
+    closePauseMenu();
+    freshKeys = new Set(); // keys held through the pause must be pressed again
     lastTime = performance.now();
-    loop(lastTime);
+    animId = requestAnimationFrame(loop); // draw() runs in the loop, not in this input handler
   } else {
     cancelAnimationFrame(animId);
     overlayTitle.textContent = 'PAUSA';
     overlayScore.textContent = '';
     overlay.classList.remove('hidden');
+    openPauseMenu();
   }
 }
 
@@ -392,31 +434,46 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  startLevel = Number(startLevelSelect.value); // chosen in the pause menu, applies from this game on
+  level = startLevel;
   pieces = 0;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = dropIntervalFor(level);
   dropAccum = 0;
   bonusSingle = false;
   lastSpecial = false;
   combo = 0;
   b2b = 0;
   lastRotated = false;
+  freshKeys = new Set();
+  maxCombo = 0;
+  resetRecordsView(); // a new game hides the GAME OVER records form and highlight
   emit({ type: 'reset' });
   lastTime = performance.now();
   next = randomPiece();
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  closePauseMenu();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
 document.addEventListener('keydown', e => {
   if (e.target.id === 'volume' && e.code.startsWith('Arrow')) return; // the slider uses the arrows
-  if (e.code === 'KeyP') { togglePause(); return; }
-  if (paused || gameOver) return;
+  // the skin list uses the arrows too, and Space opens it, so it can be used from the keyboard
+  if (e.target.id === 'skin-select' && (e.code.startsWith('Arrow') || e.code === 'Space')) return;
+  const pauseKey = (e.code === 'KeyP' || e.code === 'Escape') && !e.ctrlKey && !e.metaKey && !e.altKey;
+  // Typing a name must not move, drop or pause. A focused select (skin, start level) still
+  // lets P/Escape toggle the pause, so the pause menu can be closed from its own selector.
+  if (isTextEntry(e.target) && !(pauseKey && e.target.matches('select'))) return;
+  if (pauseKey) {
+    if (!e.repeat) togglePause();
+    return;
+  }
+  if (paused || gameOver || isStaleRepeat(e)) return; // the pause menu blocks game keys
+  if (e.code.startsWith('Arrow')) e.preventDefault(); // the page may scroll at small sizes
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) { current.x--; lastRotated = false; }
@@ -457,6 +514,118 @@ themeBtn.addEventListener('click', () => {
 });
 
 applyTheme(document.documentElement.getAttribute('data-theme'));
+
+// ---- Skins ----
+// Purely visual: a skin only changes COLORS, the board background, the grid and how drawBlock
+// paints a cell. It never touches the game state. The light/dark theme keeps styling the page.
+const skinSelect = document.getElementById('skin-select');
+
+// Each block function paints one cell whose top-left pixel is (px, py). drawBlock has already
+// set globalAlpha (0.2 for the ghost) and resets it afterwards.
+function drawRetroBlock(context, px, py, size, color) {
+  context.fillStyle = color;
+  context.fillRect(px + 1, py + 1, size - 2, size - 2);
+  // highlight
+  context.fillStyle = 'rgba(255,255,255,0.12)';
+  context.fillRect(px + 1, py + 1, size - 2, 4);
+}
+
+// Dim core and a bright outline with a glow (shadowBlur). The glow is costly, so each
+// (color, size) is drawn once into a cached sprite with room around it for the glow; the
+// sprite's shadowBlur is reset so it never leaks into other drawing.
+const neonSprites = {};
+function neonSprite(color, size) {
+  const key = color + '/' + size;
+  if (neonSprites[key]) return neonSprites[key];
+  const pad = size; // the glow spreads into the neighboring cells
+  const sprite = document.createElement('canvas');
+  sprite.width = sprite.height = size + 2 * pad;
+  const g = sprite.getContext('2d');
+  g.globalAlpha = 0.35;
+  g.fillStyle = color;
+  g.fillRect(pad + 3, pad + 3, size - 6, size - 6);
+  g.globalAlpha = 1;
+  g.shadowColor = color;
+  g.shadowBlur = size / 2;
+  g.strokeStyle = color;
+  g.lineWidth = 2;
+  g.strokeRect(pad + 4, pad + 4, size - 8, size - 8);
+  g.shadowBlur = 0;
+  return (neonSprites[key] = sprite);
+}
+
+function drawNeonBlock(context, px, py, size, color) {
+  context.drawImage(neonSprite(color, size), px - size, py - size);
+}
+
+// Soft colors with rounded corners, plus a soft shine on top.
+function drawPastelBlock(context, px, py, size, color) {
+  context.beginPath();
+  context.roundRect(px + 1, py + 1, size - 2, size - 2, size / 4);
+  context.fillStyle = color;
+  context.fill();
+  context.beginPath();
+  context.roundRect(px + size * 0.2, py + size * 0.15, size * 0.6, size * 0.2, size * 0.1);
+  context.fillStyle = 'rgba(255,255,255,0.35)';
+  context.fill();
+}
+
+// 8-bit look: flat color plus a cached overlay with a bevel and a checkered dither.
+const pixelTextures = {};
+function pixelTexture(s) {
+  if (pixelTextures[s]) return pixelTextures[s];
+  const tex = document.createElement('canvas');
+  tex.width = tex.height = s;
+  const g = tex.getContext('2d');
+  const p = Math.max(1, Math.floor(s / 7)); // size of one "pixel" of the texture
+  g.fillStyle = 'rgba(0,0,0,0.16)';
+  for (let i = 1; i * p < s - p; i++)
+    for (let j = 1; j * p < s - p; j++)
+      if ((i + j) % 2 === 0) g.fillRect(i * p, j * p, p, p);
+  g.fillStyle = 'rgba(255,255,255,0.4)';
+  g.fillRect(0, 0, s, p);
+  g.fillRect(0, 0, p, s);
+  g.fillStyle = 'rgba(0,0,0,0.35)';
+  g.fillRect(0, s - p, s, p);
+  g.fillRect(s - p, 0, p, s);
+  g.fillStyle = 'rgba(255,255,255,0.6)';
+  g.fillRect(p, p, p, p);
+  return (pixelTextures[s] = tex);
+}
+
+function drawPixelBlock(context, px, py, size, color) {
+  context.fillStyle = color;
+  context.fillRect(px + 1, py + 1, size - 2, size - 2);
+  context.drawImage(pixelTexture(size - 2), px + 1, py + 1);
+}
+
+// Called by draw() and drawNext() right after clearing. Retro leaves the canvas transparent
+// so the CSS background (--board-bg) shows through, as before.
+function fillSkinBackground(context, cnv) {
+  if (!activeSkin.background) return;
+  context.fillStyle = activeSkin.background;
+  context.fillRect(0, 0, cnv.width, cnv.height);
+}
+
+function applySkin(name) {
+  if (!Object.hasOwn(SKINS, name)) name = 'retro';
+  activeSkin = SKINS[name];
+  activeSkin.palette.forEach((color, i) => { COLORS[i] = color; }); // same array, new colors
+  document.documentElement.setAttribute('data-skin', name);
+  skinSelect.value = name;
+  try { localStorage.setItem('skin', name); } catch (e) { /* almacenamiento no disponible */ }
+  if (current) draw();
+  if (next) drawNext();
+}
+
+skinSelect.addEventListener('change', () => {
+  applySkin(skinSelect.value);
+  skinSelect.blur(); // so the arrow keys move the piece again instead of changing the skin
+});
+
+let savedSkin = null;
+try { savedSkin = localStorage.getItem('skin'); } catch (e) { /* almacenamiento no disponible */ }
+applySkin(savedSkin);
 
 // ---- Feedback: visuals and sound ----
 // Only subscribes to game events (onGameEvent) and never changes the game state, so the
@@ -602,5 +771,258 @@ volumeInput.addEventListener('change', () => volumeInput.blur());
 refreshSoundControls();
 onGameEvent(renderEvent);
 onGameEvent(soundEvent);
+
+// ---- Pause menu ----
+// Shown only while paused (P or Escape): Reanudar, Reiniciar (#restart-btn), Ver controles
+// and Nivel inicial. The keydown handler ignores game keys while paused; after resuming,
+// auto-repeats of keys held through the pause are ignored until they are pressed again.
+const MAX_START_LEVEL = 10;
+const resumeBtn = document.getElementById('resume-btn');
+const pauseMenu = document.getElementById('pause-menu');
+const controlsBtn = document.getElementById('controls-btn');
+const pauseControls = document.getElementById('pause-controls');
+const startLevelSelect = document.getElementById('start-level');
+
+// Saved start level (localStorage 'startLevel'), 1 when missing or invalid. It is read
+// once into the selector; init() reads the selector, so a choice still applies to the
+// next game when storage is not available.
+function readStartLevel() {
+  let n = 1;
+  try { n = parseInt(localStorage.getItem('startLevel'), 10); } catch (e) { /* almacenamiento no disponible */ }
+  return n >= 1 && n <= MAX_START_LEVEL ? n : 1;
+}
+
+function setControlsOpen(open) {
+  pauseControls.hidden = !open;
+  controlsBtn.setAttribute('aria-expanded', String(open));
+  controlsBtn.textContent = open ? 'Ocultar controles' : 'Ver controles';
+}
+
+function openPauseMenu() {
+  resumeBtn.hidden = false;
+  pauseMenu.hidden = false;
+  resumeBtn.focus({ preventScroll: true }); // keyboard navigation starts on Reanudar
+}
+
+// Also called by init() and endGame(): the menu never stays open outside the pause.
+function closePauseMenu() {
+  // Blur whatever got focus during the pause (menu or panel buttons reached with Tab),
+  // so Space/Enter cannot press it again during the game.
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+  resumeBtn.hidden = true;
+  pauseMenu.hidden = true;
+  setControlsOpen(false);
+}
+
+// An auto-repeat keydown is only accepted for a key pressed again after the last
+// resume/restart; this drops the repeats of a key held during the pause.
+function isStaleRepeat(e) {
+  if (!e.repeat) { freshKeys.add(e.code); return false; }
+  return !freshKeys.has(e.code);
+}
+
+for (let n = 1; n <= MAX_START_LEVEL; n++) startLevelSelect.add(new Option(String(n), String(n)));
+startLevelSelect.value = String(readStartLevel());
+
+resumeBtn.addEventListener('click', () => { if (paused) togglePause(); });
+controlsBtn.addEventListener('click', () => setControlsOpen(pauseControls.hidden));
+startLevelSelect.addEventListener('change', () => {
+  try { localStorage.setItem('startLevel', startLevelSelect.value); } catch (e) { /* sin almacenamiento */ }
+});
+
+// ---- Records ----
+// Local top MAX_RECORDS scores in localStorage ('records'), plus the best combo and the most
+// lines of any finished game. A game is stored once, at GAME OVER, with DEFAULT_PLAYER_NAME;
+// the name field only renames that row, so restarting (or closing the page) without typing a
+// name keeps the score. Only reads the game state: it never changes score, combo or lines.
+const MAX_RECORDS = 5;
+const RECORDS_KEY = 'records';
+const MAX_NAME_LENGTH = 12;
+const DEFAULT_PLAYER_NAME = 'Jugador';
+
+const recordsTable = document.getElementById('records-table');
+const recordsStats = document.getElementById('records-stats');
+const recordsResetBtn = document.getElementById('records-reset');
+const recordsConfirm = document.getElementById('records-confirm');
+const gameoverRecords = document.getElementById('gameover-records');
+const gameoverMessage = document.getElementById('gameover-message');
+const gameoverTable = document.getElementById('gameover-table');
+const gameoverStats = document.getElementById('gameover-stats');
+const recordForm = document.getElementById('record-form');
+const recordName = document.getElementById('record-name');
+
+recordName.maxLength = MAX_NAME_LENGTH;
+
+let records = loadRecords();
+let recordIndex = -1;     // row of the current game in records.top, -1 if it did not qualify
+let recordedGame = false; // the current game is already stored (endGame runs it only once)
+
+function emptyRecords() {
+  return { top: [], bestCombo: 0, maxLines: 0 };
+}
+
+function toCount(v) {
+  return Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0;
+}
+
+// Reads and validates the stored records; corrupt or missing data gives an empty table.
+// Without storage it returns `fallback`, so the records of this session are kept in memory.
+function loadRecords(fallback = emptyRecords()) {
+  let raw;
+  try { raw = localStorage.getItem(RECORDS_KEY); } catch (e) { return fallback; }
+  let data = null;
+  try { data = JSON.parse(raw); } catch (e) { /* datos dañados */ }
+  if (!data || typeof data !== 'object') return emptyRecords();
+  const top = (Array.isArray(data.top) ? data.top : [])
+    .filter(r => r && typeof r === 'object' && Number.isFinite(r.score) && Math.floor(r.score) > 0)
+    .map(r => ({
+      name: (typeof r.name === 'string' && r.name.trim().slice(0, MAX_NAME_LENGTH)) || DEFAULT_PLAYER_NAME,
+      score: Math.floor(r.score),
+      lines: toCount(r.lines),
+      level: Math.max(1, toCount(r.level)),
+      maxCombo: toCount(r.maxCombo),
+      date: typeof r.date === 'string' ? r.date : '',
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_RECORDS);
+  return {
+    top,
+    bestCombo: Math.max(toCount(data.bestCombo), ...top.map(r => r.maxCombo)),
+    maxLines: Math.max(toCount(data.maxLines), ...top.map(r => r.lines)),
+  };
+}
+
+function saveRecords() {
+  try { localStorage.setItem(RECORDS_KEY, JSON.stringify(records)); } catch (e) { /* sin almacenamiento: solo en memoria */ }
+}
+
+// 0-based row the score would take, or -1 if it does not enter the table.
+// A tie goes below the older score, so it needs to beat the last row of a full table.
+function recordRank(points) {
+  if (points <= 0) return -1;
+  const rank = records.top.filter(r => r.score >= points).length;
+  return rank < MAX_RECORDS ? rank : -1;
+}
+
+function renderRecordTable(tbody) {
+  tbody.replaceChildren();
+  if (!records.top.length) {
+    const tr = tbody.insertRow();
+    tr.className = 'records-empty';
+    const td = tr.insertCell();
+    td.colSpan = 6;
+    td.textContent = 'Sin récords todavía';
+    return;
+  }
+  records.top.forEach((r, i) => {
+    const tr = tbody.insertRow();
+    if (i === recordIndex) tr.className = 'record-current';
+    const when = r.date ? new Date(r.date) : null;
+    if (when && !isNaN(when)) tr.title = when.toLocaleString();
+    for (const v of [i + 1, r.name, r.score.toLocaleString(), r.lines, r.level, r.maxCombo])
+      tr.insertCell().textContent = v;
+  });
+}
+
+function renderRecordStats(el) {
+  const comboEl = document.createElement('strong');
+  comboEl.className = 'best-combo';
+  comboEl.textContent = records.bestCombo;
+  const maxLinesEl = document.createElement('strong');
+  maxLinesEl.className = 'max-lines';
+  maxLinesEl.textContent = records.maxLines;
+  el.replaceChildren('Mejor combo: ', comboEl, ' · Líneas máximas: ', maxLinesEl);
+}
+
+function renderRecords() {
+  renderRecordTable(recordsTable);
+  renderRecordTable(gameoverTable);
+  renderRecordStats(recordsStats);
+  renderRecordStats(gameoverStats);
+}
+
+// Called from endGame(): stores the game and shows the table in the GAME OVER overlay.
+function recordGameOver() {
+  if (recordedGame) return;
+  recordedGame = true;
+  records = loadRecords(records); // another tab may have saved since this page loaded
+  records.bestCombo = Math.max(records.bestCombo, maxCombo);
+  records.maxLines = Math.max(records.maxLines, lines);
+  recordIndex = recordRank(score);
+  if (recordIndex >= 0) {
+    records.top.splice(recordIndex, 0,
+      { name: DEFAULT_PLAYER_NAME, score, lines, level, maxCombo, date: new Date().toISOString() });
+    records.top.length = Math.min(records.top.length, MAX_RECORDS);
+  }
+  saveRecords();
+  renderRecords();
+  const isRecord = recordIndex >= 0;
+  gameoverMessage.textContent = isRecord ? `¡Nuevo récord! Puesto #${recordIndex + 1}` : 'Sin récord esta vez';
+  gameoverMessage.classList.toggle('is-record', isRecord);
+  recordName.value = '';
+  recordForm.hidden = !isRecord;
+  gameoverRecords.hidden = false;
+  if (isRecord) recordName.focus({ preventScroll: true });
+}
+
+// Names the row of this game. The form hides afterwards, so a game is named only once.
+function saveRecordName() {
+  if (recordIndex < 0 || recordForm.hidden) return;
+  const name = recordName.value.trim().slice(0, MAX_NAME_LENGTH) || DEFAULT_PLAYER_NAME;
+  records.top[recordIndex].name = name;
+  saveRecords();
+  renderRecords();
+  recordForm.hidden = true;
+  recordName.blur();
+  gameoverMessage.textContent = `¡Nuevo récord! Puesto #${recordIndex + 1} · Guardado`;
+}
+
+// Called from init(): a new game hides the GAME OVER part and the highlighted row.
+function resetRecordsView() {
+  recordedGame = false;
+  recordIndex = -1;
+  if (overlay.contains(document.activeElement)) document.activeElement.blur(); // name field or Reiniciar: keys go back to the game
+  gameoverRecords.hidden = true;
+  renderRecords();
+}
+
+function clearRecords() {
+  records = emptyRecords();
+  try { localStorage.removeItem(RECORDS_KEY); } catch (e) { /* sin almacenamiento */ }
+  recordIndex = -1;
+  recordForm.hidden = true; // the row to name is gone
+  gameoverMessage.textContent = 'Récords borrados';
+  gameoverMessage.classList.remove('is-record');
+  renderRecords();
+}
+
+// Text fields and selects get the keys; the game ignores them (the volume slider is handled apart).
+function isTextEntry(el) {
+  return el instanceof HTMLElement && (el.isContentEditable || el.matches('textarea, select') ||
+    (el.matches('input') && el.type !== 'range'));
+}
+
+function showResetConfirm(show) {
+  recordsResetBtn.hidden = show;
+  recordsConfirm.hidden = !show;
+}
+
+// The key that ended the game may still be held: its auto-repeat must not fill the name.
+recordName.addEventListener('keydown', e => { if (e.repeat) e.preventDefault(); });
+recordName.addEventListener('input', () => { recordName.value = recordName.value.trimStart(); });
+recordForm.addEventListener('submit', e => {
+  e.preventDefault(); // Enter or Guardar: stay on the page
+  saveRecordName();
+});
+recordsResetBtn.addEventListener('click', () => { showResetConfirm(true); recordsResetBtn.blur(); });
+document.getElementById('records-confirm-yes').addEventListener('click', e => {
+  clearRecords();
+  showResetConfirm(false);
+  e.currentTarget.blur();
+});
+document.getElementById('records-confirm-no').addEventListener('click', e => {
+  showResetConfirm(false);
+  e.currentTarget.blur();
+});
 
 init();

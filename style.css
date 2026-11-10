@@ -373,3 +373,297 @@ kbd {
     100% { opacity: 0; }
   }
 }
+
+/* ---- Menú de pausa (solo visible en PAUSA) ---- */
+#resume-btn,
+#pause-menu .menu-btn,
+#restart-btn {
+  min-width: 190px;
+}
+
+.menu-btn {
+  margin-top: 8px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: none;
+  border-radius: 6px;
+  padding: 10px 28px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.menu-btn:hover {
+  background: var(--accent-hover);
+}
+.menu-btn-secondary {
+  background: var(--kbd-bg);
+  color: var(--text);
+  border: 1px solid var(--kbd-border);
+}
+.menu-btn-secondary:hover {
+  background: var(--kbd-bg);
+  border-color: var(--accent);
+}
+.menu-btn:focus-visible,
+#restart-btn:focus-visible,
+#start-level:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* En PAUSA, Reanudar va primero y Reiniciar justo debajo */
+#resume-btn:not([hidden]) + #restart-btn {
+  margin-top: 0;
+}
+
+#pause-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+#pause-menu[hidden],
+#pause-controls[hidden],
+#resume-btn[hidden] {
+  display: none;
+}
+#pause-menu .menu-btn {
+  margin-top: 0;
+}
+
+#pause-controls {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  min-width: 190px;
+  background: var(--board-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-align: left;
+}
+#pause-controls li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+#pause-controls li span {
+  display: flex;
+  gap: 4px;
+  min-width: 64px;
+}
+
+.start-level {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--text);
+}
+#start-level {
+  background: var(--kbd-bg);
+  color: var(--text);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.start-level-hint {
+  margin-top: -6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ---- Skins (selector; el dibujo de cada skin está en game.js) ---- */
+.skin-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#skin-select {
+  background: var(--kbd-bg);
+  color: var(--text);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+#skin-select:hover,
+#skin-select:focus-visible {
+  border-color: var(--accent);
+}
+
+/* Neón: borde con brillo alrededor de los canvas negros */
+:root[data-skin='neon'] #board,
+:root[data-skin='neon'] #next-canvas {
+  border-color: #00f0ff;
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.45);
+}
+
+/* ---- Récords (tabla local, issue #54) ---- */
+#gameover-records[hidden],
+#record-form[hidden],
+#records-reset[hidden],
+#records-confirm[hidden] {
+  display: none;
+}
+
+#records {
+  width: 100%;
+  max-width: 482px;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.records-table th {
+  font-size: 10px;
+  letter-spacing: 1px;
+  font-weight: 600;
+  color: var(--label);
+  text-align: right;
+  padding: 2px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.records-table td {
+  font-family: 'Courier New', Courier, monospace;
+  text-align: right;
+  padding: 2px 6px;
+  color: var(--text);
+}
+
+.records-table th:nth-child(2),
+.records-table td:nth-child(2) {
+  text-align: left;
+  width: 100%;
+}
+
+.records-table th:first-child,
+.records-table td:first-child {
+  text-align: center;
+}
+
+.records-table .records-empty td {
+  text-align: center;
+  color: var(--muted);
+  font-family: inherit;
+  padding: 6px;
+}
+
+.records-table .record-current td {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 700;
+}
+
+.records-stats {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.records-stats strong {
+  font-family: 'Courier New', Courier, monospace;
+  color: var(--accent);
+}
+
+.records-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+#records-reset,
+#records-confirm button,
+#record-save {
+  background: var(--kbd-bg);
+  color: var(--text);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#records-reset:hover,
+#records-confirm button:hover,
+#record-save:hover {
+  border-color: var(--accent);
+}
+
+#records-confirm-yes {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+#gameover-records {
+  width: 400px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#gameover-message {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+#gameover-message.is-record {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #ffd54f;
+}
+
+:root[data-theme='light'] #gameover-message.is-record {
+  color: #b7791f;
+}
+
+#record-form {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+#record-name {
+  width: 160px;
+  background: var(--board-bg);
+  color: var(--text);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 14px;
+  user-select: text;
+}
+
+#record-name:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+#record-save {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+  font-weight: 700;
+}
