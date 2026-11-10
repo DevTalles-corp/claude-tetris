@@ -113,7 +113,16 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add tests/evidencia
           git commit -m "Evidencia QA del issue #$ISSUE" || echo "Sin evidencia nueva"
-          git push origin HEAD:qa
+          # Otro merge a qa puede haber avanzado la rama mientras corrían las pruebas
+          # (dos PRs fusionados seguidos). Cada evidencia va en su propia carpeta, así
+          # que el rebase no tiene conflictos: traer qa, rebasar y reintentar el push.
+          for intento in 1 2 3 4 5; do
+            git pull --rebase origin qa && git push origin HEAD:qa && exit 0
+            echo "Push rechazado (intento $intento); reintentando…"
+            sleep $((intento * 5))
+          done
+          echo "No se pudo subir la evidencia a qa tras 5 intentos"
+          exit 1
 
       - name: Publicar resultado en el issue
         if: steps.issue.outputs.numero != ''
