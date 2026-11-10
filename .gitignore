@@ -8,3 +8,6 @@ playwright-report/
 
 # Estado local de Obsidian (grafo y workspace)
 docs/.obsidian/graph.json
+
+# Worktrees creados con /worktree
+.trees/
