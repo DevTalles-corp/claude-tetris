@@ -481,3 +481,31 @@ kbd {
   font-size: 11px;
   color: var(--muted);
 }
+
+/* ---- Skins (selector; el dibujo de cada skin está en game.js) ---- */
+.skin-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#skin-select {
+  background: var(--kbd-bg);
+  color: var(--text);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+#skin-select:hover,
+#skin-select:focus-visible {
+  border-color: var(--accent);
+}
+
+/* Neón: borde con brillo alrededor de los canvas negros */
+:root[data-skin='neon'] #board,
+:root[data-skin='neon'] #next-canvas {
+  border-color: #00f0ff;
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.45);
+}
