@@ -246,3 +246,25 @@ kbd {
   75% { transform: translate(-2px, 1px); }
   90% { transform: translate(2px, -1px); }
 }
+
+/* ---- Skins ---- */
+#skin-select {
+  background: var(--kbd-bg);
+  color: var(--text);
+  border: 1px solid var(--kbd-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#skin-select:hover {
+  border-color: var(--value);
+}
+
+/* Neón fuerza fondo negro en ambos temas */
+:root[data-skin="neon"] #board,
+:root[data-skin="neon"] #next-canvas {
+  background: #000;
+}

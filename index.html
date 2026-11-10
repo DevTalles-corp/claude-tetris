@@ -10,6 +10,10 @@
     try {
       if (localStorage.getItem('theme') === 'light') document.documentElement.dataset.theme = 'light';
     } catch (e) {}
+    try {
+      var s = localStorage.getItem('skin');
+      if (['retro', 'neon', 'pastel', 'pixel'].indexOf(s) >= 0) document.documentElement.dataset.skin = s;
+    } catch (e) {}
   </script>
 </head>
 <body>
@@ -54,6 +58,16 @@
             <li><kbd>Space</kbd> caída</li>
             <li><kbd>P</kbd> pausa</li>
           </ul>
+        </div>
+
+        <div class="panel-section">
+          <label class="label" for="skin-select">SKIN</label>
+          <select id="skin-select">
+            <option value="retro">Retro</option>
+            <option value="neon">Neón</option>
+            <option value="pastel">Pastel</option>
+            <option value="pixel">Pixel art</option>
+          </select>
         </div>
 
         <div class="panel-section">
