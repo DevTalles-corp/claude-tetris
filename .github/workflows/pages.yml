@@ -1,0 +1,50 @@
+name: Pages
+
+# Publica el juego en GitHub Pages desde main.
+# Reemplaza el despliegue "desde rama" (legacy), cuyo workflow lo gestiona GitHub y usa
+# actions/upload-artifact@v4 sobre Node.js 20. Construye con Jekyll igual que antes, así que
+# el sitio no cambia. Requiere Settings → Pages → Source: "GitHub Actions".
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un solo despliegue a la vez; no se cancela uno en curso
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v6
+
+      - name: Construir con Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+
+      - name: Subir el sitio
+        uses: actions/upload-pages-artifact@v5
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - name: Desplegar
+        id: despliegue
+        uses: actions/deploy-pages@v5

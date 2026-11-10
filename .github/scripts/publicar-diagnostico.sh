@@ -14,7 +14,7 @@ MARCADOR='<!-- diagnostico-claude -->'
 # Funciones jq comunes: texto en una línea, recortado, y seguro dentro de una tabla
 JQ_DEFS='
 def limpio: tostring | gsub("[\\r\\n\\t]+"; " ") | gsub(" {2,}"; " ") | ltrimstr(" ") | rtrimstr(" ");
-def corto($n): limpio | if length > $n then .[0:($n - 1)] + "…" else . end;
+def corto($n): limpio | if length > $n then (.[0:($n - 1)] | sub(" +[^ ]*$"; "")) + "…" else . end;
 def celda($n): corto($n) | gsub("\\|"; "\\|");
 def vacio: if (. | limpio) == "" then "_Sin información._" else . end;
 '
@@ -34,7 +34,7 @@ ETIQUETAS=$(q '([.tipo] + (.areas // []) + [.prioridad]) | map(select(. != null 
       {"prioridad:alta":"🔴 Alta","prioridad:media":"🟠 Media","prioridad:baja":"🟢 Baja"}[.prioridad] // .prioridad) |"'
   echo
   echo "### 🔍 Diagnóstico"
-  q '.diagnostico | corto(300) | vacio'
+  q '.diagnostico | corto(500) | vacio'
   echo
   echo "### 📂 Área afectada"
   if [ "$(q '(.area_afectada // []) | length')" -gt 0 ]; then
@@ -46,15 +46,15 @@ ETIQUETAS=$(q '([.tipo] + (.areas // []) + [.prioridad]) | map(select(. != null 
   fi
   echo
   echo "### 🧩 Causa raíz"
-  q '.causa_raiz | corto(300) | vacio'
+  q '.causa_raiz | corto(500) | vacio'
   echo
   echo "### 🛠️ Propuesta de solución"
   q 'if ((.propuesta_solucion // []) | length) == 0 then "_Sin información._"
-     else (.propuesta_solucion[0:5] | to_entries[] | "\(.key + 1). \(.value | corto(160))") end'
+     else (.propuesta_solucion[0:5] | to_entries[] | "\(.key + 1). \(.value | corto(280))") end'
   echo
   echo "### ⚠️ Riesgos"
   q 'if ((.riesgos // []) | length) == 0 then "_Sin información._"
-     else (.riesgos[0:3][] | "- \(corto(160))") end'
+     else (.riesgos[0:3][] | "- \(corto(280))") end'
   echo
   echo "---"
   echo "<sub>🤖 Modelo \`$MODELO\` · $(date -u '+%Y-%m-%d %H:%M UTC') · Se actualiza al editar el título o la descripción.<br>"
