@@ -48,8 +48,29 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const pauseMenu = document.getElementById('pause-menu');
+const pmResume = document.getElementById('pm-resume');
+const pmRestart = document.getElementById('pm-restart');
+const pmControls = document.getElementById('pm-controls');
+const pmControlsList = document.getElementById('pm-controls-list');
+const pmLevel = document.getElementById('pm-level');
+const pmLevelVal = document.getElementById('pm-level-val');
+const pmButtons = [pmResume, pmRestart, pmControls, pmLevel];
 const themeBtn = document.getElementById('theme-toggle');
 let gridColor = '#22222e';
+
+const MAX_START_LEVEL = 10;
+const RESUME_GRACE_MS = 150;
+let startLevel = 1;
+try {
+  const saved = parseInt(localStorage.getItem('startLevel'), 10);
+  if (saved >= 1 && saved <= MAX_START_LEVEL) startLevel = saved;
+} catch (e) {}
+const heldKeys = new Set();   // teclas pulsadas ahora mismo
+let blockedKeys = new Set();  // pulsadas al reanudar: se ignoran hasta soltarlas
+let resumeUntil = 0;
+let gameStartLevel = 1;       // nivel inicial de la partida en curso
+window.addEventListener('blur', () => { heldKeys.clear(); blockedKeys.clear(); });
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bolt, nextBoltAt;
 
@@ -104,6 +125,10 @@ function merge() {
         board[current.y + r][current.x + c] = current.shape[r][c];
 }
 
+function intervalFor(lvl) {
+  return Math.max(100, 1000 - (lvl - 1) * 90);
+}
+
 function clearLines() {
   let cleared = 0;
   for (let r = ROWS - 1; r >= 0; r--) {
@@ -117,8 +142,8 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    level = Math.max(gameStartLevel,Math.floor(lines / 10) + 1);
+    dropInterval = intervalFor(level);
     updateHUD();
   }
 }
@@ -333,15 +358,72 @@ function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    closePauseMenu();
+    blockedKeys = new Set(heldKeys);
+    resumeUntil = performance.now() + RESUME_GRACE_MS;
     lastTime = performance.now();
+    cancelAnimationFrame(animId);
     loop(lastTime);
   } else {
     cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+    openPauseMenu();
   }
 }
+
+function openPauseMenu() {
+  pmControlsList.classList.add('hidden');
+  pmControls.setAttribute('aria-expanded', 'false');
+  pmLevelVal.textContent = startLevel;
+  pauseMenu.classList.remove('hidden');
+  pmResume.focus();
+}
+
+function closePauseMenu() {
+  pauseMenu.classList.add('hidden');
+  if (pauseMenu.contains(document.activeElement)) document.activeElement.blur();
+}
+
+function changeStartLevel(delta) {
+  startLevel = Math.min(MAX_START_LEVEL, Math.max(1, startLevel + delta));
+  pmLevelVal.textContent = startLevel;
+  try { localStorage.setItem('startLevel', String(startLevel)); } catch (e) {}
+}
+
+function menuKey(e) {
+  const i = pmButtons.indexOf(document.activeElement);
+  if (i < 0 && e.code.startsWith('Arrow')) {
+    // el foco se salió del menú: recuperarlo
+    e.preventDefault();
+    pmResume.focus();
+    return;
+  }
+  switch (e.code) {
+    case 'ArrowDown':
+      e.preventDefault();
+      pmButtons[(i + 1) % pmButtons.length].focus();
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      pmButtons[(i - 1 + pmButtons.length) % pmButtons.length].focus();
+      break;
+    case 'ArrowLeft':
+    case 'ArrowRight':
+      e.preventDefault();
+      if (document.activeElement === pmLevel) changeStartLevel(e.code === 'ArrowRight' ? 1 : -1);
+      break;
+    // Enter/Espacio: el botón enfocado se activa de forma nativa
+  }
+}
+
+pmResume.addEventListener('click', () => { if (paused) togglePause(); });
+pmRestart.addEventListener('click', () => init());
+pmControls.addEventListener('click', () => {
+  const show = pmControlsList.classList.toggle('hidden') === false;
+  pmControls.setAttribute('aria-expanded', String(show));
+});
+pmLevel.addEventListener('click', () => {
+  changeStartLevel(startLevel >= MAX_START_LEVEL ? 1 - MAX_START_LEVEL : 1);
+});
 
 function loop(ts) {
   const dt = ts - lastTime;
@@ -369,10 +451,11 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  gameStartLevel = startLevel; // el selector solo afecta a la próxima partida
+  level = gameStartLevel;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = intervalFor(level);
   dropAccum = 0;
   bolt = null;
   nextBoltAt = BOLT_SCORE_STEP;
@@ -382,13 +465,30 @@ function init() {
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  closePauseMenu();
+  blockedKeys = new Set(heldKeys);
+  resumeUntil = performance.now() + RESUME_GRACE_MS;
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
+document.addEventListener('keyup', e => {
+  heldKeys.delete(e.code);
+  blockedKeys.delete(e.code);
+});
+
 document.addEventListener('keydown', e => {
-  if (e.code === 'KeyP') { togglePause(); return; }
-  if (paused || gameOver || bolt) return;
+  heldKeys.add(e.code);
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    if (!e.repeat) togglePause();
+    return;
+  }
+  if (paused) { menuKey(e); return; }
+  if (gameOver || bolt) return;
+  if (blockedKeys.has(e.code) || performance.now() < resumeUntil) {
+    if (e.code === 'Space') e.preventDefault();
+    return;
+  }
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
@@ -411,7 +511,7 @@ document.addEventListener('keydown', e => {
   updateHUD();
 });
 
-restartBtn.addEventListener('click', init);
+restartBtn.addEventListener('click', () => { init(); restartBtn.blur(); });
 
 function setTheme(theme, save = true) {
   document.documentElement.dataset.theme = theme;

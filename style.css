@@ -246,3 +246,86 @@ kbd {
   75% { transform: translate(-2px, 1px); }
   90% { transform: translate(2px, -1px); }
 }
+
+/* ===== Menú de pausa ===== */
+.pause-menu {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--overlay-bg);
+  backdrop-filter: blur(4px);
+  border-radius: 4px;
+}
+
+.pause-menu.hidden,
+.pause-keys.hidden {
+  display: none;
+}
+
+.pause-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  min-width: 220px;
+}
+
+.pause-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: var(--danger);
+}
+
+.pause-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.pause-list button {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: 2px solid transparent;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.pause-list button:hover {
+  background: var(--btn-bg-hover);
+}
+
+.pause-list button:focus {
+  outline: none;
+  border-color: var(--value);
+}
+
+.pause-keys {
+  list-style: none;
+  margin: 0;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--value);
+  border-radius: 6px;
+  background: rgba(128, 128, 128, 0.15);
+}
+
+.pause-hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  text-align: center;
+  color: var(--value);
+  opacity: 0.7;
+}
