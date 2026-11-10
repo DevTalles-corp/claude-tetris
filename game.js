@@ -253,6 +253,8 @@ function loop(ts) {
     }
   }
   draw();
+  // Si lockPiece terminó el juego, no reprogramar el bucle
+  if (gameOver) return;
   animId = requestAnimationFrame(loop);
 }
 
