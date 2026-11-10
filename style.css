@@ -408,7 +408,7 @@ kbd {
 }
 .menu-btn:focus-visible,
 #restart-btn:focus-visible,
-#start-level:focus-visible {
+.step-btn:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 2px;
 }
@@ -467,14 +467,35 @@ kbd {
   letter-spacing: 1px;
   color: var(--text);
 }
-#start-level {
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.step-btn {
+  width: 30px;
+  height: 30px;
   background: var(--kbd-bg);
   color: var(--text);
   border: 1px solid var(--kbd-border);
   border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 14px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
   cursor: pointer;
+}
+.step-btn:hover:not([aria-disabled='true']) {
+  border-color: var(--accent);
+}
+.step-btn[aria-disabled='true'] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+#start-level {
+  min-width: 28px;
+  text-align: center;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
 }
 .start-level-hint {
   margin-top: -6px;
