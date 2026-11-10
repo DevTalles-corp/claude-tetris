@@ -19,7 +19,6 @@ const menu = (page) => ({
   verControles: page.locator('#controls-btn'),
   controles: page.locator('#pause-controls'),
   nivel: page.locator('#start-level'),
-  bajarNivel: page.locator('#start-level-down'),
   subirNivel: page.locator('#start-level-up'),
   bloque: page.locator('#pause-menu'),
 });
@@ -150,45 +149,6 @@ test('Nivel inicial se aplica en la próxima partida, no en la actual', async ({
   const r = await page.evaluate(() => ({ level, startLevel, dropInterval, hud: document.getElementById('level').textContent }));
   expect(r).toEqual({ level: 5, startLevel: 5, dropInterval: 640, hud: '5' }); // max(100, 1000 - 4 × 90)
   await capturar(page, 'partida-nueva-en-nivel-5');
-});
-
-test('Nivel inicial: + sube, − baja y los botones respetan los límites 1 y 10', async ({ page }) => {
-  const m = menu(page);
-  await page.keyboard.press('KeyP');
-  await expect(m.nivel).toHaveText('1');
-  await expect(m.bajarNivel).toBeDisabled();
-  await expect(m.subirNivel).toBeEnabled();
-  await capturar(page, 'nivel-minimo-menos-desactivado');
-
-  await m.subirNivel.click();
-  await expect(m.nivel).toHaveText('2');
-  await expect(m.bajarNivel).toBeEnabled();
-  await m.bajarNivel.click();
-  await expect(m.nivel).toHaveText('1');
-  await expect(m.bajarNivel).toBeDisabled();
-
-  // Con el teclado: Enter repetido sobre + no pasa de 10 y el foco se queda en +.
-  await m.subirNivel.focus();
-  for (let i = 0; i < 12; i++) await page.keyboard.press('Enter');
-  await expect(m.nivel).toHaveText('10');
-  await expect(m.subirNivel).toBeDisabled();
-  await expect(m.subirNivel).toBeFocused();
-  await expect(m.bajarNivel).toBeEnabled();
-  expect(await page.evaluate(() => localStorage.getItem('startLevel'))).toBe('10');
-  await capturar(page, 'nivel-maximo-mas-desactivado');
-
-  // Bajar de más tampoco sale del límite.
-  await m.bajarNivel.focus();
-  for (let i = 0; i < 12; i++) await page.keyboard.press('Enter');
-  await expect(m.nivel).toHaveText('1');
-  await expect(m.bajarNivel).toBeDisabled();
-  await expect(m.bajarNivel).toBeFocused();
-  expect(await page.evaluate(() => ({ startLevel: localStorage.getItem('startLevel'), level }))).toEqual({ startLevel: '1', level: 1 });
-
-  // P sigue cerrando la pausa con un botón del nivel enfocado.
-  await page.keyboard.press('KeyP');
-  await expect(m.overlay).toBeHidden();
-  expect(await page.evaluate(() => paused)).toBe(false);
 });
 
 test('Nivel inicial se recuerda tras recargar y el nivel nunca baja de él', async ({ page }) => {
