@@ -19,6 +19,7 @@ const menu = (page) => ({
   verControles: page.locator('#controls-btn'),
   controles: page.locator('#pause-controls'),
   nivel: page.locator('#start-level'),
+  subirNivel: page.locator('#start-level-up'),
   bloque: page.locator('#pause-menu'),
 });
 
@@ -135,10 +136,10 @@ test('Ver controles muestra la lista de teclas dentro del menú y se pliega al v
 test('Nivel inicial se aplica en la próxima partida, no en la actual', async ({ page }) => {
   const m = menu(page);
   await page.keyboard.press('KeyP');
-  await expect(m.nivel).toHaveValue('1');
-  expect(await m.nivel.locator('option').allTextContents()).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
+  await expect(m.nivel).toHaveText('1');
 
-  await m.nivel.selectOption('5');
+  for (let i = 0; i < 4; i++) await m.subirNivel.click();
+  await expect(m.nivel).toHaveText('5');
   expect(await page.evaluate(() => localStorage.getItem('startLevel'))).toBe('5');
   // La partida en curso no cambia de nivel.
   expect(await page.evaluate(() => ({ level, dropInterval }))).toEqual({ level: 1, dropInterval: 1000 });
@@ -153,13 +154,15 @@ test('Nivel inicial se aplica en la próxima partida, no en la actual', async ({
 test('Nivel inicial se recuerda tras recargar y el nivel nunca baja de él', async ({ page }) => {
   const m = menu(page);
   await page.keyboard.press('KeyP');
-  await m.nivel.selectOption('3');
+  await m.subirNivel.click();
+  await m.subirNivel.click();
+  await expect(m.nivel).toHaveText('3');
   await page.reload();
 
   const inicio = await page.evaluate(() => ({ level, dropInterval, guardado: localStorage.getItem('startLevel') }));
   expect(inicio).toEqual({ level: 3, dropInterval: 820, guardado: '3' });
   await page.keyboard.press('KeyP');
-  await expect(m.nivel).toHaveValue('3');
+  await expect(m.nivel).toHaveText('3');
   await capturar(page, 'nivel-inicial-recordado');
   await page.keyboard.press('KeyP');
 
