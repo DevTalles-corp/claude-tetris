@@ -86,6 +86,9 @@ Verificar que cada cambio de Tetris funciona en el navegador antes de llegar a `
 | TC-71 | Límites 1 y 10 | En 1 el − está desactivado y en 10 el +; pulsar de más con mouse o Enter no sale de 1..10 y el foco se queda en el botón (issue #66) | `limite-1-menos-desactivado.png`, `limite-10-mas-desactivado.png` |
 | TC-72 | Solo cambia la interfaz | La partida en curso no cambia; la siguiente empieza en el nivel elegido y se recuerda al recargar (issue #66) | `proxima-partida-en-nivel-5.png`, `nivel-recordado-tras-recargar.png` |
 | TC-73 | Pausa desde los botones | P y Escape cierran la pausa con + o − enfocado (issue #66) | `pausa-cerrada-desde-los-botones.png` |
+| TC-74 | Panel con ↑ X y Espacio | El panel de controles muestra ↑ X para rotar y Espacio para la caída, sin "Space" (issue #68) | `panel-controles.png` |
+| TC-75 | Panel igual al menú | Las teclas de cada fila del panel coinciden con las del menú de pausa (issue #68) | `panel-y-menu-iguales.png` |
+| TC-76 | Solo cambia el texto | X sigue rotando la pieza y Espacio sigue dejándola caer (issue #68) | `x-rota-y-espacio-cae.png` |
 | TC-49 | Tabla al cargar | Con `localStorage` vacío, `#records` (RÉCORDS) se ve con «Sin récords todavía» y `Mejor combo: 0 · Líneas máximas: 0`, debajo del tablero y del panel (560×800 y 1080×1920), y el juego arranca solo (issue #54) | `tabla-vacia-al-cargar.png` |
 | TC-50 | Récords guardados al cargar | Con 6 récords desordenados en `localStorage`, la tabla muestra los 5 mejores ordenados por puntos, con líneas, nivel y combo, y los máximos guardados (issue #54) | `tabla-con-records-al-cargar.png` |
 | TC-51 | GAME OVER con récord | Jugando con Espacio hasta el GAME OVER: `¡Nuevo récord! Puesto #1`, campo de nombre enfocado, botón Guardar y la fila resaltada en las dos tablas; `#overlay-score` no cambia (issue #54) | `game-over-nuevo-record.png` |
