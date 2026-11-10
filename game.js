@@ -434,7 +434,7 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  startLevel = Number(startLevelSelect.value); // chosen in the pause menu, applies from this game on
+  startLevel = Number(startLevelOutput.value); // chosen in the pause menu, applies from this game on
   level = startLevel;
   pieces = 0;
   paused = false;
@@ -781,10 +781,12 @@ const resumeBtn = document.getElementById('resume-btn');
 const pauseMenu = document.getElementById('pause-menu');
 const controlsBtn = document.getElementById('controls-btn');
 const pauseControls = document.getElementById('pause-controls');
-const startLevelSelect = document.getElementById('start-level');
+const startLevelOutput = document.getElementById('start-level');
+const startLevelDown = document.getElementById('start-level-down');
+const startLevelUp = document.getElementById('start-level-up');
 
 // Saved start level (localStorage 'startLevel'), 1 when missing or invalid. It is read
-// once into the selector; init() reads the selector, so a choice still applies to the
+// once into the − / + control; init() reads the control, so a choice still applies to the
 // next game when storage is not available.
 function readStartLevel() {
   let n = 1;
@@ -821,14 +823,28 @@ function isStaleRepeat(e) {
   return !freshKeys.has(e.code);
 }
 
-for (let n = 1; n <= MAX_START_LEVEL; n++) startLevelSelect.add(new Option(String(n), String(n)));
-startLevelSelect.value = String(readStartLevel());
+// Shows the start level clamped to 1..MAX_START_LEVEL and marks − at 1 and + at the top as
+// disabled with aria-disabled (not `disabled`, which would drop the focus): pressing a button
+// past its limit does nothing and the focus stays on it.
+function showStartLevel(n) {
+  n = Math.min(MAX_START_LEVEL, Math.max(1, n));
+  startLevelOutput.value = String(n);
+  startLevelDown.setAttribute('aria-disabled', String(n <= 1));
+  startLevelUp.setAttribute('aria-disabled', String(n >= MAX_START_LEVEL));
+  return n;
+}
+
+function stepStartLevel(delta) {
+  const n = showStartLevel(Number(startLevelOutput.value) + delta);
+  try { localStorage.setItem('startLevel', String(n)); } catch (e) { /* sin almacenamiento */ }
+}
+
+showStartLevel(readStartLevel());
 
 resumeBtn.addEventListener('click', () => { if (paused) togglePause(); });
 controlsBtn.addEventListener('click', () => setControlsOpen(pauseControls.hidden));
-startLevelSelect.addEventListener('change', () => {
-  try { localStorage.setItem('startLevel', startLevelSelect.value); } catch (e) { /* sin almacenamiento */ }
-});
+startLevelDown.addEventListener('click', () => stepStartLevel(-1));
+startLevelUp.addEventListener('click', () => stepStartLevel(1));
 
 // ---- Records ----
 // Local top MAX_RECORDS scores in localStorage ('records'), plus the best combo and the most

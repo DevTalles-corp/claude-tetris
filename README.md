@@ -100,7 +100,7 @@ Con `P` o `Esc` la partida se detiene y aparece el menú:
 - **Reanudar**: vuelve al juego (también con `P`, `Esc` o `Enter` sobre el botón).
 - **Reiniciar**: empieza una partida nueva sin recargar la página.
 - **Ver controles**: despliega la lista de teclas dentro del menú.
-- **Nivel inicial**: elige del 1 al 10 con qué nivel empieza la **próxima** partida (la actual no cambia). Se recuerda entre visitas. El nivel nunca baja del elegido: `nivel = max(nivel inicial, floor(líneas / 10) + 1)`.
+- **Nivel inicial**: con los botones **+** (más difícil) y **−** (más fácil) elige del 1 al 10 con qué nivel empieza la **próxima** partida (la actual no cambia). Se recuerda entre visitas. El nivel nunca baja del elegido: `nivel = max(nivel inicial, floor(líneas / 10) + 1)`.
 
 Mientras el menú está abierto las teclas del juego no mueven la pieza; se navega con el ratón o con `Tab`, `Enter` y las flechas sobre el selector. Al volver, una tecla que se haya quedado pulsada durante la pausa no mueve la pieza hasta soltarla y pulsarla de nuevo. En **Game Over** no aparece el menú de pausa: solo la puntuación, la tabla de récords y **Reiniciar**.
 

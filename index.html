@@ -122,10 +122,14 @@
             <li><span><kbd>Espacio</kbd></span> caída (hard drop)</li>
             <li><span><kbd>P</kbd><kbd>Esc</kbd></span> pausa / reanudar</li>
           </ul>
-          <label class="start-level" for="start-level">
-            <span>Nivel inicial</span>
-            <select id="start-level" autocomplete="off"></select>
-          </label>
+          <div class="start-level" role="group" aria-labelledby="start-level-label">
+            <span id="start-level-label">Nivel inicial</span>
+            <div class="stepper">
+              <button id="start-level-down" class="step-btn" type="button" aria-label="Bajar nivel inicial">−</button>
+              <output id="start-level" aria-live="polite">1</output>
+              <button id="start-level-up" class="step-btn" type="button" aria-label="Subir nivel inicial">+</button>
+            </div>
+          </div>
           <p class="start-level-hint">Se aplica en la próxima partida</p>
         </div>
       </div>
