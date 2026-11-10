@@ -1,0 +1,36 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude code review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Revisa este pull request del juego Tetris (HTML, CSS y JavaScript sin build).
+            Lee CLAUDE.md antes de revisar. Enfócate en:
+            - Bugs de lógica en colisiones, rotación, limpieza de líneas, puntuación y el ciclo de juego (loop, lockPiece, spawn, endGame).
+            - IDs del DOM usados en game.js que deban existir en index.html.
+            - Que las dimensiones del canvas en index.html coincidan con COLS, ROWS y BLOCK.
+            - Texto de la interfaz nuevo en español.
+            Reporta solo hallazgos concretos con archivo y línea. Responde en español y de forma directa.
+          claude_args: "--model claude-sonnet-5-5 --max-turns 10"
