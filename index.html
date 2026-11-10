@@ -5,9 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
   <link rel="stylesheet" href="style.css" />
+  <script>
+    // Aplica el tema guardado antes de pintar para evitar destellos
+    try {
+      if (localStorage.getItem('theme') === 'light') document.documentElement.dataset.theme = 'light';
+    } catch (e) {}
+    try {
+      var s = localStorage.getItem('skin');
+      if (['retro', 'neon', 'pastel', 'pixel'].indexOf(s) >= 0) document.documentElement.dataset.skin = s;
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <div class="wrapper">
+    <h1 class="title" aria-label="TETRIS">
+      <span style="--c:#4dd0e1">T</span><span style="--c:#ffd54f">E</span><span style="--c:#ba68c8">T</span><span style="--c:#81c784">R</span><span style="--c:#e57373">I</span><span style="--c:#ffb74d">S</span>
+    </h1>
+
+    <div class="stage">
     <div class="game-container">
       <canvas id="board" width="300" height="600"></canvas>
 
@@ -23,6 +38,10 @@
         <div class="panel-section">
           <span class="label">LEVEL</span>
           <span class="value" id="level">1</span>
+        </div>
+        <div class="panel-section">
+          <span class="label">RAYO EN</span>
+          <span class="value" id="bolt">2.000</span>
         </div>
 
         <div class="panel-section">
@@ -40,6 +59,20 @@
             <li><kbd>P</kbd> pausa</li>
           </ul>
         </div>
+
+        <div class="panel-section">
+          <label class="label" for="skin-select">SKIN</label>
+          <select id="skin-select">
+            <option value="retro">Retro</option>
+            <option value="neon">Neón</option>
+            <option value="pastel">Pastel</option>
+            <option value="pixel">Pixel art</option>
+          </select>
+        </div>
+
+        <div class="panel-section">
+          <button id="theme-toggle" type="button" aria-pressed="false">Modo claro</button>
+        </div>
       </aside>
     </div>
 
@@ -49,6 +82,7 @@
         <p id="overlay-score"></p>
         <button id="restart-btn">Reiniciar</button>
       </div>
+    </div>
     </div>
   </div>
 
