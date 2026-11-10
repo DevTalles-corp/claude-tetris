@@ -246,3 +246,100 @@ kbd {
   75% { transform: translate(-2px, 1px); }
   90% { transform: translate(2px, -1px); }
 }
+
+/* ---- Tabla de records (pantalla de inicio y game over) ---- */
+#start-screen.hidden { display: none; }
+
+.hs-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: var(--value);
+}
+
+.hs-box { width: 280px; }
+.hs-box.hidden, .hs-entry.hidden, .hs-link.hidden { display: none; }
+
+.hs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.hs-table th {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--label);
+  font-weight: 700;
+  text-align: right;
+  padding: 2px 4px;
+}
+
+.hs-table td {
+  padding: 3px 4px;
+  text-align: right;
+  border-top: 1px solid var(--border);
+}
+
+.hs-table th:nth-child(2), .hs-table td:nth-child(2) { text-align: left; }
+.hs-table td:nth-child(2) { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.hs-table tr.hs-new td {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  font-weight: 700;
+}
+
+.hs-empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+
+.hs-bests {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  color: var(--value);
+}
+
+.hs-msg { font-size: 14px; font-weight: 700; color: var(--value); }
+.hs-entry { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.hs-row { display: flex; gap: 8px; }
+
+.hs-row input {
+  width: 150px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--board-bg);
+  color: var(--text);
+  font-size: 14px;
+  user-select: text;
+}
+
+.hs-btn {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: none;
+  border-radius: 6px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+
+.hs-btn:hover { background: var(--btn-bg-hover); }
+
+.hs-link {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.hs-link:hover { color: var(--danger); }

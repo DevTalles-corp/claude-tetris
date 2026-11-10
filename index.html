@@ -66,7 +66,25 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <div id="record-entry" class="hs-entry hidden">
+          <p id="record-msg" class="hs-msg"></p>
+          <div class="hs-row">
+            <input id="record-name" type="text" maxlength="12" value="Jugador" autocomplete="off" aria-label="Nombre del jugador" />
+            <button id="record-save" type="button" class="hs-btn">Guardar</button>
+          </div>
+        </div>
+        <div id="overlay-records" class="hs-box hidden"></div>
         <button id="restart-btn">Reiniciar</button>
+        <button id="overlay-reset-records" type="button" class="hs-link hidden">Borrar records</button>
+      </div>
+    </div>
+
+    <div id="start-screen" class="overlay">
+      <div class="overlay-box">
+        <p class="hs-title">MEJORES PUNTUACIONES</p>
+        <div id="start-records" class="hs-box"></div>
+        <button id="start-btn" type="button" class="hs-btn">Jugar</button>
+        <button id="start-reset-records" type="button" class="hs-link">Borrar records</button>
       </div>
     </div>
     </div>
