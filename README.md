@@ -24,6 +24,7 @@ Implementación del clásico **Tetris** en JavaScript vanilla, usando HTML5 Canv
     - [Flujo del juego](#flujo-del-juego)
   - [Combos y multiplicadores](#combos-y-multiplicadores)
   - [Skins](#skins)
+  - [Tabla de récords](#tabla-de-récords)
   - [Tecnologías](#tecnologías)
   - [Estructura del proyecto](#estructura-del-proyecto)
   - [Personalización](#personalización)
@@ -47,6 +48,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Skins** del tablero: Retro, Neón, Pastel y Pixel art, con la preferencia guardada (ver [Skins](#skins)).
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Menú de pausa** (`P` o `Esc`) con Reanudar, Reiniciar, la lista de controles y el **nivel inicial** de la próxima partida; **Game Over** con opción de reinicio.
+- **Tabla de récords local**: las 5 mejores puntuaciones con el nombre del jugador, el mejor combo y las líneas máximas, guardadas en el navegador (ver [Tabla de récords](#tabla-de-récords)).
 
 ---
 
@@ -100,9 +102,11 @@ Con `P` o `Esc` la partida se detiene y aparece el menú:
 - **Ver controles**: despliega la lista de teclas dentro del menú.
 - **Nivel inicial**: elige del 1 al 10 con qué nivel empieza la **próxima** partida (la actual no cambia). Se recuerda entre visitas. El nivel nunca baja del elegido: `nivel = max(nivel inicial, floor(líneas / 10) + 1)`.
 
-Mientras el menú está abierto las teclas del juego no mueven la pieza; se navega con el ratón o con `Tab`, `Enter` y las flechas sobre el selector. Al volver, una tecla que se haya quedado pulsada durante la pausa no mueve la pieza hasta soltarla y pulsarla de nuevo. En **Game Over** solo aparecen la puntuación y **Reiniciar**.
+Mientras el menú está abierto las teclas del juego no mueven la pieza; se navega con el ratón o con `Tab`, `Enter` y las flechas sobre el selector. Al volver, una tecla que se haya quedado pulsada durante la pausa no mueve la pieza hasta soltarla y pulsarla de nuevo. En **Game Over** no aparece el menú de pausa: solo la puntuación, la tabla de récords y **Reiniciar**.
 
 En el panel, el botón **🔊 / 🔇** activa o desactiva el sonido y el deslizador ajusta el volumen. Las dos opciones se recuerdan entre partidas. El selector **SKIN** cambia el aspecto del tablero y de la vista NEXT (ver [Skins](#skins)).
+
+En el GAME OVER con récord, se escribe el nombre y **Enter** lo guarda; mientras el campo tiene el foco, las teclas del juego no actúan.
 
 ---
 
@@ -118,6 +122,8 @@ Define la estructura visual:
 - Un panel lateral con `SCORE`, `LINES`, `LEVEL`, `PIEZAS` (número de piezas fijadas en el tablero), vista de la siguiente pieza, la lista de controles y los controles de sonido.
 - Sobre el tablero, el contador de combo, el indicador de B2B, los avisos flotantes y el destello del Perfect Clear. No mueven el diseño del panel.
 - Un overlay para los estados **PAUSA** (con el menú de pausa: `#resume-btn`, `#restart-btn` y `#pause-menu`) y **GAME OVER**.
+- Un overlay para los estados **PAUSA** y **GAME OVER**. En GAME OVER muestra además el campo de nombre y la tabla de récords.
+- Debajo del tablero, la sección **RÉCORDS** con la tabla, el mejor combo, las líneas máximas y el botón **Borrar récords**.
 
 ### 2. `style.css`
 
@@ -211,6 +217,17 @@ El selector **SKIN** del panel cambia el aspecto del tablero y de la vista NEXT 
 La elección se guarda en `localStorage` (clave `skin`); si el valor guardado no es una skin conocida, se usa Retro. El botón de tema claro/oscuro sigue controlando la página; la skin solo cambia los canvas. La pieza fantasma se ve en todas las skins.
 
 Cada skin vive en `SKINS` (`game.js`) con su paleta de 12 colores, su fondo, su cuadrícula y su función de dibujo de bloque. `applySkin(nombre)` copia la paleta dentro de `COLORS`, cambia la función que usa `drawBlock` y redibuja el tablero y NEXT.
+## Tabla de récords
+
+Las mejores puntuaciones se guardan en el navegador (`localStorage`, clave `records`), así que se conservan al recargar la página pero son propias de cada navegador.
+
+- **Dónde se ve**: el juego sigue arrancando solo al abrir la página; la sección **RÉCORDS** está siempre visible debajo del tablero, y la misma tabla aparece en el overlay de **GAME OVER** (no en el de PAUSA).
+- **Qué guarda**: las 5 mejores partidas (`MAX_RECORDS`) con nombre, puntos, líneas, nivel y mejor combo de la partida, ordenadas por puntos. Además, el **mejor combo** (la cadena más larga de piezas seguidas que eliminan líneas) y las **líneas máximas** de cualquier partida terminada, entre o no en la tabla.
+- **Al terminar una partida**: si la puntuación es mayor que 0 y entra en el top 5, aparece «¡Nuevo récord! Puesto #N», la fila se resalta en las dos tablas y se pide el nombre (hasta 12 caracteres). **Enter** o **Guardar** lo guardan; mientras se escribe, las teclas del juego (P, Espacio, flechas) no actúan.
+- **Si no se escribe nombre**: la partida se guarda en el momento del GAME OVER como «Jugador». Reiniciar (o cerrar la página) sin guardar conserva la puntuación con ese nombre; el campo solo sirve para ponerle nombre, una vez por partida.
+- **Empates**: una puntuación igual a otra ya guardada queda debajo; con la tabla llena tiene que superar a la 5.ª para entrar.
+- **Borrar récords**: el botón pide confirmación en la misma página («Sí, borrar» / «Cancelar») y borra la tabla y los máximos.
+- Si los datos guardados están dañados, se ignoran y el juego funciona con la tabla vacía.
 
 ---
 
@@ -261,6 +278,9 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `B2B_MULTIPLIER` | Multiplicador de la base durante el Back-to-Back | `1.5` |
 | `MAX_COMBO_MULTIPLIER` | Tope del multiplicador de combo | `8` |
 | `MAX_TOASTS` | Avisos flotantes visibles a la vez | `3` |
+| `MAX_RECORDS` | Puntuaciones que guarda la tabla de récords | `5` |
+| `MAX_NAME_LENGTH` | Largo máximo del nombre del jugador | `12` |
+| `DEFAULT_PLAYER_NAME` | Nombre si no se escribe ninguno | `"Jugador"` |
 
 > Si cambias `COLS`, `ROWS` o `BLOCK`, recuerda ajustar también `width` y `height` del `<canvas id="board">` en `index.html` para que coincida (`COLS × BLOCK` × `ROWS × BLOCK`).
 

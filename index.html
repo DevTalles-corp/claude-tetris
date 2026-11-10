@@ -93,6 +93,22 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+
+        <!-- Récords: solo en GAME OVER (no en PAUSA). Se rellena desde game.js -->
+        <div id="gameover-records" hidden>
+          <p id="gameover-message"></p>
+          <form id="record-form" autocomplete="off" hidden>
+            <input id="record-name" type="text" placeholder="Tu nombre" aria-label="Nombre del jugador">
+            <button id="record-save" type="submit">Guardar</button>
+          </form>
+          <table class="records-table">
+            <thead><tr><th>#</th><th>Nombre</th><th>Puntos</th><th>Líneas</th><th>Nivel</th><th>Combo</th></tr></thead>
+            <tbody id="gameover-table"></tbody>
+          </table>
+          <p id="gameover-stats" class="records-stats"></p>
+        </div>
+
+        <!-- Reanudar va justo antes de Reiniciar (style.css: #resume-btn + #restart-btn) -->
         <button id="resume-btn" class="menu-btn" type="button" hidden>Reanudar</button>
         <button id="restart-btn">Reiniciar</button>
 
@@ -115,6 +131,24 @@
       </div>
     </div>
   </div>
+
+  <!-- Tabla de récords visible desde la carga (debajo del tablero, sin taparlo) -->
+  <section id="records" aria-labelledby="records-title">
+    <h2 id="records-title" class="label">RÉCORDS</h2>
+    <table class="records-table">
+      <thead><tr><th>#</th><th>Nombre</th><th>Puntos</th><th>Líneas</th><th>Nivel</th><th>Combo</th></tr></thead>
+      <tbody id="records-table"></tbody>
+    </table>
+    <p id="records-stats" class="records-stats"></p>
+    <div class="records-actions">
+      <button id="records-reset" type="button">Borrar récords</button>
+      <span id="records-confirm" hidden>
+        ¿Borrar todos los récords?
+        <button id="records-confirm-yes" type="button">Sí, borrar</button>
+        <button id="records-confirm-no" type="button">Cancelar</button>
+      </span>
+    </div>
+  </section>
 
   <script src="game.js"></script>
 </body>
