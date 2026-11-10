@@ -19,6 +19,20 @@ body {
   position: relative;
 }
 
+.game-title {
+  text-align: center;
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  color: #7aa2f7;
+  margin-bottom: 16px;
+  text-shadow: 0 0 16px rgba(122, 162, 247, 0.5);
+}
+
+.game-title .smiley {
+  letter-spacing: 0;
+}
+
 .game-container {
   display: flex;
   gap: 20px;
