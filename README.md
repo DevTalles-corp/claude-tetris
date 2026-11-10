@@ -44,7 +44,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Sistema de puntuación** clásico de Tetris (100 / 300 / 500 / 800 multiplicado por nivel), con **combo encadenado**, **T-spin** (normal y Mini), **Back-to-Back** y **Perfect Clear** (ver [Combos y multiplicadores](#combos-y-multiplicadores)).
 - **Efectos visuales y sonoros** para cada jugada, con un interruptor de sonido y control de volumen.
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
-- **Pausa** y **Game Over** con opción de reinicio.
+- **Menú de pausa** (`P` o `Esc`) con Reanudar, Reiniciar, la lista de controles y el **nivel inicial** de la próxima partida; **Game Over** con opción de reinicio.
 
 ---
 
@@ -87,7 +87,18 @@ Después abre `http://localhost:8000` en el navegador.
 | `↑` o `X` | Rotar la pieza en sentido horario |
 | `↓`       | Soft drop (bajar más rápido)      |
 | `Espacio` | Hard drop (caída instantánea)     |
-| `P`       | Pausar / reanudar                 |
+| `P` o `Esc` | Abrir / cerrar el menú de pausa |
+
+### Menú de pausa
+
+Con `P` o `Esc` la partida se detiene y aparece el menú:
+
+- **Reanudar**: vuelve al juego (también con `P`, `Esc` o `Enter` sobre el botón).
+- **Reiniciar**: empieza una partida nueva sin recargar la página.
+- **Ver controles**: despliega la lista de teclas dentro del menú.
+- **Nivel inicial**: elige del 1 al 10 con qué nivel empieza la **próxima** partida (la actual no cambia). Se recuerda entre visitas. El nivel nunca baja del elegido: `nivel = max(nivel inicial, floor(líneas / 10) + 1)`.
+
+Mientras el menú está abierto las teclas del juego no mueven la pieza; se navega con el ratón o con `Tab`, `Enter` y las flechas sobre el selector. Al volver, una tecla que se haya quedado pulsada durante la pausa no mueve la pieza hasta soltarla y pulsarla de nuevo. En **Game Over** solo aparecen la puntuación y **Reiniciar**.
 
 En el panel, el botón **🔊 / 🔇** activa o desactiva el sonido y el deslizador ajusta el volumen. Las dos opciones se recuerdan entre partidas.
 
@@ -104,7 +115,7 @@ Define la estructura visual:
 - Un `<canvas id="board">` de **300 × 600** píxeles donde se renderiza el tablero.
 - Un panel lateral con `SCORE`, `LINES`, `LEVEL`, `PIEZAS` (número de piezas fijadas en el tablero), vista de la siguiente pieza, la lista de controles y los controles de sonido.
 - Sobre el tablero, el contador de combo, el indicador de B2B, los avisos flotantes y el destello del Perfect Clear. No mueven el diseño del panel.
-- Un overlay para los estados **PAUSA** y **GAME OVER**.
+- Un overlay para los estados **PAUSA** (con el menú de pausa: `#resume-btn`, `#restart-btn` y `#pause-menu`) y **GAME OVER**.
 
 ### 2. `style.css`
 
@@ -122,7 +133,8 @@ Contiene toda la lógica del juego. A grandes rasgos:
 - **Limpieza de líneas** (`clearLines`): recorre el tablero de abajo hacia arriba; cada fila completa se elimina y se inserta una vacía en la cima.
 - **Puntuación** (`scoreMove`): una sola función combina línea, T-spin, B2B, Perfect Clear y combo, y devuelve los puntos y los eventos de la jugada. `lockPiece()` detecta el T-spin (`detectTSpin`), fija la pieza, elimina líneas y aplica el resultado con `settleMove()`. El hard drop suma 2 puntos por celda recorrida y el soft drop 1 punto por fila.
 - **Eventos**: las reglas emiten eventos (`combo`, `tspin`, `b2b`, `perfect-clear`…) y los efectos visuales y el sonido (Web Audio, sin archivos) solo se suscriben con `onGameEvent`. Se pueden cambiar las animaciones sin tocar las reglas.
-- **Nivel y velocidad**: el nivel sube cada 10 líneas; la velocidad de caída se calcula como `max(100, 1000 − (level − 1) × 90)` milisegundos.
+- **Nivel y velocidad**: la partida empieza en el nivel inicial elegido en el menú de pausa (`startLevel`, 1 por defecto) y el nivel sube cada 10 líneas sin bajar de él: `max(startLevel, floor(lines / 10) + 1)`. La velocidad de caída se calcula como `max(100, 1000 − (level − 1) × 90)` milisegundos.
+- **Menú de pausa** (`togglePause`, sección _Pause menu_): `openPauseMenu()` / `closePauseMenu()` muestran u ocultan las opciones; con el menú abierto el `keydown` ignora las teclas del juego, y al reanudar `isStaleRepeat()` descarta las repeticiones de teclas que siguieron pulsadas.
 - **Ghost piece** (`ghostY`): proyecta la posición final de la pieza actual hacia abajo y la dibuja con `globalAlpha = 0.2`.
 
 ### Flujo del juego
@@ -140,7 +152,7 @@ init()
      ├─ draw()  (grid + tablero + ghost + pieza actual)
      └─ requestAnimationFrame(loop)
 
-   keydown → mover / rotar / soft-drop / hard-drop / pausa
+   keydown → mover / rotar / soft-drop / hard-drop / pausa (P o Esc → menú de pausa)
 ```
 
 Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara `endGame()` y se muestra el overlay de **Game Over**.
@@ -219,7 +231,8 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `BLOCK`        | Tamaño en píxeles de cada celda          | `30`                  |
 | `COLORS`       | Paleta de colores por tipo de pieza      | 12 colores (7 + 5 especiales) |
 | `LINE_SCORES`  | Puntos por 1, 2, 3 o 4 líneas eliminadas | `[0,100,300,500,800]` |
-| `dropInterval` | Velocidad inicial de caída en ms         | `1000`                |
+| `dropInterval` | Velocidad inicial de caída en ms (nivel 1) | `1000`                |
+| `MAX_START_LEVEL` | Nivel inicial más alto del menú de pausa | `10`                |
 | `PENTOMINO_CHANCE` | Probabilidad de que la pieza generada sea un pentominó | `0.08` |
 | `HOLLOW_CHANCE` | Probabilidad del cuadrado hueco 3×3      | `0.01`                |
 | `TSPIN_SCORES` | Puntos de un T-spin con 0, 1, 2 o 3 líneas | `[400,800,1200,1600]` |

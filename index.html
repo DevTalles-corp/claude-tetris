@@ -73,7 +73,7 @@
             <li><kbd>↑</kbd> rotar</li>
             <li><kbd>↓</kbd> bajar</li>
             <li><kbd>Space</kbd> caída</li>
-            <li><kbd>P</kbd> pausa</li>
+            <li><kbd>P</kbd><kbd>Esc</kbd> pausa</li>
           </ul>
         </div>
       </aside>
@@ -83,7 +83,25 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <button id="resume-btn" class="menu-btn" type="button" hidden>Reanudar</button>
         <button id="restart-btn">Reiniciar</button>
+
+        <!-- Menú de pausa: solo visible en PAUSA (game.js, sección "Pause menu") -->
+        <div id="pause-menu" hidden>
+          <button id="controls-btn" class="menu-btn menu-btn-secondary" type="button" aria-expanded="false" aria-controls="pause-controls">Ver controles</button>
+          <ul id="pause-controls" hidden>
+            <li><span><kbd>←</kbd><kbd>→</kbd></span> mover</li>
+            <li><span><kbd>↑</kbd><kbd>X</kbd></span> rotar</li>
+            <li><span><kbd>↓</kbd></span> bajar (soft drop)</li>
+            <li><span><kbd>Espacio</kbd></span> caída (hard drop)</li>
+            <li><span><kbd>P</kbd><kbd>Esc</kbd></span> pausa / reanudar</li>
+          </ul>
+          <label class="start-level" for="start-level">
+            <span>Nivel inicial</span>
+            <select id="start-level" autocomplete="off"></select>
+          </label>
+          <p class="start-level-hint">Se aplica en la próxima partida</p>
+        </div>
       </div>
     </div>
   </div>
