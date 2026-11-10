@@ -61,6 +61,26 @@ Verificar que cada cambio de Tetris funciona en el navegador antes de llegar a `
 | TC-36 | Eventos separados | Sin la capa visual ni sonora, un Tetris emite `combo`, `b2b-start` y `score` y puntúa igual; `scoreMove` no cambia el estado (issue #48) | `reglas-sin-capa-visual.png` |
 | TC-37 | Piezas especiales y niveles | Combo con la cruz `+` y el cuadrado hueco, subida al nivel 2 en mitad del combo y el 1×1 sigue tras el Tetris (issue #48) | `combo-con-piezas-especiales.png` |
 | TC-38 | GAME OVER y reinicio | Con combo y B2B activos la partida termina; Reiniciar deja combo, B2B y avisos en 0 (issue #48) | `game-over-con-combo-activo.png`, `reinicio-limpia-combo-y-b2b.png` |
+| TC-39 | Menú de pausa con P | P abre el overlay `PAUSA` con Reanudar, Reiniciar, Ver controles y Nivel inicial, el bucle se detiene; P de nuevo lo cierra y la pieza vuelve a caer (issue #53) | `menu-pausa-con-p.png`, `p-cierra-el-menu.png` |
+| TC-40 | Menú de pausa con Escape | Escape abre y cierra el mismo menú (issue #53) | `menu-pausa-con-escape.png`, `escape-cierra-el-menu.png` |
+| TC-41 | Reanudar | El foco empieza en Reanudar; al pulsarlo el overlay se oculta, el foco vuelve al documento y la pieza cae (issue #53) | `reanudar-vuelve-al-juego.png` |
+| TC-42 | Reiniciar sin recargar | Tras fijar 2 piezas, Reiniciar desde el menú deja piezas, puntos y líneas en 0 y el tablero vacío; una marca en `window` sigue ahí (no se recargó) (issue #53) | `reiniciar-sin-recargar.png` |
+| TC-43 | Ver controles | Despliega dentro del overlay la lista de teclas (← → ↑ X ↓ Espacio P Esc); al reanudar se pliega (issue #53) | `ver-controles.png`, `controles-plegados-al-volver.png` |
+| TC-44 | Nivel inicial en la próxima partida | Elegir 5 lo guarda en `localStorage` sin cambiar la partida actual; Reiniciar empieza en nivel 5 con caída de 640 ms (issue #53) | `nivel-inicial-elegido.png`, `partida-nueva-en-nivel-5.png` |
+| TC-45 | Nivel inicial recordado | Tras recargar, la partida empieza en el nivel 3 elegido (820 ms) y el selector lo muestra; con 10 y 29 líneas sigue en 3 y con 30 sube a 4 (issue #53) | `nivel-inicial-recordado.png` |
+| TC-46 | Teclas bloqueadas en pausa | Con el menú abierto, ← → ↓ ↑ X y Espacio no cambian la pieza, el tablero, los puntos ni las piezas (issue #53) | `teclas-bloqueadas-en-pausa.png` |
+| TC-47 | Sin movimientos al volver | Una flecha mantenida desde la pausa no mueve la pieza hasta soltarla; tras reanudar con Enter, Espacio hace una sola caída y no reabre el menú; mantener P no alterna la pausa (issue #53) | `sin-movimientos-al-volver.png` |
+| TC-48 | GAME OVER sin menú | En GAME OVER se ven título, puntuación y Reiniciar, pero no Reanudar ni el menú; P y Escape no lo abren (issue #53) | `game-over-sin-menu-de-pausa.png` |
+| TC-59 | Selector de skins | `#skin-select` muestra Retro, Neón, Pastel y Pixel art; sin preferencia guardada empieza en Retro (issue #55) | `selector-de-skins.png` |
+| TC-60 | Retro sin cambios | Retro (también al volver desde Neón) dibuja el tablero píxel a píxel igual que el código anterior a las skins, con fondo del CSS (issue #55) | `skin-retro.png` |
+| TC-61 | Skin Neón | Fondo negro, contorno del color de la pieza, brillo (`shadowBlur`) en la celda vecina y `shadowBlur` vuelve a 0 (issue #55) | `skin-neon.png` |
+| TC-62 | Skin Pastel | Colores suaves y esquina del bloque redondeada (se ve el fondo de la skin), lados rectos llenos (issue #55) | `skin-pastel.png` |
+| TC-63 | Skin Pixel art | Cada bloque tiene textura: bisel claro arriba, oscuro abajo y tramado en damero (issue #55) | `skin-pixel-art.png` |
+| TC-64 | Pieza fantasma | En las cuatro skins la celda del fantasma se distingue de una celda vacía (issue #55) | `fantasma-retro.png`, `fantasma-neon.png`, `fantasma-pastel.png`, `fantasma-pixel.png` |
+| TC-65 | Vista NEXT | NEXT usa la misma skin: fondo, color y forma del bloque de cada una (issue #55) | `next-neon.png`, `next-pixel-art.png` |
+| TC-66 | Cambio sin recargar | Elegir otra skin no recarga la página ni cambia la partida, redibuja en el acto y suelta el foco: las flechas vuelven a mover la pieza (issue #55) | `cambio-sin-recargar.png` |
+| TC-67 | Preferencia guardada | La skin elegida queda en `localStorage` (`skin`) y se aplica al recargar, también en NEXT (issue #55) | `neon-tras-recargar.png` |
+| TC-68 | Skin desconocida y foco | Una skin guardada desconocida vuelve a Retro; con el selector enfocado, ← y ↑ no mueven ni giran la pieza (issue #55) | `skin-desconocida-vuelve-a-retro.png` |
 | TC-49 | Tabla al cargar | Con `localStorage` vacío, `#records` (RÉCORDS) se ve con «Sin récords todavía» y `Mejor combo: 0 · Líneas máximas: 0`, debajo del tablero y del panel (560×800 y 1080×1920), y el juego arranca solo (issue #54) | `tabla-vacia-al-cargar.png` |
 | TC-50 | Récords guardados al cargar | Con 6 récords desordenados en `localStorage`, la tabla muestra los 5 mejores ordenados por puntos, con líneas, nivel y combo, y los máximos guardados (issue #54) | `tabla-con-records-al-cargar.png` |
 | TC-51 | GAME OVER con récord | Jugando con Espacio hasta el GAME OVER: `¡Nuevo récord! Puesto #1`, campo de nombre enfocado, botón Guardar y la fila resaltada en las dos tablas; `#overlay-score` no cambia (issue #54) | `game-over-nuevo-record.png` |
