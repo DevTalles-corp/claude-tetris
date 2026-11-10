@@ -99,7 +99,7 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 
-let board, current, next, score, lines, level, pieces, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bonusSingle, lastSpecial, combo, b2b, lastRotated;
+let board, current, next, score, lines, level, pieces, paused, gameOver, lastTime, dropAccum, dropInterval, animId, bonusSingle, lastSpecial, combo, b2b, lastRotated, startLevel, freshKeys;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -252,6 +252,10 @@ function detectTSpin() {
   return corners[front[0]] && corners[front[1]] ? 'normal' : 'mini';
 }
 
+function dropIntervalFor(lvl) {
+  return Math.max(100, 1000 - (lvl - 1) * 90);
+}
+
 // Applies the result of a lock: score, combo, B2B, lines, level and the events.
 function settleMove(cleared, tspin) {
   const perfect = cleared > 0 && board.every(row => row.every(v => v === 0));
@@ -262,8 +266,8 @@ function settleMove(cleared, tspin) {
   if (cleared) {
     lines += cleared;
     if (cleared === 4) bonusSingle = true; // reward: the next generated piece is the 1x1 block
-    level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    level = Math.max(startLevel, Math.floor(lines / 10) + 1); // never below the chosen start level
+    dropInterval = dropIntervalFor(level);
   }
   result.events.forEach(emit);
 }
@@ -384,19 +388,24 @@ function endGame() {
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   overlay.classList.remove('hidden');
+  closePauseMenu(); // the GAME OVER overlay keeps only its title, score and Reiniciar
 }
 
 function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    overlay.classList.add('hidden');
+    closePauseMenu();
+    freshKeys = new Set(); // keys held through the pause must be pressed again
     lastTime = performance.now();
-    loop(lastTime);
+    animId = requestAnimationFrame(loop); // draw() runs in the loop, not in this input handler
   } else {
     cancelAnimationFrame(animId);
     overlayTitle.textContent = 'PAUSA';
     overlayScore.textContent = '';
     overlay.classList.remove('hidden');
+    openPauseMenu();
   }
 }
 
@@ -423,23 +432,26 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  startLevel = Number(startLevelSelect.value); // chosen in the pause menu, applies from this game on
+  level = startLevel;
   pieces = 0;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = dropIntervalFor(level);
   dropAccum = 0;
   bonusSingle = false;
   lastSpecial = false;
   combo = 0;
   b2b = 0;
   lastRotated = false;
+  freshKeys = new Set();
   emit({ type: 'reset' });
   lastTime = performance.now();
   next = randomPiece();
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  closePauseMenu();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -448,8 +460,11 @@ document.addEventListener('keydown', e => {
   if (e.target.id === 'volume' && e.code.startsWith('Arrow')) return; // the slider uses the arrows
   // the skin list uses the arrows too, and Space opens it, so it can be used from the keyboard
   if (e.target.id === 'skin-select' && (e.code.startsWith('Arrow') || e.code === 'Space')) return;
-  if (e.code === 'KeyP') { togglePause(); return; }
-  if (paused || gameOver) return;
+  if ((e.code === 'KeyP' || e.code === 'Escape') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (!e.repeat) togglePause();
+    return;
+  }
+  if (paused || gameOver || isStaleRepeat(e)) return; // the pause menu blocks game keys
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) { current.x--; lastRotated = false; }
@@ -747,5 +762,63 @@ volumeInput.addEventListener('change', () => volumeInput.blur());
 refreshSoundControls();
 onGameEvent(renderEvent);
 onGameEvent(soundEvent);
+
+// ---- Pause menu ----
+// Shown only while paused (P or Escape): Reanudar, Reiniciar (#restart-btn), Ver controles
+// and Nivel inicial. The keydown handler ignores game keys while paused; after resuming,
+// auto-repeats of keys held through the pause are ignored until they are pressed again.
+const MAX_START_LEVEL = 10;
+const resumeBtn = document.getElementById('resume-btn');
+const pauseMenu = document.getElementById('pause-menu');
+const controlsBtn = document.getElementById('controls-btn');
+const pauseControls = document.getElementById('pause-controls');
+const startLevelSelect = document.getElementById('start-level');
+
+// Saved start level (localStorage 'startLevel'), 1 when missing or invalid. It is read
+// once into the selector; init() reads the selector, so a choice still applies to the
+// next game when storage is not available.
+function readStartLevel() {
+  let n = 1;
+  try { n = parseInt(localStorage.getItem('startLevel'), 10); } catch (e) { /* almacenamiento no disponible */ }
+  return n >= 1 && n <= MAX_START_LEVEL ? n : 1;
+}
+
+function setControlsOpen(open) {
+  pauseControls.hidden = !open;
+  controlsBtn.setAttribute('aria-expanded', String(open));
+  controlsBtn.textContent = open ? 'Ocultar controles' : 'Ver controles';
+}
+
+function openPauseMenu() {
+  resumeBtn.hidden = false;
+  pauseMenu.hidden = false;
+  resumeBtn.focus({ preventScroll: true }); // keyboard navigation starts on Reanudar
+}
+
+// Also called by init() and endGame(): the menu never stays open outside the pause.
+function closePauseMenu() {
+  // Blur whatever got focus during the pause (menu or panel buttons reached with Tab),
+  // so Space/Enter cannot press it again during the game.
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+  resumeBtn.hidden = true;
+  pauseMenu.hidden = true;
+  setControlsOpen(false);
+}
+
+// An auto-repeat keydown is only accepted for a key pressed again after the last
+// resume/restart; this drops the repeats of a key held during the pause.
+function isStaleRepeat(e) {
+  if (!e.repeat) { freshKeys.add(e.code); return false; }
+  return !freshKeys.has(e.code);
+}
+
+for (let n = 1; n <= MAX_START_LEVEL; n++) startLevelSelect.add(new Option(String(n), String(n)));
+startLevelSelect.value = String(readStartLevel());
+
+resumeBtn.addEventListener('click', () => { if (paused) togglePause(); });
+controlsBtn.addEventListener('click', () => setControlsOpen(pauseControls.hidden));
+startLevelSelect.addEventListener('change', () => {
+  try { localStorage.setItem('startLevel', startLevelSelect.value); } catch (e) { /* sin almacenamiento */ }
+});
 
 init();
