@@ -39,6 +39,15 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const themeToggle = document.getElementById('theme-toggle');
+const themeText = document.getElementById('theme-text');
+
+// Canvas colors per theme (canvas does not inherit CSS variables)
+const THEMES = {
+  dark:  { grid: '#22222e', highlight: 'rgba(255,255,255,0.12)' },
+  light: { grid: '#e1e3ee', highlight: 'rgba(255,255,255,0.35)' },
+};
+let theme = 'dark';
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
@@ -163,13 +172,13 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   context.fillStyle = color;
   context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
   // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
+  context.fillStyle = THEMES[theme].highlight;
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
   context.globalAlpha = 1;
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = THEMES[theme].grid;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -216,6 +225,15 @@ function drawNext() {
   for (let r = 0; r < shape.length; r++)
     for (let c = 0; c < shape[r].length; c++)
       drawBlock(nextCtx, offX + c, offY + r, shape[r][c], NB);
+}
+
+function setTheme(name) {
+  theme = name === 'light' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = theme;
+  themeToggle.setAttribute('aria-checked', String(theme === 'light'));
+  themeText.textContent = theme === 'light' ? 'Modo oscuro' : 'Modo claro';
+  // Redraw immediately so paused / game-over states update too
+  if (current && next) { draw(); drawNext(); }
 }
 
 function endGame() {
@@ -275,6 +293,8 @@ function init() {
 }
 
 document.addEventListener('keydown', e => {
+  // Let the focused theme switch handle Space/Enter without dropping the piece
+  if (e.target === themeToggle && (e.code === 'Space' || e.code === 'Enter')) return;
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
@@ -300,5 +320,9 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+themeToggle.addEventListener('click', () => {
+  setTheme(theme === 'light' ? 'dark' : 'light');
+  themeToggle.blur(); // return keyboard control to the game
+});
 
 init();
