@@ -271,6 +271,9 @@ function loop(ts) {
     }
   }
   draw();
+  // lockPiece() may have ended the game; endGame() cancelled the frame that is
+  // already running, so stop here instead of scheduling another one.
+  if (gameOver) return;
   animId = requestAnimationFrame(loop);
 }
 
