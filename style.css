@@ -9,10 +9,21 @@ body {
   color: #e0e0e0;
   font-family: system-ui, -apple-system, sans-serif;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
   user-select: none;
+}
+
+.title {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: 12px;
+  padding-left: 12px; /* compensa el letter-spacing final */
+  color: #7aa2f7;
+  margin-bottom: 16px;
 }
 
 .wrapper {
