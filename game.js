@@ -50,6 +50,196 @@ const THEMES = {
 let theme = 'dark';
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+// started stays false while the start screen is shown; combo counts consecutive
+// locked pieces that cleared at least one line, maxCombo is the best of this game.
+let started = false, combo = 0, maxCombo = 0;
+
+// ---- High scores (localStorage) ----
+const RECORDS_KEY = 'tetris.records';
+const STATS_KEY = 'tetris.stats';
+const TOP_SIZE = 5;
+const NAME_MAX = 12;
+
+const startOverlay = document.getElementById('start-overlay');
+const playBtn = document.getElementById('play-btn');
+const startRecordsEl = document.getElementById('start-records');
+const overRecordsEl = document.getElementById('over-records');
+const newRecordEl = document.getElementById('new-record');
+const nameForm = document.getElementById('name-form');
+const nameInput = document.getElementById('name-input');
+
+// Index the current game's score would occupy in the table, or -1 if it
+// does not qualify. Set at game over and cleared once the name is saved.
+let pendingRank = -1;
+let highlightRank = -1;
+
+function readStorage(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStorage(key, value) {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Storage unavailable (private mode, quota, file:// restrictions): ignore
+  }
+}
+
+function loadRecords() {
+  const data = readStorage(RECORDS_KEY, []);
+  if (!Array.isArray(data)) return [];
+  return data
+    .filter(r => r && typeof r.score === 'number')
+    .map(r => ({
+      name: String(r.name ?? '').slice(0, NAME_MAX) || 'Jugador',
+      score: r.score,
+      lines: Number(r.lines) || 0,
+      level: Number(r.level) || 1,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, TOP_SIZE);
+}
+
+function loadStats() {
+  const data = readStorage(STATS_KEY, {});
+  return {
+    bestCombo: Number(data && data.bestCombo) || 0,
+    maxLines: Number(data && data.maxLines) || 0,
+  };
+}
+
+// Position the score would take in the table, or -1 if it doesn't make the top
+function recordRank(value) {
+  if (value <= 0) return -1;
+  const records = loadRecords();
+  const idx = records.findIndex(r => value > r.score);
+  if (idx !== -1) return idx;
+  return records.length < TOP_SIZE ? records.length : -1;
+}
+
+function saveRecord(name) {
+  const records = loadRecords();
+  const entry = { name: name.trim().slice(0, NAME_MAX) || 'Jugador', score, lines, level };
+  records.splice(pendingRank, 0, entry);
+  writeStorage(RECORDS_KEY, records.slice(0, TOP_SIZE));
+  highlightRank = pendingRank;
+  pendingRank = -1;
+}
+
+function updateStats() {
+  const stats = loadStats();
+  writeStorage(STATS_KEY, {
+    bestCombo: Math.max(stats.bestCombo, maxCombo),
+    maxLines: Math.max(stats.maxLines, lines),
+  });
+}
+
+function resetRecords() {
+  if (!confirm('¿Borrar todos los records?')) return;
+  writeStorage(RECORDS_KEY, null);
+  writeStorage(STATS_KEY, null);
+  highlightRank = -1;
+  // An unsaved score from the game just finished now goes first in the empty table
+  if (pendingRank !== -1) pendingRank = 0;
+  renderAllRecords();
+}
+
+// Builds the records table + stats into container using DOM APIs only
+// (player names are user input, so never go through innerHTML).
+function renderRecords(container, highlight) {
+  const records = loadRecords();
+  const stats = loadStats();
+  container.replaceChildren();
+
+  const heading = document.createElement('p');
+  heading.className = 'records-title';
+  heading.textContent = 'MEJORES PUNTUACIONES';
+  container.appendChild(heading);
+
+  const table = document.createElement('table');
+  table.className = 'records-table';
+  const head = table.createTHead().insertRow();
+  for (const label of ['#', 'Nombre', 'Puntos', 'Líneas', 'Nivel']) {
+    const th = document.createElement('th');
+    th.textContent = label;
+    head.appendChild(th);
+  }
+  const body = table.createTBody();
+  if (!records.length) {
+    const cell = body.insertRow().insertCell();
+    cell.colSpan = 5;
+    cell.className = 'records-empty';
+    cell.textContent = 'Sin records todavía';
+  }
+  records.forEach((r, i) => {
+    const row = body.insertRow();
+    if (i === highlight) row.className = 'highlight';
+    for (const v of [i + 1, r.name, r.score.toLocaleString(), r.lines, r.level]) {
+      row.insertCell().textContent = v;
+    }
+  });
+  container.appendChild(table);
+
+  const statsEl = document.createElement('p');
+  statsEl.className = 'records-stats';
+  statsEl.textContent = `Mejor combo: ${stats.bestCombo} · Líneas máximas: ${stats.maxLines}`;
+  container.appendChild(statsEl);
+
+  const resetBtn = document.createElement('button');
+  resetBtn.type = 'button';
+  resetBtn.className = 'reset-records-btn';
+  resetBtn.textContent = 'Borrar records';
+  resetBtn.addEventListener('click', () => { resetRecords(); resetBtn.blur(); });
+  container.appendChild(resetBtn);
+}
+
+function renderAllRecords() {
+  renderRecords(startRecordsEl, -1);
+  renderRecords(overRecordsEl, highlightRank);
+}
+
+// Called from endGame(): persists stats and offers the name form if the score qualifies
+function showGameOverRecords() {
+  updateStats();
+  pendingRank = recordRank(score);
+  highlightRank = -1;
+  const qualifies = pendingRank !== -1;
+  newRecordEl.classList.toggle('hidden', !qualifies);
+  newRecordEl.textContent = pendingRank === 0 ? '¡Nuevo récord!' : '¡Entras en el top 5!';
+  nameForm.classList.toggle('hidden', !qualifies);
+  overRecordsEl.classList.remove('hidden');
+  renderAllRecords();
+  if (qualifies) {
+    nameInput.value = '';
+    nameInput.focus();
+  }
+}
+
+// If the player restarts without saving, keep the record under a default name
+function commitPendingRecord() {
+  if (pendingRank !== -1) saveRecord(nameInput.value);
+}
+
+function hideGameOverRecords() {
+  newRecordEl.classList.add('hidden');
+  nameForm.classList.add('hidden');
+  overRecordsEl.classList.add('hidden');
+}
+
+function showStartScreen() {
+  board = createBoard();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid();
+  renderAllRecords();
+  startOverlay.classList.remove('hidden');
+  playBtn.focus();
+}
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -119,6 +309,7 @@ function clearLines() {
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     updateHUD();
   }
+  return cleared;
 }
 
 function ghostY() {
@@ -146,7 +337,8 @@ function softDrop() {
 
 function lockPiece() {
   merge();
-  clearLines();
+  combo = clearLines() ? combo + 1 : 0;
+  maxCombo = Math.max(maxCombo, combo);
   spawn();
 }
 
@@ -234,6 +426,7 @@ function setTheme(name) {
   themeText.textContent = theme === 'light' ? 'Modo oscuro' : 'Modo claro';
   // Redraw immediately so paused / game-over states update too
   if (current && next) { draw(); drawNext(); }
+  else if (board) { ctx.clearRect(0, 0, canvas.width, canvas.height); drawGrid(); }
 }
 
 function endGame() {
@@ -242,6 +435,7 @@ function endGame() {
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   overlay.classList.remove('hidden');
+  showGameOverRecords();
 }
 
 function togglePause() {
@@ -254,6 +448,7 @@ function togglePause() {
     cancelAnimationFrame(animId);
     overlayTitle.textContent = 'PAUSA';
     overlayScore.textContent = '';
+    hideGameOverRecords();
     overlay.classList.remove('hidden');
   }
 }
@@ -278,6 +473,12 @@ function loop(ts) {
 }
 
 function init() {
+  commitPendingRecord();
+  hideGameOverRecords();
+  startOverlay.classList.add('hidden');
+  started = true;
+  combo = 0;
+  maxCombo = 0;
   board = createBoard();
   score = 0;
   lines = 0;
@@ -298,6 +499,10 @@ function init() {
 document.addEventListener('keydown', e => {
   // Let the focused theme switch handle Space/Enter without dropping the piece
   if (e.target === themeToggle && (e.code === 'Space' || e.code === 'Enter')) return;
+  // Typing a name must not move pieces or toggle pause; nothing to control before Jugar
+  if (e.target instanceof HTMLInputElement || !started) return;
+  // Let a focused overlay button (Jugar, Reiniciar, Borrar records…) handle Space/Enter
+  if (e.target instanceof HTMLButtonElement && (e.code === 'Space' || e.code === 'Enter')) return;
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
@@ -322,10 +527,19 @@ document.addEventListener('keydown', e => {
   updateHUD();
 });
 
-restartBtn.addEventListener('click', init);
+restartBtn.addEventListener('click', () => { init(); restartBtn.blur(); });
+playBtn.addEventListener('click', () => { init(); playBtn.blur(); });
+nameForm.addEventListener('submit', e => {
+  e.preventDefault();
+  if (pendingRank === -1) return;
+  saveRecord(nameInput.value);
+  nameForm.classList.add('hidden');
+  nameInput.blur();
+  renderAllRecords();
+});
 themeToggle.addEventListener('click', () => {
   setTheme(theme === 'light' ? 'dark' : 'light');
   themeToggle.blur(); // return keyboard control to the game
 });
 
-init();
+showStartScreen();
