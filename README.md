@@ -44,6 +44,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Menú de pausa** (`P` o `Esc`) con Reanudar, Reiniciar, Ver controles y selector de **nivel inicial** (1–10); mientras está abierto se bloquean los inputs del juego.
 - **Game Over** con opción de reinicio.
+- **Tabla de records local** (`localStorage`): top 5 con nombre del jugador, puntos, líneas y nivel, más el **mejor combo** y las **líneas máximas** conseguidas en una partida. Se muestra en la pantalla de inicio y en el Game Over, resalta la fila nueva y permite borrar los records.
 
 ---
 
@@ -100,8 +101,9 @@ Define la estructura visual:
 
 - Un `<canvas id="board">` de **300 × 600** píxeles donde se renderiza el tablero.
 - Un panel lateral con `SCORE`, `LINES`, `LEVEL`, vista de la siguiente pieza y la lista de controles.
-- Un overlay `#overlay` para **GAME OVER**.
+- Un overlay `#overlay` para **GAME OVER** (incluye el campo de nombre y la tabla de records).
 - Un overlay `#pause-menu` con el menú de pausa: Reanudar, Reiniciar, Ver controles y el selector de nivel inicial.
+- Un overlay de **pantalla de inicio** (`#start-overlay`) con la tabla de records y el botón **Jugar**; la partida no empieza hasta pulsarlo.
 
 ### 2. `style.css`
 
@@ -121,10 +123,15 @@ Contiene toda la lógica del juego. A grandes rasgos:
 - **Nivel y velocidad**: la partida empieza en `startLevel` (elegido en el menú de pausa) y el nivel sube cada 10 líneas: `level = floor(lines / 10) + baseLevel`. La velocidad de caída la calcula `dropIntervalFor(level)` como `max(100, 1000 − (level − 1) × 90)` milisegundos.
 - **Menú de pausa** (`togglePause`, `openPauseMenu`, `closePauseMenu`): detiene el bucle y muestra `#pause-menu`. Mientras está abierto, el `keydown` ignora todas las teclas del juego (solo `P`/`Esc` lo cierran), así que las flechas, `Espacio` o `Enter` sobre un botón con foco no mueven piezas. Al reanudar se quita el foco del menú (`releaseMenuFocus`) y se reinicia `lastTime` para evitar un salto de tiempo. El nivel elegido se guarda en `startLevel` y solo se aplica al reiniciar: `init()` lo copia en `baseLevel`, que es el que usa la fórmula del nivel. `setupPauseMenu()` copia la lista de controles del panel lateral dentro del menú y genera las opciones `1…MAX_START_LEVEL`.
 - **Ghost piece** (`ghostY`): proyecta la posición final de la pieza actual hacia abajo y la dibuja con `globalAlpha = 0.2`.
+- **Combo**: `lockPiece` usa el número de líneas que devuelve `clearLines`; cada pieza fijada que limpia al menos una línea suma 1 al combo y una que no limpia nada lo reinicia a 0. Se guarda el máximo de la partida (`maxCombo`).
+- **Records** (`loadRecords`, `saveRecord`, `recordRank`, `updateStats`, `resetRecords`, `renderRecords`): el top 5 se guarda en `localStorage` bajo `tetris.records` (`[{name, score, lines, level}]`) y las estadísticas en `tetris.stats` (`{bestCombo, maxLines}`). Todo acceso a `localStorage` va en `try/catch` (`readStorage` / `writeStorage`), así que el juego funciona aunque el almacenamiento no esté disponible. Los nombres se pintan con `textContent`, nunca con `innerHTML`.
+- **Game Over** (`showGameOverRecords`): actualiza las estadísticas y, si la puntuación es mayor que 0 y entra en el top 5, muestra «¡Nuevo récord!» y un campo de nombre (Enter o **Guardar**). Si se reinicia sin guardar, el record se guarda como «Jugador».
 
 ### Flujo del juego
 
 ```
+showStartScreen()                   → tablero vacío + tabla de records + botón Jugar
+  ↓ (clic en Jugar)
 init()
   ├─ createBoard()                  → matriz vacía
   ├─ next = randomPiece()
@@ -138,9 +145,10 @@ init()
      └─ requestAnimationFrame(loop)
 
    keydown → mover / rotar / soft-drop / hard-drop / menú de pausa (P / Esc)
+             (se ignora en la pantalla de inicio y mientras se escribe en el campo de nombre)
 ```
 
-Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara `endGame()` y se muestra el overlay de **Game Over**.
+Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara `endGame()` y se muestra el overlay de **Game Over** con la tabla de records (`showGameOverRecords()`).
 
 ---
 
@@ -162,7 +170,7 @@ Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara
 03-tetris/
 ├── index.html      # Estructura del DOM y canvas
 ├── style.css       # Estilos del juego (tema oscuro/claro)
-├── game.js         # Toda la lógica del Tetris (~300 líneas)
+├── game.js         # Toda la lógica del Tetris (~500 líneas)
 └── README.md
 ```
 
@@ -181,6 +189,10 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `LINE_SCORES`  | Puntos por 1, 2, 3 o 4 líneas eliminadas | `[0,100,300,500,800]` |
 | `dropInterval` | Velocidad de caída en ms (`dropIntervalFor(level)`) | `1000` en nivel 1 |
 | `MAX_START_LEVEL` | Nivel máximo del selector "Nivel inicial" | `10`             |
+| `TOP_SIZE`     | Número de records guardados              | `5`                   |
+| `NAME_MAX`     | Longitud máxima del nombre del jugador   | `12`                  |
+| `RECORDS_KEY`  | Clave de `localStorage` del top          | `'tetris.records'`    |
+| `STATS_KEY`    | Clave de `localStorage` de estadísticas  | `'tetris.stats'`      |
 
 > Si cambias `COLS`, `ROWS` o `BLOCK`, recuerda ajustar también `width` y `height` del `<canvas id="board">` en `index.html` para que coincida (`COLS × BLOCK` × `ROWS × BLOCK`).
 
