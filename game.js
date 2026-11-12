@@ -57,8 +57,12 @@ const THEMES = {
 };
 let theme = 'dark';
 
+const MAX_START_LEVEL = 10;
+
 // Level the next game starts at (chosen in the pause menu)
 let startLevel = 1;
+// Start level of the game in progress (startLevel captured by init())
+let baseLevel = 1;
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
@@ -131,7 +135,7 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + startLevel;
+    level = Math.floor(lines / 10) + baseLevel;
     dropInterval = dropIntervalFor(level);
     updateHUD();
   }
@@ -293,6 +297,27 @@ function releaseMenuFocus() {
   if (el && el !== document.body && pauseMenu.contains(el)) el.blur();
 }
 
+// Keep Tab focus inside the open pause menu
+function trapMenuFocus(e) {
+  const items = [resumeBtn, pauseRestartBtn, pauseControlsBtn, startLevelSelect];
+  const i = items.indexOf(document.activeElement);
+  const step = e.shiftKey ? -1 : 1;
+  const nextIndex = i === -1 ? 0 : (i + step + items.length) % items.length;
+  e.preventDefault();
+  items[nextIndex].focus();
+}
+
+// Build the in-menu key list and level options from single sources of truth
+function setupPauseMenu() {
+  pauseControls.innerHTML = document.querySelector('.controls ul').innerHTML;
+  for (let lvl = 1; lvl <= MAX_START_LEVEL; lvl++) {
+    const opt = document.createElement('option');
+    opt.value = String(lvl);
+    opt.textContent = String(lvl);
+    startLevelSelect.appendChild(opt);
+  }
+}
+
 function setPauseControlsVisible(visible) {
   pauseControls.classList.toggle('hidden', !visible);
   pauseControlsBtn.setAttribute('aria-expanded', String(visible));
@@ -322,7 +347,8 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = startLevel;
+  baseLevel = startLevel;
+  level = baseLevel;
   paused = false;
   gameOver = false;
   dropInterval = dropIntervalFor(level);
@@ -333,7 +359,8 @@ function init() {
   updateHUD();
   overlay.classList.add('hidden');
   pauseMenu.classList.add('hidden');
-  releaseMenuFocus();
+  // Drop focus from any button (menu or game-over) so Enter/Space reach the game
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -346,7 +373,11 @@ document.addEventListener('keydown', e => {
     // keep their native behavior on the focused menu control.
     if (e.code === 'KeyP' || e.code === 'Escape') {
       e.preventDefault();
-      if (!e.repeat) closePauseMenu(); // holding the key must not flicker the menu
+      if (!e.repeat) togglePause(); // holding the key must not flicker the menu
+    } else if (e.code === 'Tab') {
+      trapMenuFocus(e);
+    } else if (!pauseMenu.contains(e.target) && (e.code === 'Space' || e.code.startsWith('Arrow'))) {
+      e.preventDefault(); // nothing focused in the menu: don't scroll the page
     }
     return;
   }
@@ -382,8 +413,10 @@ pauseControlsBtn.addEventListener('click', () => {
 });
 startLevelSelect.addEventListener('change', () => {
   const lvl = parseInt(startLevelSelect.value, 10);
-  startLevel = lvl >= 1 && lvl <= 10 ? lvl : 1;
+  startLevel = lvl >= 1 && lvl <= MAX_START_LEVEL ? lvl : 1;
 });
+
+setupPauseMenu();
 themeToggle.addEventListener('click', () => {
   setTheme(theme === 'light' ? 'dark' : 'light');
   themeToggle.blur(); // return keyboard control to the game

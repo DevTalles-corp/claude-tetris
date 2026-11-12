@@ -118,8 +118,8 @@ Contiene toda la lógica del juego. A grandes rasgos:
 - **Game loop** (`loop`): basado en `requestAnimationFrame`, acumula el tiempo transcurrido y baja la pieza una fila cuando se supera `dropInterval`.
 - **Limpieza de líneas** (`clearLines`): recorre el tablero de abajo hacia arriba; cada fila completa se elimina y se inserta una vacía en la cima.
 - **Puntuación**: usa la tabla clásica `[0, 100, 300, 500, 800]` multiplicada por el nivel actual; el hard drop suma 2 puntos por celda recorrida y el soft drop 1 punto por fila.
-- **Nivel y velocidad**: la partida empieza en `startLevel` (elegido en el menú de pausa) y el nivel sube cada 10 líneas: `level = floor(lines / 10) + startLevel`. La velocidad de caída la calcula `dropIntervalFor(level)` como `max(100, 1000 − (level − 1) × 90)` milisegundos.
-- **Menú de pausa** (`togglePause`, `openPauseMenu`, `closePauseMenu`): detiene el bucle y muestra `#pause-menu`. Mientras está abierto, el `keydown` ignora todas las teclas del juego (solo `P`/`Esc` lo cierran), así que las flechas, `Espacio` o `Enter` sobre un botón con foco no mueven piezas. Al reanudar se quita el foco del menú (`releaseMenuFocus`) y se reinicia `lastTime` para evitar un salto de tiempo.
+- **Nivel y velocidad**: la partida empieza en `startLevel` (elegido en el menú de pausa) y el nivel sube cada 10 líneas: `level = floor(lines / 10) + baseLevel`. La velocidad de caída la calcula `dropIntervalFor(level)` como `max(100, 1000 − (level − 1) × 90)` milisegundos.
+- **Menú de pausa** (`togglePause`, `openPauseMenu`, `closePauseMenu`): detiene el bucle y muestra `#pause-menu`. Mientras está abierto, el `keydown` ignora todas las teclas del juego (solo `P`/`Esc` lo cierran), así que las flechas, `Espacio` o `Enter` sobre un botón con foco no mueven piezas. Al reanudar se quita el foco del menú (`releaseMenuFocus`) y se reinicia `lastTime` para evitar un salto de tiempo. El nivel elegido se guarda en `startLevel` y solo se aplica al reiniciar: `init()` lo copia en `baseLevel`, que es el que usa la fórmula del nivel. `setupPauseMenu()` copia la lista de controles del panel lateral dentro del menú y genera las opciones `1…MAX_START_LEVEL`.
 - **Ghost piece** (`ghostY`): proyecta la posición final de la pieza actual hacia abajo y la dibuja con `globalAlpha = 0.2`.
 
 ### Flujo del juego
@@ -180,7 +180,7 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `COLORS`       | Paleta de colores por tipo de pieza      | 7 colores             |
 | `LINE_SCORES`  | Puntos por 1, 2, 3 o 4 líneas eliminadas | `[0,100,300,500,800]` |
 | `dropInterval` | Velocidad de caída en ms (`dropIntervalFor(level)`) | `1000` en nivel 1 |
-| `startLevel`   | Nivel inicial de la partida (menú de pausa, 1–10) | `1`         |
+| `MAX_START_LEVEL` | Nivel máximo del selector "Nivel inicial" | `10`             |
 
 > Si cambias `COLS`, `ROWS` o `BLOCK`, recuerda ajustar también `width` y `height` del `<canvas id="board">` en `index.html` para que coincida (`COLS × BLOCK` × `ROWS × BLOCK`).
 
