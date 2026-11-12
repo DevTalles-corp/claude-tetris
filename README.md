@@ -25,6 +25,7 @@ Implementación del clásico **Tetris** en JavaScript vanilla, usando HTML5 Canv
   - [Tecnologías](#tecnologías)
   - [Estructura del proyecto](#estructura-del-proyecto)
   - [Personalización](#personalización)
+  - [Automatización de issues](#automatización-de-issues)
   - [Licencia](#licencia)
 
 ---
@@ -41,7 +42,10 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Vista previa** de la siguiente pieza.
 - **Sistema de puntuación** clásico de Tetris (100 / 300 / 500 / 800 multiplicado por nivel).
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
-- **Pausa** y **Game Over** con opción de reinicio.
+- **Menú de pausa** (`P` o `Esc`) con Reanudar, Reiniciar, Ver controles y selector de **nivel inicial** (1–10); mientras está abierto se bloquean los inputs del juego.
+- **Game Over** con opción de reinicio.
+- **Tabla de records local** (`localStorage`): top 5 con nombre del jugador, puntos, líneas y nivel, más el **mejor combo** y las **líneas máximas** conseguidas en una partida. Se muestra en la pantalla de inicio y en el Game Over, resalta la fila nueva y permite borrar los records.
+- **Skins visuales** seleccionables en vivo: Retro, Neón, Pastel y Pixel art. La preferencia se guarda en `localStorage`.
 
 ---
 
@@ -84,7 +88,7 @@ Después abre `http://localhost:8000` en el navegador.
 | `↑` o `X` | Rotar la pieza en sentido horario |
 | `↓`       | Soft drop (bajar más rápido)      |
 | `Espacio` | Hard drop (caída instantánea)     |
-| `P`       | Pausar / reanudar                 |
+| `P` / `Esc` | Abrir / cerrar el menú de pausa |
 
 ---
 
@@ -97,12 +101,14 @@ El juego se compone de tres archivos que cooperan:
 Define la estructura visual:
 
 - Un `<canvas id="board">` de **300 × 600** píxeles donde se renderiza el tablero.
-- Un panel lateral con `SCORE`, `LINES`, `LEVEL`, vista de la siguiente pieza y la lista de controles.
-- Un overlay para los estados **PAUSA** y **GAME OVER**.
+- Un panel lateral con `SCORE`, `LINES`, `LEVEL`, vista de la siguiente pieza, la lista de controles, el interruptor de tema y el selector de **SKIN** (`<select id="skin-select">`).
+- Un overlay `#overlay` para **GAME OVER** (incluye el campo de nombre y la tabla de records).
+- Un overlay `#pause-menu` con el menú de pausa: Reanudar, Reiniciar, Ver controles y el selector de nivel inicial.
+- Un overlay de **pantalla de inicio** (`#start-overlay`) con la tabla de records y el botón **Jugar**; la partida no empieza hasta pulsarlo.
 
 ### 2. `style.css`
 
-Aporta el aspecto visual con estética _dark / retro arcade_: fondo oscuro, tipografía monoespaciada para los marcadores y _backdrop blur_ en los overlays.
+Aporta el aspecto visual con estética _dark / retro arcade_: fondo oscuro, tipografía monoespaciada para los marcadores y _backdrop blur_ en los overlays. Los colores son variables CSS en `:root` (tema oscuro por defecto) y `:root[data-theme="light"]` las sobrescribe para el tema claro. El interruptor del panel lateral (`setTheme()` en `game.js`) cambia entre ambos y redibuja los canvas, cuyos colores de rejilla y brillo viven en la constante `THEMES`.
 
 ### 3. `game.js`
 
@@ -115,12 +121,25 @@ Contiene toda la lógica del juego. A grandes rasgos:
 - **Game loop** (`loop`): basado en `requestAnimationFrame`, acumula el tiempo transcurrido y baja la pieza una fila cuando se supera `dropInterval`.
 - **Limpieza de líneas** (`clearLines`): recorre el tablero de abajo hacia arriba; cada fila completa se elimina y se inserta una vacía en la cima.
 - **Puntuación**: usa la tabla clásica `[0, 100, 300, 500, 800]` multiplicada por el nivel actual; el hard drop suma 2 puntos por celda recorrida y el soft drop 1 punto por fila.
-- **Nivel y velocidad**: el nivel sube cada 10 líneas; la velocidad de caída se calcula como `max(100, 1000 − (level − 1) × 90)` milisegundos.
+- **Nivel y velocidad**: la partida empieza en `startLevel` (elegido en el menú de pausa) y el nivel sube cada 10 líneas: `level = floor(lines / 10) + baseLevel`. La velocidad de caída la calcula `dropIntervalFor(level)` como `max(100, 1000 − (level − 1) × 90)` milisegundos.
+- **Menú de pausa** (`togglePause`, `openPauseMenu`, `closePauseMenu`): detiene el bucle y muestra `#pause-menu`. Mientras está abierto, el `keydown` ignora todas las teclas del juego (solo `P`/`Esc` lo cierran), así que las flechas, `Espacio` o `Enter` sobre un botón con foco no mueven piezas. Al reanudar se quita el foco del menú (`releaseMenuFocus`) y se reinicia `lastTime` para evitar un salto de tiempo. El nivel elegido se guarda en `startLevel` y solo se aplica al reiniciar: `init()` lo copia en `baseLevel`, que es el que usa la fórmula del nivel. `setupPauseMenu()` copia la lista de controles del panel lateral dentro del menú y genera las opciones `1…MAX_START_LEVEL`.
 - **Ghost piece** (`ghostY`): proyecta la posición final de la pieza actual hacia abajo y la dibuja con `globalAlpha = 0.2`.
+- **Combo**: `lockPiece` usa el número de líneas que devuelve `clearLines`; cada pieza fijada que limpia al menos una línea suma 1 al combo y una que no limpia nada lo reinicia a 0. Se guarda el máximo de la partida (`maxCombo`).
+- **Records** (`loadRecords`, `saveRecord`, `recordRank`, `updateStats`, `resetRecords`, `renderRecords`): el top 5 se guarda en `localStorage` bajo `tetris.records` (`[{name, score, lines, level}]`) y las estadísticas en `tetris.stats` (`{bestCombo, maxLines}`). Todo acceso a `localStorage` va en `try/catch` (`readStorage` / `writeStorage`), así que el juego funciona aunque el almacenamiento no esté disponible. Los nombres se pintan con `textContent`, nunca con `innerHTML`.
+- **Game Over** (`showGameOverRecords`): actualiza las estadísticas y, si la puntuación es mayor que 0 y entra en el top 5, muestra «¡Nuevo récord!» y un campo de nombre (Enter o **Guardar**). Si se reinicia sin guardar, el record se guarda como «Jugador».
+- **Skins** (`SKINS`, `setSkin`, `loadSkin`): cada skin define su paleta `colors` (índices 1–7 = I, O, T, S, Z, J, L), un fondo de canvas opcional `bg`, un color de rejilla opcional `grid` y su propia función de dibujo. `drawBlock` delega en la función del skin activo:
+  - **Retro** (`drawBlockRetro`): bloques cuadrados con colores planos y franja de brillo (el aspecto original).
+  - **Neón** (`drawBlockNeon`): fondo negro y contorno brillante con `shadowBlur` / `shadowColor` (se reinicia a `0` tras cada bloque).
+  - **Pastel** (`drawBlockPastel`): colores suaves y esquinas redondeadas con un trazado manual de `arcTo` (`roundRectPath`).
+  - **Pixel art** (`drawBlockPixel`): biselado y textura de píxeles dibujados sobre cada bloque.
+
+  `fillSkinBackground` pinta el fondo del skin en el tablero y en la vista previa. Cuando el skin define `bg` o `grid`, prevalece sobre el tema claro/oscuro; si no, se usa `THEMES[theme]`. La elección se guarda en `localStorage` con la clave `tetris.skin` (si el valor no es válido se usa Retro) y al cambiarla se redibujan `draw()` y `drawNext()` al instante, incluso en pausa o tras Game Over.
 
 ### Flujo del juego
 
 ```
+showStartScreen()                   → tablero vacío + tabla de records + botón Jugar
+  ↓ (clic en Jugar)
 init()
   ├─ createBoard()                  → matriz vacía
   ├─ next = randomPiece()
@@ -133,10 +152,11 @@ init()
      ├─ draw()  (grid + tablero + ghost + pieza actual)
      └─ requestAnimationFrame(loop)
 
-   keydown → mover / rotar / soft-drop / hard-drop / pausa
+   keydown → mover / rotar / soft-drop / hard-drop / menú de pausa (P / Esc)
+             (se ignora en la pantalla de inicio y mientras se escribe en el campo de nombre)
 ```
 
-Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara `endGame()` y se muestra el overlay de **Game Over**.
+Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara `endGame()` y se muestra el overlay de **Game Over** con la tabla de records (`showGameOverRecords()`).
 
 ---
 
@@ -157,8 +177,8 @@ Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara
 ```
 03-tetris/
 ├── index.html      # Estructura del DOM y canvas
-├── style.css       # Estilos del juego (dark theme)
-├── game.js         # Toda la lógica del Tetris (~300 líneas)
+├── style.css       # Estilos del juego (tema oscuro/claro)
+├── game.js         # Toda la lógica del Tetris (~500 líneas)
 └── README.md
 ```
 
@@ -173,11 +193,28 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `COLS`         | Columnas del tablero                     | `10`                  |
 | `ROWS`         | Filas del tablero                        | `20`                  |
 | `BLOCK`        | Tamaño en píxeles de cada celda          | `30`                  |
-| `COLORS`       | Paleta de colores por tipo de pieza      | 7 colores             |
+| `SKINS`        | Skins: paleta `colors` por tipo de pieza (antes `COLORS`), `bg`, `grid` y función de dibujo | `retro`, `neon`, `pastel`, `pixel` |
 | `LINE_SCORES`  | Puntos por 1, 2, 3 o 4 líneas eliminadas | `[0,100,300,500,800]` |
-| `dropInterval` | Velocidad inicial de caída en ms         | `1000`                |
+| `dropInterval` | Velocidad de caída en ms (`dropIntervalFor(level)`) | `1000` en nivel 1 |
+| `MAX_START_LEVEL` | Nivel máximo del selector "Nivel inicial" | `10`             |
+| `TOP_SIZE`     | Número de records guardados              | `5`                   |
+| `NAME_MAX`     | Longitud máxima del nombre del jugador   | `12`                  |
+| `RECORDS_KEY`  | Clave de `localStorage` del top          | `'tetris.records'`    |
+| `STATS_KEY`    | Clave de `localStorage` de estadísticas  | `'tetris.stats'`      |
 
 > Si cambias `COLS`, `ROWS` o `BLOCK`, recuerda ajustar también `width` y `height` del `<canvas id="board">` en `index.html` para que coincida (`COLS × BLOCK` × `ROWS × BLOCK`).
+
+---
+
+## Automatización de issues
+
+El workflow `.github/workflows/claude-issue-triage.yml` se ejecuta cada vez que se **crea** un issue o se **edita** su título o descripción. Claude:
+
+1. Lee el issue y el código del juego.
+2. Asigna labels: un tipo (`bug`, `enhancement`, `documentation`, `question`), una o más áreas (`area: gameplay`, `area: ui`, `area: controls`, `area: scoring`) y una prioridad (`priority: high`, `priority: medium`, `priority: low`).
+3. Publica un comentario con un **diagnóstico general** (resumen, archivos y funciones afectados, causa probable, enfoque de implementación sugerido, riesgos y criterios de verificación). Si el issue se edita, se actualiza ese mismo comentario.
+
+Usa el secret `CLAUDE_CODE_OAUTH_TOKEN`, el mismo que ya usan los demás workflows de Claude.
 
 ---
 

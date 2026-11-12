@@ -8,6 +8,7 @@
 </head>
 <body>
   <div class="wrapper">
+    <h1 class="game-title">TETRIS <span class="smiley" role="img" aria-label="cara feliz">😊</span></h1>
     <div class="game-container">
       <canvas id="board" width="300" height="600"></canvas>
 
@@ -37,8 +38,26 @@
             <li><kbd>↑</kbd> rotar</li>
             <li><kbd>↓</kbd> bajar</li>
             <li><kbd>Space</kbd> caída</li>
-            <li><kbd>P</kbd> pausa</li>
+            <li><kbd>P</kbd><kbd>Esc</kbd> pausa</li>
           </ul>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">THEME</span>
+          <button id="theme-toggle" class="theme-switch" role="switch" aria-checked="false">
+            <span class="track"><span class="thumb"></span></span>
+            <span id="theme-text">Modo claro</span>
+          </button>
+        </div>
+
+        <div class="panel-section">
+          <label class="label" for="skin-select">SKIN</label>
+          <select id="skin-select" class="skin-select">
+            <option value="retro">Retro</option>
+            <option value="neon">Neón</option>
+            <option value="pastel">Pastel</option>
+            <option value="pixel">Pixel art</option>
+          </select>
         </div>
       </aside>
     </div>
@@ -47,7 +66,37 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <p id="new-record" class="new-record hidden">¡Nuevo récord!</p>
+        <form id="name-form" class="name-form hidden">
+          <input id="name-input" type="text" maxlength="12" placeholder="Tu nombre" autocomplete="off" aria-label="Nombre del jugador" />
+          <button type="submit" id="save-name-btn">Guardar</button>
+        </form>
+        <div id="over-records" class="records hidden"></div>
         <button id="restart-btn">Reiniciar</button>
+      </div>
+    </div>
+
+    <div id="pause-menu" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+      <div class="overlay-box pause-box">
+        <p id="pause-title">PAUSA</p>
+        <button id="resume-btn" class="menu-btn primary">Reanudar</button>
+        <button id="pause-restart-btn" class="menu-btn">Reiniciar</button>
+        <button id="pause-controls-btn" class="menu-btn" aria-expanded="false" aria-controls="pause-controls">Ver controles</button>
+        <!-- Filled from the .controls list by setupPauseMenu() in game.js -->
+        <ul id="pause-controls" class="pause-controls hidden"></ul>
+        <label class="start-level">
+          Nivel inicial
+          <select id="start-level"></select>
+        </label>
+        <p class="pause-hint">Se aplica al reiniciar</p>
+      </div>
+    </div>
+
+    <div id="start-overlay" class="overlay">
+      <div class="overlay-box">
+        <p class="start-title">TETRIS</p>
+        <div id="start-records" class="records"></div>
+        <button id="play-btn">Jugar</button>
       </div>
     </div>
   </div>
