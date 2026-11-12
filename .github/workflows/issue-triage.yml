@@ -1,0 +1,44 @@
+name: Triaje de issues
+
+# Analiza cada issue nuevo (o editado) con Claude: le asigna las labels adecuadas
+# y publica un diagnóstico técnico que sirve de base para implementar la solución.
+#
+# Las labels deben existir previamente: ejecuta una vez `bash .github/setup-labels.sh`.
+# El prompt vive en `.claude/commands/triage-issue.md`.
+
+on:
+  issues:
+    types: [opened, edited]
+
+# Si se edita el issue varias veces seguidas, solo interesa el análisis más reciente.
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    # No triar lo que haya abierto un bot (incluido el propio Claude).
+    if: github.event.issue.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write # necesario para añadir labels y comentar
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Triaje con Claude
+        id: triage
+        uses: anthropics/claude-code-action@v1
+        env:
+          # Lo consume el CLI `gh` que Claude invoca desde la herramienta Bash.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: '/triage-issue ${{ github.event.issue.number }}'
+          claude_args: >-
+            --allowedTools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh label list:*),Bash(gh api:*),Read,Grep,Glob"
