@@ -43,6 +43,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Sistema de puntuación** clásico de Tetris (100 / 300 / 500 / 800 multiplicado por nivel).
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Pausa** y **Game Over** con opción de reinicio.
+- **Skins visuales** seleccionables en vivo: Retro, Neón, Pastel y Pixel art. La preferencia se guarda en `localStorage`.
 
 ---
 
@@ -98,7 +99,7 @@ El juego se compone de tres archivos que cooperan:
 Define la estructura visual:
 
 - Un `<canvas id="board">` de **300 × 600** píxeles donde se renderiza el tablero.
-- Un panel lateral con `SCORE`, `LINES`, `LEVEL`, vista de la siguiente pieza y la lista de controles.
+- Un panel lateral con `SCORE`, `LINES`, `LEVEL`, vista de la siguiente pieza, la lista de controles, el interruptor de tema y el selector de **SKIN** (`<select id="skin-select">`).
 - Un overlay para los estados **PAUSA** y **GAME OVER**.
 
 ### 2. `style.css`
@@ -118,6 +119,13 @@ Contiene toda la lógica del juego. A grandes rasgos:
 - **Puntuación**: usa la tabla clásica `[0, 100, 300, 500, 800]` multiplicada por el nivel actual; el hard drop suma 2 puntos por celda recorrida y el soft drop 1 punto por fila.
 - **Nivel y velocidad**: el nivel sube cada 10 líneas; la velocidad de caída se calcula como `max(100, 1000 − (level − 1) × 90)` milisegundos.
 - **Ghost piece** (`ghostY`): proyecta la posición final de la pieza actual hacia abajo y la dibuja con `globalAlpha = 0.2`.
+- **Skins** (`SKINS`, `setSkin`, `loadSkin`): cada skin define su paleta `colors` (índices 1–7 = I, O, T, S, Z, J, L), un fondo de canvas opcional `bg`, un color de rejilla opcional `grid` y su propia función de dibujo. `drawBlock` delega en la función del skin activo:
+  - **Retro** (`drawBlockRetro`): bloques cuadrados con colores planos y franja de brillo (el aspecto original).
+  - **Neón** (`drawBlockNeon`): fondo negro y contorno brillante con `shadowBlur` / `shadowColor` (se reinicia a `0` tras cada bloque).
+  - **Pastel** (`drawBlockPastel`): colores suaves y esquinas redondeadas con un trazado manual de `arcTo` (`roundRectPath`).
+  - **Pixel art** (`drawBlockPixel`): biselado y textura de píxeles dibujados sobre cada bloque.
+
+  `fillSkinBackground` pinta el fondo del skin en el tablero y en la vista previa. Cuando el skin define `bg` o `grid`, prevalece sobre el tema claro/oscuro; si no, se usa `THEMES[theme]`. La elección se guarda en `localStorage` con la clave `tetris.skin` (si el valor no es válido se usa Retro) y al cambiarla se redibujan `draw()` y `drawNext()` al instante, incluso en pausa o tras Game Over.
 
 ### Flujo del juego
 
@@ -174,7 +182,7 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `COLS`         | Columnas del tablero                     | `10`                  |
 | `ROWS`         | Filas del tablero                        | `20`                  |
 | `BLOCK`        | Tamaño en píxeles de cada celda          | `30`                  |
-| `COLORS`       | Paleta de colores por tipo de pieza      | 7 colores             |
+| `SKINS`        | Skins: paleta `colors` por tipo de pieza (antes `COLORS`), `bg`, `grid` y función de dibujo | `retro`, `neon`, `pastel`, `pixel` |
 | `LINE_SCORES`  | Puntos por 1, 2, 3 o 4 líneas eliminadas | `[0,100,300,500,800]` |
 | `dropInterval` | Velocidad inicial de caída en ms         | `1000`                |
 
