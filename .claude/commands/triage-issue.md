@@ -1,5 +1,5 @@
 ---
-description: Analiza un issue, le asigna labels y publica/actualiza un diagnóstico técnico
+description: Analiza un issue, le asigna labels y publica/actualiza un diagnóstico técnico como comentario en formato Markdown válido para que GitHub lo renderice correctamente
 allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh label list:*), Bash(gh api:*), Read, Grep, Glob
 ---
 
@@ -96,6 +96,11 @@ Preguntas concretas al autor si el issue es ambiguo. Si no falta nada, omite est
 
 Sé específico y breve: este texto se lee para empezar a programar, no para documentar el proyecto. Si el
 issue es trivial, un diagnóstico corto es la respuesta correcta.
+
+El comentario se publica en GitHub, así que **todo el cuerpo tiene que ser Markdown válido** para que se
+renderice bien: encabezados con `###`, listas con `-`, énfasis con `**`, referencias a código entre comillas
+simples invertidas y los fragmentos de código en bloques con triple comilla invertida indicando el lenguaje
+(```js). No uses HTML, salvo el marcador `<!-- claude-triage -->` de la primera línea.
 
 ## 6. Publica o actualiza el comentario
 
