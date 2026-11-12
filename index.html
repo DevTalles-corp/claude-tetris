@@ -38,7 +38,7 @@
             <li><kbd>↑</kbd> rotar</li>
             <li><kbd>↓</kbd> bajar</li>
             <li><kbd>Space</kbd> caída</li>
-            <li><kbd>P</kbd> pausa</li>
+            <li><kbd>P</kbd><kbd>Esc</kbd> pausa</li>
           </ul>
         </div>
 
@@ -57,6 +57,22 @@
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
         <button id="restart-btn">Reiniciar</button>
+      </div>
+    </div>
+
+    <div id="pause-menu" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+      <div class="overlay-box pause-box">
+        <p id="pause-title">PAUSA</p>
+        <button id="resume-btn" class="menu-btn primary">Reanudar</button>
+        <button id="pause-restart-btn" class="menu-btn">Reiniciar</button>
+        <button id="pause-controls-btn" class="menu-btn" aria-expanded="false" aria-controls="pause-controls">Ver controles</button>
+        <!-- Filled from the .controls list by setupPauseMenu() in game.js -->
+        <ul id="pause-controls" class="pause-controls hidden"></ul>
+        <label class="start-level">
+          Nivel inicial
+          <select id="start-level"></select>
+        </label>
+        <p class="pause-hint">Se aplica al reiniciar</p>
       </div>
     </div>
   </div>
