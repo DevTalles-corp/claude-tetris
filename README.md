@@ -45,6 +45,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Menú de pausa** (`P` o `Esc`) con Reanudar, Reiniciar, Ver controles y selector de **nivel inicial** (1–10); mientras está abierto se bloquean los inputs del juego.
 - **Game Over** con opción de reinicio.
 - **Tabla de records local** (`localStorage`): top 5 con nombre del jugador, puntos, líneas y nivel, más el **mejor combo** y las **líneas máximas** conseguidas en una partida. Se muestra en la pantalla de inicio y en el Game Over, resalta la fila nueva y permite borrar los records.
+- **Skins visuales** seleccionables en vivo: Retro, Neón, Pastel y Pixel art. La preferencia se guarda en `localStorage`.
 
 ---
 
@@ -100,7 +101,7 @@ El juego se compone de tres archivos que cooperan:
 Define la estructura visual:
 
 - Un `<canvas id="board">` de **300 × 600** píxeles donde se renderiza el tablero.
-- Un panel lateral con `SCORE`, `LINES`, `LEVEL`, vista de la siguiente pieza y la lista de controles.
+- Un panel lateral con `SCORE`, `LINES`, `LEVEL`, vista de la siguiente pieza, la lista de controles, el interruptor de tema y el selector de **SKIN** (`<select id="skin-select">`).
 - Un overlay `#overlay` para **GAME OVER** (incluye el campo de nombre y la tabla de records).
 - Un overlay `#pause-menu` con el menú de pausa: Reanudar, Reiniciar, Ver controles y el selector de nivel inicial.
 - Un overlay de **pantalla de inicio** (`#start-overlay`) con la tabla de records y el botón **Jugar**; la partida no empieza hasta pulsarlo.
@@ -126,6 +127,13 @@ Contiene toda la lógica del juego. A grandes rasgos:
 - **Combo**: `lockPiece` usa el número de líneas que devuelve `clearLines`; cada pieza fijada que limpia al menos una línea suma 1 al combo y una que no limpia nada lo reinicia a 0. Se guarda el máximo de la partida (`maxCombo`).
 - **Records** (`loadRecords`, `saveRecord`, `recordRank`, `updateStats`, `resetRecords`, `renderRecords`): el top 5 se guarda en `localStorage` bajo `tetris.records` (`[{name, score, lines, level}]`) y las estadísticas en `tetris.stats` (`{bestCombo, maxLines}`). Todo acceso a `localStorage` va en `try/catch` (`readStorage` / `writeStorage`), así que el juego funciona aunque el almacenamiento no esté disponible. Los nombres se pintan con `textContent`, nunca con `innerHTML`.
 - **Game Over** (`showGameOverRecords`): actualiza las estadísticas y, si la puntuación es mayor que 0 y entra en el top 5, muestra «¡Nuevo récord!» y un campo de nombre (Enter o **Guardar**). Si se reinicia sin guardar, el record se guarda como «Jugador».
+- **Skins** (`SKINS`, `setSkin`, `loadSkin`): cada skin define su paleta `colors` (índices 1–7 = I, O, T, S, Z, J, L), un fondo de canvas opcional `bg`, un color de rejilla opcional `grid` y su propia función de dibujo. `drawBlock` delega en la función del skin activo:
+  - **Retro** (`drawBlockRetro`): bloques cuadrados con colores planos y franja de brillo (el aspecto original).
+  - **Neón** (`drawBlockNeon`): fondo negro y contorno brillante con `shadowBlur` / `shadowColor` (se reinicia a `0` tras cada bloque).
+  - **Pastel** (`drawBlockPastel`): colores suaves y esquinas redondeadas con un trazado manual de `arcTo` (`roundRectPath`).
+  - **Pixel art** (`drawBlockPixel`): biselado y textura de píxeles dibujados sobre cada bloque.
+
+  `fillSkinBackground` pinta el fondo del skin en el tablero y en la vista previa. Cuando el skin define `bg` o `grid`, prevalece sobre el tema claro/oscuro; si no, se usa `THEMES[theme]`. La elección se guarda en `localStorage` con la clave `tetris.skin` (si el valor no es válido se usa Retro) y al cambiarla se redibujan `draw()` y `drawNext()` al instante, incluso en pausa o tras Game Over.
 
 ### Flujo del juego
 
@@ -185,7 +193,7 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `COLS`         | Columnas del tablero                     | `10`                  |
 | `ROWS`         | Filas del tablero                        | `20`                  |
 | `BLOCK`        | Tamaño en píxeles de cada celda          | `30`                  |
-| `COLORS`       | Paleta de colores por tipo de pieza      | 7 colores             |
+| `SKINS`        | Skins: paleta `colors` por tipo de pieza (antes `COLORS`), `bg`, `grid` y función de dibujo | `retro`, `neon`, `pastel`, `pixel` |
 | `LINE_SCORES`  | Puntos por 1, 2, 3 o 4 líneas eliminadas | `[0,100,300,500,800]` |
 | `dropInterval` | Velocidad de caída en ms (`dropIntervalFor(level)`) | `1000` en nivel 1 |
 | `MAX_START_LEVEL` | Nivel máximo del selector "Nivel inicial" | `10`             |
