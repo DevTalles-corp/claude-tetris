@@ -1,0 +1,150 @@
+name: Claude Code
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  claude:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Evita ejecuciones paralelas (y ramas duplicadas) sobre el mismo issue o PR.
+    concurrency:
+      group: claude-${{ github.event.issue.number || github.event.pull_request.number }}
+      cancel-in-progress: false
+    env:
+      # Presupuesto de turnos de Claude por issue o PR (suma de todas sus ejecuciones)
+      LIMITE_TURNOS: 40
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read # Required for Claude to read CI results on PRs
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+
+      # El modelo se lee de .claude/settings.json en cada ejecución.
+      # Para cambiarlo: editar "model" en ese archivo, hacer commit y push a main.
+      - name: Leer modelo del proyecto
+        id: modelo
+        run: |
+          MODELO=$(jq -r '.model // empty' .claude/settings.json)
+          echo "model=${MODELO:-claude-sonnet-5-5}" >> "$GITHUB_OUTPUT"
+
+      - name: Registrar modelo usado
+        run: |
+          echo "Modelo configurado para esta ejecución: \`${{ steps.modelo.outputs.model }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # Suma los turnos ya usados en este issue (marcador oculto en los comentarios de github-actions[bot])
+      - name: Calcular turnos disponibles
+        id: turnos
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMERO: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: |
+          USADOS=$(gh api "repos/$REPO/issues/$NUMERO/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]") | .body' \
+            | grep -oE '<!-- turnos-claude: [0-9]+ -->' | grep -oE '[0-9]+' \
+            | awk '{ s += $1 } END { print s + 0 }')
+          RESTANTES=$(( LIMITE_TURNOS - USADOS ))
+          [ "$RESTANTES" -lt 0 ] && RESTANTES=0
+          echo "usados=$USADOS" >> "$GITHUB_OUTPUT"
+          echo "restantes=$RESTANTES" >> "$GITHUB_OUTPUT"
+          echo "Turnos usados: $USADOS de $LIMITE_TURNOS. Disponibles: $RESTANTES"
+
+      # Sin turnos: no se llama a Claude y se dejan pasos para validar a mano
+      - name: Avisar que no quedan turnos
+        if: fromJSON(steps.turnos.outputs.restantes) <= 0
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMERO: ${{ github.event.issue.number || github.event.pull_request.number }}
+          USADOS: ${{ steps.turnos.outputs.usados }}
+          CUERPO: ${{ github.event.issue.body || github.event.pull_request.body }}
+        run: |
+          RAMA=$(gh api "repos/$REPO/branches" --paginate --jq '.[].name' | grep "^claude/issue-$NUMERO-" | sort | tail -1)
+          CRITERIOS=$(printf '%s\n' "$CUERPO" | grep -E '^\s*- \[[ xX]\] .+' | sed -E 's/^\s*- \[[ xX]\] /   - [ ] /')
+          {
+            echo "### ⛔ Claude se quedó sin intentos en este issue"
+            echo "Se usaron **$USADOS de $LIMITE_TURNOS turnos**. Para no seguir gastando tokens, Claude no atenderá más pedidos aquí."
+            echo ""
+            echo "**Valida esta acción de forma manual:**"
+            echo "1. Trae la rama del cambio: \`git fetch origin && git checkout ${RAMA:-<rama del cambio>}\`"
+            echo "2. Abre el juego: \`python3 -m http.server 8000\` y visita \`http://localhost:8000\`."
+            echo "3. Revisa cada criterio de aceptación:"
+            echo "${CRITERIOS:-   - [ ] (el issue no tiene criterios en casillas: revisa la descripción)}"
+            echo "4. Si hay pruebas, ejecútalas: \`npm ci && npx playwright install chromium && ISSUE=$NUMERO npm test\`."
+            echo "5. Deja el resultado en este issue. Si todo está bien, une la rama a \`qa\` con una PR."
+            echo ""
+            echo "Si hace falta más ayuda de Claude, abre un issue nuevo con lo que falte, o sube \`LIMITE_TURNOS\` en \`.github/workflows/claude.yml\`."
+          } > aviso.md
+          gh api "repos/$REPO/issues/$NUMERO/comments" -F body=@aviso.md >/dev/null
+
+      - name: Run Claude Code
+        id: claude
+        if: fromJSON(steps.turnos.outputs.restantes) > 0
+        uses: anthropics/claude-code-action@d70510b174a1244958df0b03166a54912811f3e6 # v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          # Muestra el avance como lista de tareas con casillas mientras Claude trabaja
+          track_progress: true
+
+          # This is an optional setting that allows Claude to read CI results on PRs
+          additional_permissions: |
+            actions: read
+
+          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
+          # prompt: 'Update the pull request description to include a summary of changes.'
+
+          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
+          # or https://code.claude.com/docs/en/cli-reference for available options
+          # Solo los turnos que quedan del presupuesto del issue
+          claude_args: '--model ${{ steps.modelo.outputs.model }} --max-turns ${{ steps.turnos.outputs.restantes }}'
+
+      # Busca en el registro de la sesión los modelos que respondieron de verdad.
+      # Compara con el modelo pedido para detectar si no coinciden.
+      - name: Verificar modelo que respondió
+        if: always() && steps.claude.outputs.execution_file != ''
+        env:
+          PEDIDO: ${{ steps.modelo.outputs.model }}
+          ARCHIVO: ${{ steps.claude.outputs.execution_file }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMERO: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: |
+          REALES=$(jq -r '.. | objects | .model? // empty' "$ARCHIVO" 2>/dev/null | sort -u | paste -sd ', ' -)
+          TURNOS=$(jq -r '.. | objects | select(.type? == "result") | .num_turns // empty' "$ARCHIVO" 2>/dev/null | tail -1)
+          TURNOS=${TURNOS:-0}
+          TOTAL=$(( ${{ steps.turnos.outputs.usados }} + TURNOS ))
+          echo "Modelos detectados: ${REALES:-ninguno}"
+          {
+            echo "### Modelo verificado"
+            echo "- Pedido: \`$PEDIDO\`"
+            echo "- Respondió: \`${REALES:-no detectado}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$REALES" ] && ! echo "$REALES" | grep -q "$PEDIDO"; then
+            echo "::warning::El modelo que respondió ($REALES) no coincide con el pedido ($PEDIDO)"
+          fi
+
+          # Deja el modelo visible en el hilo del issue o PR, donde se lee la respuesta
+          # El marcador oculto lleva la cuenta de turnos del issue para la próxima ejecución
+          gh api "repos/$REPO/issues/$NUMERO/comments" -f body="🔎 Modelo usado en esta ejecución: \`${REALES:-no detectado}\` (pedido: \`$PEDIDO\`)
+          Turnos usados en este issue: $TOTAL de $LIMITE_TURNOS
+          <!-- turnos-claude: $TURNOS -->" >/dev/null

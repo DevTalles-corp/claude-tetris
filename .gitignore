@@ -1,1 +1,13 @@
 .DS_STORE
+# Configuracion personal de Claude Code (no compartir)
+.claude/settings.local.json
+
+node_modules/
+test-results/
+playwright-report/
+
+# Estado local de Obsidian (grafo y workspace)
+docs/.obsidian/graph.json
+
+# Worktrees creados con /worktree
+.trees/

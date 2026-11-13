@@ -4,14 +4,56 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <h1 class="title">TETRIS</h1>
   <div class="wrapper">
     <div class="game-container">
       <canvas id="board" width="300" height="600"></canvas>
 
+      <!-- Feedback de combos: se rellena desde game.js (solo presentación) -->
+      <div id="hud-stack">
+        <div id="combo-hud" class="hud" hidden>
+          <span class="label">COMBO</span>
+          <span class="value" id="combo-value">×1</span>
+        </div>
+        <div id="b2b-hud" class="hud" hidden>
+          <span class="b2b-badge" id="b2b-badge"></span>
+        </div>
+      </div>
+      <div id="toasts" aria-live="polite"></div>
+      <div id="flash"></div>
+
       <aside class="panel">
+        <div class="panel-top">
+          <button id="theme-toggle" type="button" aria-label="Cambiar tema"></button>
+          <div class="sound-row">
+            <button id="sound-toggle" type="button" aria-label="Activar o desactivar el sonido"></button>
+            <input id="volume" type="range" min="0" max="100" step="5" aria-label="Volumen">
+          </div>
+          <!-- Skin del tablero y de NEXT (game.js: applySkin) -->
+          <label class="skin-row">
+            <span class="label">SKIN</span>
+            <select id="skin-select" aria-label="Skin del tablero">
+              <option value="retro">Retro</option>
+              <option value="neon">Neón</option>
+              <option value="pastel">Pastel</option>
+              <option value="pixel">Pixel art</option>
+            </select>
+          </label>
+        </div>
+
         <div class="panel-section">
           <span class="label">SCORE</span>
           <span class="value" id="score">0</span>
@@ -24,6 +66,10 @@
           <span class="label">LEVEL</span>
           <span class="value" id="level">1</span>
         </div>
+        <div class="panel-section">
+          <span class="label">PIEZAS</span>
+          <span class="value" id="pieces">0</span>
+        </div>
 
         <div class="panel-section">
           <span class="label">NEXT</span>
@@ -34,10 +80,10 @@
           <span class="label">CONTROLS</span>
           <ul>
             <li><kbd>←</kbd><kbd>→</kbd> mover</li>
-            <li><kbd>↑</kbd> rotar</li>
+            <li><kbd>↑</kbd><kbd>X</kbd> rotar</li>
             <li><kbd>↓</kbd> bajar</li>
-            <li><kbd>Space</kbd> caída</li>
-            <li><kbd>P</kbd> pausa</li>
+            <li><kbd>Espacio</kbd> caída</li>
+            <li><kbd>P</kbd><kbd>Esc</kbd> pausa</li>
           </ul>
         </div>
       </aside>
@@ -47,10 +93,66 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+
+        <!-- Récords: solo en GAME OVER (no en PAUSA). Se rellena desde game.js -->
+        <div id="gameover-records" hidden>
+          <p id="gameover-message"></p>
+          <form id="record-form" autocomplete="off" hidden>
+            <input id="record-name" type="text" placeholder="Tu nombre" aria-label="Nombre del jugador">
+            <button id="record-save" type="submit">Guardar</button>
+          </form>
+          <table class="records-table">
+            <thead><tr><th>#</th><th>Nombre</th><th>Puntos</th><th>Líneas</th><th>Nivel</th><th>Combo</th></tr></thead>
+            <tbody id="gameover-table"></tbody>
+          </table>
+          <p id="gameover-stats" class="records-stats"></p>
+        </div>
+
+        <!-- Reanudar va justo antes de Reiniciar (style.css: #resume-btn + #restart-btn) -->
+        <button id="resume-btn" class="menu-btn" type="button" hidden>Reanudar</button>
         <button id="restart-btn">Reiniciar</button>
+
+        <!-- Menú de pausa: solo visible en PAUSA (game.js, sección "Pause menu") -->
+        <div id="pause-menu" hidden>
+          <button id="controls-btn" class="menu-btn menu-btn-secondary" type="button" aria-expanded="false" aria-controls="pause-controls">Ver controles</button>
+          <ul id="pause-controls" hidden>
+            <li><span><kbd>←</kbd><kbd>→</kbd></span> mover</li>
+            <li><span><kbd>↑</kbd><kbd>X</kbd></span> rotar</li>
+            <li><span><kbd>↓</kbd></span> bajar (soft drop)</li>
+            <li><span><kbd>Espacio</kbd></span> caída (hard drop)</li>
+            <li><span><kbd>P</kbd><kbd>Esc</kbd></span> pausa / reanudar</li>
+          </ul>
+          <div class="start-level" role="group" aria-labelledby="start-level-label">
+            <span id="start-level-label">Nivel inicial</span>
+            <div class="stepper">
+              <button id="start-level-down" class="step-btn" type="button" aria-label="Bajar nivel inicial">−</button>
+              <output id="start-level" aria-live="polite">1</output>
+              <button id="start-level-up" class="step-btn" type="button" aria-label="Subir nivel inicial">+</button>
+            </div>
+          </div>
+          <p class="start-level-hint">Se aplica en la próxima partida</p>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- Tabla de récords visible desde la carga (debajo del tablero, sin taparlo) -->
+  <section id="records" aria-labelledby="records-title">
+    <h2 id="records-title" class="label">RÉCORDS</h2>
+    <table class="records-table">
+      <thead><tr><th>#</th><th>Nombre</th><th>Puntos</th><th>Líneas</th><th>Nivel</th><th>Combo</th></tr></thead>
+      <tbody id="records-table"></tbody>
+    </table>
+    <p id="records-stats" class="records-stats"></p>
+    <div class="records-actions">
+      <button id="records-reset" type="button">Borrar récords</button>
+      <span id="records-confirm" hidden>
+        ¿Borrar todos los récords?
+        <button id="records-confirm-yes" type="button">Sí, borrar</button>
+        <button id="records-confirm-no" type="button">Cancelar</button>
+      </span>
+    </div>
+  </section>
 
   <script src="game.js"></script>
 </body>

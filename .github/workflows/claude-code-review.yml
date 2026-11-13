@@ -1,0 +1,62 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    # Sin "synchronize": no se vuelve a revisar en cada push. Para revisar de nuevo,
+    # comentar "@claude revisa esta PR".
+    types: [opened, ready_for_review, reopened]
+    # No gastar tokens en cambios que no son código
+    paths-ignore:
+      - 'tests/evidencia/**'
+      - 'docs/**'
+      - '**/*.md'
+      - '**/*.png'
+
+jobs:
+  claude-review:
+    # Las PRs de qa a main traen código ya revisado al entrar a qa; los borradores aún no están listos
+    if: github.head_ref != 'qa' && github.event.pull_request.draft == false
+    timeout-minutes: 10
+    concurrency:
+      group: claude-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    # Optional: Filter by PR author
+    # if: |
+    #   github.event.pull_request.user.login == 'external-contributor' ||
+    #   github.event.pull_request.user.login == 'new-developer' ||
+    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      # Mismo modelo que el resto del proyecto (.claude/settings.json)
+      - name: Leer modelo del proyecto
+        id: modelo
+        run: |
+          MODELO=$(jq -r '.model // empty' .claude/settings.json)
+          echo "model=${MODELO:-claude-haiku-5-5}" >> "$GITHUB_OUTPUT"
+
+      - name: Run Claude Code Review
+        id: claude-review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Permite revisar los commits que Claude sube a la rama de una PR
+          allowed_bots: 'claude[bot]'
+          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
+          plugins: 'code-review@claude-code-plugins'
+          prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          claude_args: '--model ${{ steps.modelo.outputs.model }} --max-turns 15 --allowedTools "mcp__github_inline_comment__create_inline_comment"'
+          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
+          # or https://code.claude.com/docs/en/cli-reference for available options
+

@@ -1,0 +1,188 @@
+name: QA
+
+# Ejecuta las pruebas Playwright de un issue y publica la evidencia en su hilo.
+# Se lanza solo al hacer merge de una PR hacia qa, o a mano desde Actions → QA → Run workflow.
+# El issue sale de la rama (claude/issue-N-…) o de "Refs #N" en la descripción de la PR.
+# No hace merge ni cierra el issue: eso lo decide una persona.
+on:
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Número del issue a verificar
+        required: true
+  pull_request:
+    types: [closed]
+    branches: [qa]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  qa:
+    # En PRs, solo cuando se hizo merge (no al cerrar sin fusionar)
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Determinar issue
+        id: issue
+        env:
+          ENTRADA: ${{ inputs.issue }}
+          RAMA: ${{ github.event.pull_request.head.ref }}
+          CUERPO: ${{ github.event.pull_request.body }}
+        run: |
+          NUMERO="$ENTRADA"
+          if [ -z "$NUMERO" ]; then
+            NUMERO=$(echo "$RAMA" | sed -nE 's#^claude/issue-([0-9]+)-.*#\1#p')
+          fi
+          if [ -z "$NUMERO" ]; then
+            NUMERO=$(printf '%s' "$CUERPO" | grep -oE 'Refs #[0-9]+' | head -1 | tr -dc '0-9')
+          fi
+          echo "numero=$NUMERO" >> "$GITHUB_OUTPUT"
+          echo "Issue detectado: ${NUMERO:-ninguno}"
+
+      - name: Avisar que no hay issue
+        if: steps.issue.outputs.numero == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh api "repos/$REPO/issues/$PR/comments" -f body="⚠️ QA no se ejecutó: no encontré el número del issue. Usa una rama \`claude/issue-N-…\`, agrega \`Refs #N\` en la descripción, o lánzalo a mano desde Actions → QA → Run workflow." >/dev/null
+
+      - name: Checkout rama qa
+        if: steps.issue.outputs.numero != ''
+        uses: actions/checkout@v7
+        with:
+          ref: qa
+          fetch-depth: 1
+
+      - name: Instalar Node
+        if: steps.issue.outputs.numero != ''
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+
+      - name: Instalar dependencias y navegador
+        if: steps.issue.outputs.numero != ''
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Ejecutar pruebas
+        if: steps.issue.outputs.numero != ''
+        id: pruebas
+        env:
+          ISSUE: ${{ steps.issue.outputs.numero }}
+        run: npm test 2>&1 | tee resultado.txt
+        continue-on-error: true
+
+      # Si una prueba grabó video (.webm) en la evidencia del issue, se genera un GIF
+      # para que se vea animado en el comentario. El .webm se conserva y se enlaza.
+      - name: Convertir videos a GIF
+        if: steps.issue.outputs.numero != ''
+        env:
+          ISSUE: ${{ steps.issue.outputs.numero }}
+        run: |
+          CARPETA=$(ls -d tests/evidencia/issue-$ISSUE/*/ 2>/dev/null | sort | tail -1)
+          [ -n "$CARPETA" ] || exit 0
+          ls "$CARPETA"*.webm >/dev/null 2>&1 || { echo "Sin videos"; exit 0; }
+          command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg; }
+          for v in "$CARPETA"*.webm; do
+            g="${v%.webm}.gif"
+            ffmpeg -loglevel error -y -i "$v" \
+              -vf "fps=6,scale=480:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse" "$g"
+            echo "GIF: $g ($(du -h "$g" | cut -f1))"
+          done
+
+      - name: Guardar evidencia en qa
+        if: steps.issue.outputs.numero != ''
+        env:
+          ISSUE: ${{ steps.issue.outputs.numero }}
+          RESULTADO: ${{ steps.pruebas.outcome }}
+        run: |
+          CARPETA=$(ls -d tests/evidencia/issue-$ISSUE/*/ 2>/dev/null | sort | tail -1)
+          # Si una prueba falla, conservar también lo que Playwright registró del error
+          if [ "$RESULTADO" = "failure" ] && [ -d test-results ] && [ -n "$CARPETA" ]; then
+            mkdir -p "${CARPETA}fallo"
+            cp -r test-results/. "${CARPETA}fallo/"
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/evidencia
+          git commit -m "Evidencia QA del issue #$ISSUE" || echo "Sin evidencia nueva"
+          # Otro merge a qa puede haber avanzado la rama mientras corrían las pruebas
+          # (dos PRs fusionados seguidos). Cada evidencia va en su propia carpeta, así
+          # que el rebase no tiene conflictos: traer qa, rebasar y reintentar el push.
+          for intento in 1 2 3 4 5; do
+            git pull --rebase origin qa && git push origin HEAD:qa && exit 0
+            echo "Push rechazado (intento $intento); reintentando…"
+            sleep $((intento * 5))
+          done
+          echo "No se pudo subir la evidencia a qa tras 5 intentos"
+          exit 1
+
+      - name: Publicar resultado en el issue
+        if: steps.issue.outputs.numero != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ steps.issue.outputs.numero }}
+          RESULTADO: ${{ steps.pruebas.outcome }}
+          REPO: ${{ github.repository }}
+        run: |
+          SHA=$(git rev-parse HEAD)
+          CARPETA=$(ls -d tests/evidencia/issue-$ISSUE/*/ 2>/dev/null | sort | tail -1)
+          REGRESION=$(grep -oE "[0-9]+ (passed|failed|flaky|skipped)" resultado.txt | paste -sd ',' - | sed 's/,/, /g')
+          MODELO=$(jq -r '.model // "sin modelo"' .claude/settings.json)
+          NAVEGADOR=$(node -e "require('playwright-core').chromium.launch().then(async b=>{console.log('Chromium '+b.version());await b.close()})")
+          PLAYWRIGHT=$(npx playwright --version | awk '{print $2}')
+          DISPOSITIVO=$(. /etc/os-release; echo "$PRETTY_NAME, viewport 1080×1920")
+          IMAGENES=""
+          VIDEOS=""
+          for f in "$CARPETA"*.webm; do
+            [ -f "$f" ] || continue
+            VIDEOS="$VIDEOS
+          - 🎬 Video: [$(basename "$f")](https://github.com/$REPO/blob/$SHA/$f) ($(du -h "$f" | cut -f1))"
+          done
+          for f in "$CARPETA"*.gif "$CARPETA"*.png "$CARPETA"fallo/*.png; do
+            [ -f "$f" ] || continue
+            IMAGENES="$IMAGENES
+          ![$(basename "${f%.*}")](https://raw.githubusercontent.com/$REPO/$SHA/$f)"
+          done
+          {
+            echo "### 🧪 Evidencia QA"
+            if [ "$RESULTADO" = "success" ]; then
+              echo "✅ Pruebas pasan en qa"
+            else
+              echo "❌ Pruebas fallan en qa"
+              echo ""
+              echo "**Revisión manual requerida.** El issue sigue abierto y \`main\` no cambia."
+              echo ""
+              echo "Causa (extracto de la ejecución):"
+              echo '```'
+              grep -E "Error:|✘" resultado.txt | head -8
+              echo '```'
+            fi
+            echo ""
+            echo "- Rama: \`qa\` (commit \`${SHA:0:7}\`)"
+            echo "- Ejecución: \`$(basename "${CARPETA:-sin-capturas}")\`"
+            echo "- Regresión (todas las pruebas): ${REGRESION:-sin datos}"
+            VERIF="tests/evidencia/issue-$ISSUE/verificacion-llm.md"
+            if [ -f "tests/issue-$ISSUE.spec.js" ]; then
+              echo "- Tipo de evidencia: pruebas automatizadas (\`tests/issue-$ISSUE.spec.js\`)"
+            elif [ -f "$VERIF" ]; then
+              echo "- Tipo de evidencia: verificación LLM, sin pruebas automatizadas ([ver verificación](https://github.com/$REPO/blob/$SHA/$VERIF))"
+            else
+              echo "- ⚠️ No hay \`tests/issue-$ISSUE.spec.js\` ni \`$VERIF\`: este issue no tiene evidencia propia. Revisión manual requerida."
+            fi
+            echo "- Modelo configurado: \`$MODELO\`"
+            echo "- Navegador: \`$NAVEGADOR\` (Playwright $PLAYWRIGHT)"
+            echo "- Dispositivo: $DISPOSITIVO"
+            [ -n "$VIDEOS" ] && echo "$VIDEOS"
+            echo "$IMAGENES"
+            echo ""
+            echo "Aprobación del merge a \`main\`: manual."
+          } > cuerpo.md
+          gh api "repos/$REPO/issues/$ISSUE/comments" -F body=@cuerpo.md >/dev/null
