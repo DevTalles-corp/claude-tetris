@@ -39,6 +39,11 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const themeBtn = document.getElementById('theme-toggle');
+
+const THEME_KEY = 'tetris-theme';
+let theme = 'dark';
+let gridColor = '#22222e';
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
@@ -163,13 +168,13 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   context.fillStyle = color;
   context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
   // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
+  context.fillStyle = theme === 'light' ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)';
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
   context.globalAlpha = 1;
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = gridColor;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -300,5 +305,27 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+
+function applyTheme(t) {
+  theme = t === 'light' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = theme;
+  const isLight = theme === 'light';
+  themeBtn.setAttribute('aria-pressed', String(isLight));
+  themeBtn.textContent = isLight ? '🌙 Modo oscuro' : '☀️ Modo claro';
+  gridColor = isLight ? '#e3e6ee' : '#22222e';
+  try { localStorage.setItem(THEME_KEY, theme); } catch (e) { /* almacenamiento no disponible */ }
+  // refrescar canvas aunque el juego esté en pausa o terminado
+  if (current && board) draw();
+  if (next) drawNext();
+}
+
+themeBtn.addEventListener('click', () => {
+  applyTheme(theme === 'dark' ? 'light' : 'dark');
+  themeBtn.blur();
+});
+
+let savedTheme = null;
+try { savedTheme = localStorage.getItem(THEME_KEY); } catch (e) { /* ignorar */ }
+applyTheme(savedTheme === 'light' ? 'light' : 'dark');
 
 init();
