@@ -76,7 +76,11 @@ jobs:
             Elige exactamente 1 label de tipo (bug/enhancement/question/documentation),
             1 o más de área y exactamente 1 de prioridad.
 
-            El campo `diagnosis` debe ser markdown con estas secciones:
+            El campo `diagnosis` se publicará como comentario en GitHub, así que debe estar escrito
+            en markdown (GitHub Flavored Markdown) para que se renderice bien y se entienda mejor:
+            usa encabezados, listas, **negritas**, `código en línea`, bloques de código con lenguaje
+            (```js) y listas de tareas (`- [ ]`) para los criterios de aceptación.
+            Debe tener estas secciones:
             ### Resumen
             ### Tipo y prioridad (justificación)
             ### Áreas y archivos afectados (archivos y funciones concretas, p. ej. `clearLines()` en `game.js`)
