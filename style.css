@@ -94,11 +94,16 @@ body {
   letter-spacing: 1px;
 }
 
-#next-canvas {
+#next-canvas, #hold-canvas, #look-canvas {
   display: block;
-  border: 1px solid #2a2a3a;
-  background: #1a1a25;
+  border: 1px solid var(--border);
+  background: var(--board-bg);
   border-radius: 4px;
+  transition: opacity 0.15s;
+}
+
+#hold-canvas.locked {
+  opacity: 0.35;
 }
 
 /* ---- Controles ---- */
@@ -196,4 +201,120 @@ kbd {
 
 #theme-toggle:hover {
   border-color: var(--accent);
+}
+
+/* ---- Panel izquierdo y widgets nuevos ---- */
+.panel-left {
+  width: 140px;
+}
+
+.hidden {
+  display: none;
+}
+
+.value.small {
+  font-size: 20px;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.progress {
+  color: var(--accent);
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.badge {
+  align-self: flex-start;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  color: var(--label);
+  opacity: 0.4;
+}
+
+.badge.on {
+  opacity: 1;
+  color: var(--btn-text);
+  background: #ffb74d;
+  border-color: #ffb74d;
+}
+
+.energy {
+  height: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--board-bg);
+  overflow: hidden;
+}
+
+.energy-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #26a69a, #80deea);
+  transition: width 0.25s;
+}
+
+.energy.full {
+  border-color: #80deea;
+  animation: energy-pulse 1s ease-in-out infinite;
+}
+
+@keyframes energy-pulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(128, 222, 234, 0); }
+  50% { box-shadow: 0 0 10px rgba(128, 222, 234, 0.9); }
+}
+
+#mode-select {
+  width: 100%;
+  background: var(--kbd-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 6px;
+  font-size: 12px;
+}
+
+/* ---- Ganar / habilidades ---- */
+#overlay-title.win {
+  color: var(--accent);
+}
+
+.ability-box button {
+  width: 240px;
+  background: var(--kbd-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ability-box button:hover {
+  border-color: var(--accent);
+}
+
+.ability-box button.secondary {
+  justify-content: center;
+  background: transparent;
+  color: var(--muted);
+}
+
+.ability-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: var(--accent);
 }

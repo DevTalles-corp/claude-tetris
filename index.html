@@ -11,6 +11,47 @@
   <button id="theme-toggle" type="button" tabindex="-1" aria-pressed="false">☀️ Modo claro</button>
   <div class="wrapper">
     <div class="game-container">
+
+      <aside class="panel panel-left">
+        <div class="panel-section">
+          <span class="label">HOLD</span>
+          <canvas id="hold-canvas" width="120" height="120"></canvas>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">ENERGÍA</span>
+          <div id="energy" class="energy">
+            <div id="energy-fill" class="energy-fill"></div>
+          </div>
+          <span id="energy-hint" class="hint">0%</span>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">COMBO</span>
+          <span class="value small" id="combo">—</span>
+          <span id="b2b" class="badge">BACK-TO-BACK</span>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">MODO</span>
+          <select id="mode-select" tabindex="-1">
+            <option value="classic">Libre</option>
+            <option value="sprint">Desafío: Sprint</option>
+            <option value="garbage">Desafío: Basura</option>
+            <option value="fixed">Desafío: Bloques fijos</option>
+            <option value="invisible">Desafío: Invisibles</option>
+            <option value="reverse">Desafío: Rotación inversa</option>
+          </select>
+          <span id="objective" class="hint">Modo libre</span>
+          <span id="progress" class="hint progress"></span>
+        </div>
+
+        <div id="look-section" class="panel-section hidden">
+          <span class="label">PRÓXIMAS 5</span>
+          <canvas id="look-canvas" width="120" height="200"></canvas>
+        </div>
+      </aside>
+
       <canvas id="board" width="300" height="600"></canvas>
 
       <aside class="panel">
@@ -39,6 +80,9 @@
             <li><kbd>↑</kbd> rotar</li>
             <li><kbd>↓</kbd> bajar</li>
             <li><kbd>Space</kbd> caída</li>
+            <li><kbd>C</kbd><kbd>Shift</kbd> hold</li>
+            <li><kbd>E</kbd> habilidades</li>
+            <li><kbd>M</kbd> sonido</li>
             <li><kbd>P</kbd> pausa</li>
           </ul>
         </div>
@@ -50,6 +94,18 @@
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
         <button id="restart-btn">Reiniciar</button>
+      </div>
+    </div>
+
+    <div id="ability-overlay" class="overlay hidden">
+      <div class="overlay-box ability-box">
+        <p class="ability-title">ELIGE UNA HABILIDAD</p>
+        <button type="button" data-ability="lookahead"><kbd>1</kbd> Ver siguientes 5 piezas</button>
+        <button type="button" data-ability="swap"><kbd>2</kbd> Cambiar pieza actual</button>
+        <button type="button" data-ability="slow"><kbd>3</kbd> Ralentizar tiempo 10s</button>
+        <button type="button" data-ability="undo"><kbd>4</kbd> Deshacer última colocación</button>
+        <button type="button" data-ability="hold"><kbd>5</kbd> Hold libre (ignora restricción)</button>
+        <button type="button" id="ability-cancel" class="secondary">Cancelar (Esc)</button>
       </div>
     </div>
   </div>
