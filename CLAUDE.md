@@ -16,7 +16,8 @@ Three files: `index.html` (DOM + two canvases), `style.css`, and `game.js` (all 
 
 `game.js` uses module-level mutable state (`board`, `current`, `next`, `score`, `lines`, `level`, `paused`, `gameOver`, `dropInterval`, `animId`, ...) shared by all functions. Key flow:
 
-- `init()` resets all state and starts the `requestAnimationFrame` `loop`; it is also the restart-button handler.
+- `init()` resets all state and starts the `requestAnimationFrame` `loop`; it is the handler of both the "Jugar" button (`#start-overlay`, shown on load) and the restart button. Nothing runs before the first `init()` (`current` is undefined; the keydown handler returns early).
+- Records: `endGame()` saves `recordStats` (`combo`/`lines` maxima; `combo` counter lives in `clearLines()`) and shows the top-5 table from `localStorage` key `records` (`renderRecords`, all via `textContent`); the name form appears only if the score qualifies.
 - `loop(ts)` accumulates elapsed time into `dropAccum` and gravity-drops or calls `lockPiece()`, then `draw()`.
 - `lockPiece()` = `merge()` → `clearLines()` → `spawn()`. `spawn()` calls `endGame()` if the new piece collides immediately.
 - Board cells are `0` or a color/piece index 1–7; `PIECES` and `COLORS` are indexed by the same number (index 0 is `null`).

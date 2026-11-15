@@ -244,6 +244,21 @@ kbd {
 .skills button:disabled { cursor: not-allowed; opacity: 0.5; }
 #energy { width: 100%; accent-color: var(--accent); }
 
+/* ---- Records locales ---- */
+.start-title { font-size: 28px; font-weight: 800; letter-spacing: 4px; color: var(--accent); }
+#start-btn, #name-form button, .records button {
+  background: var(--accent); color: var(--accent-text); border: none; border-radius: 6px;
+  padding: 8px 20px; font-weight: 700; cursor: pointer;
+}
+#start-btn { padding: 10px 28px; font-size: 14px; letter-spacing: 1px; }
+.records .reset-records { background: none; color: var(--text); border: 1px solid var(--border); padding: 4px 10px; font-size: 11px; }
+#name-form { display: flex; gap: 6px; }
+#name-input { width: 130px; padding: 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
+.records { font-family: 'Courier New', Courier, monospace; font-size: 13px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.records ol { margin: 0; padding-left: 24px; text-align: left; min-width: 180px; }
+.records li.me { color: var(--accent); font-weight: 800; }
+.records .stats { font-size: 11px; opacity: 0.8; }
+
 /* Paneles laterales: no deben ser más altos que el tablero */
 [hidden] { display: none !important; }
 #next-canvas, #hold-canvas, #peek-canvas { width: 96px; height: auto; }

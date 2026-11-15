@@ -133,6 +133,8 @@ function clearLines() {
       r++;
     }
   }
+  combo = cleared ? combo + 1 : 0;
+  maxCombo = Math.max(maxCombo, combo);
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
@@ -306,13 +308,87 @@ function useSkill(i) {
   draw();
 }
 
+// ---- Records locales (localStorage: `records` = top 5 [{name, score}], `recordStats` = {combo, lines}) ----
+const MAX_RECORDS = 5;
+const nameForm = document.getElementById('name-form');
+const nameInput = document.getElementById('name-input');
+const recordsOver = document.getElementById('records-over');
+const recordsStart = document.getElementById('records-start');
+const startOverlay = document.getElementById('start-overlay');
+let combo = 0, maxCombo = 0;
+
+function loadJSON(key, fallback) {
+  try {
+    const v = JSON.parse(localStorage.getItem(key));
+    return v ?? fallback;
+  } catch (e) { return fallback; }
+}
+function saveJSON(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) { /* ignorar */ } }
+const loadRecords = () => {
+  const r = loadJSON('records', []);
+  return Array.isArray(r) ? r.filter(x => x && typeof x.score === 'number' && typeof x.name === 'string').slice(0, MAX_RECORDS) : [];
+};
+const loadStats = () => {
+  const s = loadJSON('recordStats', {});
+  return { combo: Number(s.combo) || 0, lines: Number(s.lines) || 0 };
+};
+
+// Rellena `box` con la tabla; `hi` = índice a resaltar. Todo con textContent.
+function renderRecords(box, hi = -1) {
+  const recs = loadRecords(), st = loadStats();
+  box.replaceChildren();
+  const ol = document.createElement('ol');
+  if (!recs.length) ol.textContent = 'Sin records todavía';
+  recs.forEach((r, i) => {
+    const li = document.createElement('li');
+    li.textContent = `${r.name} — ${r.score.toLocaleString()}`;
+    if (i === hi) li.className = 'me';
+    ol.append(li);
+  });
+  const stats = document.createElement('div');
+  stats.className = 'stats';
+  stats.textContent = `Mejor combo: ${st.combo} · Líneas máx.: ${st.lines}`;
+  const reset = document.createElement('button');
+  reset.type = 'button';
+  reset.className = 'reset-records';
+  reset.textContent = 'Resetear records';
+  reset.addEventListener('click', () => {
+    try { localStorage.removeItem('records'); localStorage.removeItem('recordStats'); } catch (e) { /* ignorar */ }
+    renderRecords(box);
+  });
+  box.append(ol, stats, reset);
+}
+
 function endGame() {
   gameOver = true;
   cancelAnimationFrame(animId);
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
+  const st = loadStats();
+  saveJSON('recordStats', { combo: Math.max(st.combo, maxCombo), lines: Math.max(st.lines, lines) });
+  const recs = loadRecords();
+  const qualifies = score > 0 && (recs.length < MAX_RECORDS || score > recs[recs.length - 1].score);
+  nameForm.hidden = !qualifies;
+  renderRecords(recordsOver);
+  recordsOver.hidden = false;
   overlay.classList.remove('hidden');
+  if (qualifies) nameInput.focus();
 }
+
+nameForm.addEventListener('submit', e => {
+  e.preventDefault();
+  const name = nameInput.value.trim().slice(0, 12) || 'Anónimo';
+  const recs = loadRecords();
+  const entry = { name, score };
+  recs.push(entry);
+  recs.sort((a, b) => b.score - a.score); // estable: empates quedan tras el existente
+  const top = recs.slice(0, MAX_RECORDS);
+  saveJSON('records', top);
+  nameInput.value = '';
+  nameForm.hidden = true;
+  renderRecords(recordsOver, top.indexOf(entry));
+  restartBtn.focus();
+});
 
 function togglePause() {
   if (gameOver) return;
@@ -357,6 +433,9 @@ function init() {
   dropAccum = 0;
   lastTime = performance.now();
   energy = 0;
+  combo = maxCombo = 0;
+  nameForm.hidden = recordsOver.hidden = true;
+  startOverlay.classList.add('hidden');
   held = lastLock = null;
   peekLeft = slowLeft = 0;
   queue = Array.from({ length: QUEUE_LEN }, () => randomPiece());
@@ -369,6 +448,7 @@ function init() {
 }
 
 document.addEventListener('keydown', e => {
+  if (!current) return; // aún no se pulsó "Jugar"
   if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); return; }
   if (paused || gameOver) return;
   if (e.code >= 'Digit1' && e.code <= 'Digit5') { useSkill(+e.code.slice(5) - 1); return; }
@@ -419,4 +499,5 @@ themeToggle.addEventListener('click', () => {
 
 applyTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark');
 
-init();
+renderRecords(recordsStart);
+document.getElementById('start-btn').addEventListener('click', init);
