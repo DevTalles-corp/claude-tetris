@@ -19,8 +19,6 @@
     <button id="theme-toggle" type="button" aria-label="Cambiar a modo claro" title="Cambiar a modo claro">☀️</button>
     <h1 class="title">Tetris</h1>
     <div class="game-container">
-      <canvas id="board" width="300" height="600" role="img" aria-label="Tablero de juego"></canvas>
-
       <aside class="panel">
         <div class="panel-section">
           <span class="label">SCORE</span>
@@ -33,21 +31,6 @@
         <div class="panel-section">
           <span class="label">LEVEL</span>
           <span class="value" id="level">1</span>
-        </div>
-
-        <div class="panel-section">
-          <span class="label">NEXT</span>
-          <canvas id="next-canvas" width="120" height="120" role="img" aria-label="Siguiente pieza"></canvas>
-        </div>
-
-        <div class="panel-section">
-          <span class="label">HOLD</span>
-          <canvas id="hold-canvas" width="120" height="120" role="img" aria-label="Pieza reservada"></canvas>
-        </div>
-
-        <div class="panel-section" id="peek-section" hidden>
-          <span class="label">PRÓXIMAS 5</span>
-          <canvas id="peek-canvas" width="120" height="180" role="img" aria-label="Siguientes cinco piezas"></canvas>
         </div>
 
         <div class="panel-section skills">
@@ -70,6 +53,25 @@
             <li><kbd>P</kbd> pausa</li>
             <li><kbd>1</kbd>–<kbd>5</kbd> habilidad</li>
           </ul>
+        </div>
+      </aside>
+
+      <canvas id="board" width="300" height="600" role="img" aria-label="Tablero de juego"></canvas>
+
+      <aside class="panel">
+        <div class="panel-section">
+          <span class="label">NEXT</span>
+          <canvas id="next-canvas" width="120" height="120" role="img" aria-label="Siguiente pieza"></canvas>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">HOLD</span>
+          <canvas id="hold-canvas" width="120" height="120" role="img" aria-label="Pieza reservada"></canvas>
+        </div>
+
+        <div class="panel-section" id="peek-section" hidden>
+          <span class="label">PRÓXIMAS 5</span>
+          <canvas id="peek-canvas" width="120" height="180" role="img" aria-label="Siguientes cinco piezas"></canvas>
         </div>
       </aside>
     </div>
