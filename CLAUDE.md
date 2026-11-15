@@ -24,6 +24,8 @@ Three files: `index.html` (DOM + two canvases), `style.css`, and `game.js` (all 
 
 ## Gotchas
 
+- Pausa (P/Escape) muestra `#pause-menu` (no `#overlay`, que es solo game over). `startLevel` (selector 1–10) lo usa `init()`; `clearLines()` calcula `level = startLevel + floor(lines/10)`.
+
 - Canvas size is hardcoded in `index.html` (`#board` 300×600; `#next-canvas`/`#hold-canvas` 120×120 y `#peek-canvas` 120×180, mostrados a 96px de ancho por CSS). If you change `COLS`, `ROWS` or `BLOCK` in `game.js`, update the canvas `width`/`height` to `COLS*BLOCK` × `ROWS*BLOCK`.
 - Rotation uses simple horizontal kicks only (`[0,-1,1,-2,2]` in `tryRotate`), not SRS.
 - Scoring: `LINE_SCORES[cleared] * level`; soft drop +1/cell, hard drop +2/cell. Fall interval is `max(100, 1000 - (level-1)*90)` ms, recomputed in `clearLines()`.

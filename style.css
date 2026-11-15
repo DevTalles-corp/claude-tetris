@@ -167,6 +167,11 @@ kbd {
   align-items: center;
 }
 
+.pause-title { font-size: 28px; font-weight: 800; letter-spacing: 4px; }
+#pause-menu button, #pause-menu select { padding: 8px 18px; font: inherit; }
+#pause-menu ul { list-style: none; padding: 0; margin: 0; text-align: left; }
+#pause-menu label { display: flex; gap: 8px; align-items: center; }
+
 #overlay-title {
   font-size: 28px;
   font-weight: 800;
