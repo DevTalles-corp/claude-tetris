@@ -1,8 +1,10 @@
+//Agergo este comentario
 'use strict';
 
 const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
+const timeEl = document.getElementById('time');
 
 const COLORS = [
   null,
@@ -17,13 +19,41 @@ const COLORS = [
 
 const PIECES = [
   null,
-  [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
-  [[2,2],[2,2]],                               // O
-  [[0,3,0],[3,3,3],[0,0,0]],                  // T
-  [[0,4,4],[4,4,0],[0,0,0]],                  // S
-  [[5,5,0],[0,5,5],[0,0,0]],                  // Z
-  [[6,0,0],[6,6,6],[0,0,0]],                  // J
-  [[0,0,7],[7,7,7],[0,0,0]],                  // L
+  [
+    [0, 0, 0, 0],
+    [1, 1, 1, 1],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+  ], // I
+  [
+    [2, 2],
+    [2, 2],
+  ], // O
+  [
+    [0, 3, 0],
+    [3, 3, 3],
+    [0, 0, 0],
+  ], // T
+  [
+    [0, 4, 4],
+    [4, 4, 0],
+    [0, 0, 0],
+  ], // S
+  [
+    [5, 5, 0],
+    [0, 5, 5],
+    [0, 0, 0],
+  ], // Z
+  [
+    [6, 0, 0],
+    [6, 6, 6],
+    [0, 0, 0],
+  ], // J
+  [
+    [0, 0, 7],
+    [7, 7, 7],
+    [0, 0, 0],
+  ], // L
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
@@ -40,7 +70,19 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let board,
+  current,
+  next,
+  score,
+  lines,
+  level,
+  paused,
+  gameOver,
+  lastTime,
+  dropAccum,
+  dropInterval,
+  animId,
+  elapsed;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -48,8 +90,13 @@ function createBoard() {
 
 function randomPiece() {
   const type = Math.floor(Math.random() * 7) + 1;
-  const shape = PIECES[type].map(row => [...row]);
-  return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
+  const shape = PIECES[type].map((row) => [...row]);
+  return {
+    type,
+    shape,
+    x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2),
+    y: 0,
+  };
 }
 
 function collide(shape, ox, oy) {
@@ -66,11 +113,11 @@ function collide(shape, ox, oy) {
 }
 
 function rotateCW(shape) {
-  const rows = shape.length, cols = shape[0].length;
+  const rows = shape.length,
+    cols = shape[0].length;
   const result = Array.from({ length: cols }, () => new Array(rows).fill(0));
   for (let r = 0; r < rows; r++)
-    for (let c = 0; c < cols; c++)
-      result[c][rows - 1 - r] = shape[r][c];
+    for (let c = 0; c < cols; c++) result[c][rows - 1 - r] = shape[r][c];
   return result;
 }
 
@@ -96,7 +143,7 @@ function merge() {
 function clearLines() {
   let cleared = 0;
   for (let r = ROWS - 1; r >= 0; r--) {
-    if (board[r].every(v => v !== 0)) {
+    if (board[r].every((v) => v !== 0)) {
       board.splice(r, 1);
       board.unshift(new Array(COLS).fill(0));
       cleared++;
@@ -150,6 +197,13 @@ function spawn() {
   drawNext();
 }
 
+function formatTime(ms) {
+  const total = Math.floor(ms / 1000);
+  const m = String(Math.floor(total / 60)).padStart(2, '0');
+  const s = String(total % 60).padStart(2, '0');
+  return `${m}:${s}`;
+}
+
 function updateHUD() {
   scoreEl.textContent = score.toLocaleString();
   linesEl.textContent = lines;
@@ -191,8 +245,7 @@ function draw() {
 
   // board
   for (let r = 0; r < ROWS; r++)
-    for (let c = 0; c < COLS; c++)
-      drawBlock(ctx, c, r, board[r][c], BLOCK);
+    for (let c = 0; c < COLS; c++) drawBlock(ctx, c, r, board[r][c], BLOCK);
 
   // ghost
   const gy = ghostY();
@@ -224,6 +277,7 @@ function endGame() {
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   overlay.classList.remove('hidden');
+  overlayScore.textContent = `Puntuación: ${score.toLocaleString()} · Tiempo: ${formatTime(elapsed)}`;
 }
 
 function togglePause() {
@@ -241,19 +295,26 @@ function togglePause() {
 }
 
 function loop(ts) {
-  const dt = ts - lastTime;
+  const dt = Math.min(ts - lastTime, 100); // evita saltos al volver de otra pestaña
   lastTime = ts;
   dropAccum += dt;
+
+  const prevSec = Math.floor(elapsed / 1000);
+  elapsed += dt;
+  if (Math.floor(elapsed / 1000) !== prevSec) {
+    timeEl.textContent = formatTime(elapsed); // solo toca el DOM una vez por segundo
+  }
   if (dropAccum >= dropInterval) {
-    dropAccum = 0;
+    dropAccum -= dropInterval;
     if (!collide(current.shape, current.x, current.y + 1)) {
       current.y++;
     } else {
       lockPiece();
     }
   }
+
   draw();
-  animId = requestAnimationFrame(loop);
+  if (!gameOver && !paused) animId = requestAnimationFrame(loop);
 }
 
 function init() {
@@ -272,10 +333,15 @@ function init() {
   overlay.classList.add('hidden');
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
+  elapsed = 0;
+  timeEl.textContent = '00:00';
 }
 
-document.addEventListener('keydown', e => {
-  if (e.code === 'KeyP') { togglePause(); return; }
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyP') {
+    togglePause();
+    return;
+  }
   if (paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
