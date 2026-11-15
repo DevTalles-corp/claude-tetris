@@ -41,6 +41,11 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const holdCanvas = document.getElementById('hold-canvas');
+const peekCanvas = document.getElementById('peek-canvas');
+const peekSection = document.getElementById('peek-section');
+const energyEl = document.getElementById('energy');
+const skillBtns = document.querySelectorAll('[data-skill]');
 const themeToggle = document.getElementById('theme-toggle');
 
 let gridColor = '#22222e';
@@ -55,6 +60,8 @@ function applyTheme(theme) {
   gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim() || gridColor;
 }
 
+const ENERGY_PER_LINE = 25, ENERGY_MAX = 100, SLOW_MS = 10000, QUEUE_LEN = 4;
+let energy, queue, held, lastLock, peekLeft, slowLeft;
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
 function createBoard() {
@@ -62,7 +69,10 @@ function createBoard() {
 }
 
 function randomPiece() {
-  const type = Math.floor(Math.random() * (PIECES.length - 1)) + 1;
+  return makePiece(Math.floor(Math.random() * (PIECES.length - 1)) + 1);
+}
+
+function makePiece(type) {
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
 }
@@ -123,6 +133,7 @@ function clearLines() {
     score += (LINE_SCORES[cleared] || 0) * level;
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    energy = Math.min(ENERGY_MAX, energy + cleared * ENERGY_PER_LINE);
     updateHUD();
   }
 }
@@ -151,6 +162,7 @@ function softDrop() {
 }
 
 function lockPiece() {
+  lastLock = { board: board.map(r => [...r]), type: current.type, score, lines, level };
   merge();
   clearLines();
   spawn();
@@ -158,7 +170,9 @@ function lockPiece() {
 
 function spawn() {
   current = next;
-  next = randomPiece();
+  next = queue.shift();
+  queue.push(randomPiece());
+  if (peekLeft > 0) peekLeft--;
   if (collide(current.shape, current.x, current.y)) {
     endGame();
   }
@@ -169,6 +183,8 @@ function updateHUD() {
   scoreEl.textContent = score.toLocaleString();
   linesEl.textContent = lines;
   levelEl.textContent = level;
+  energyEl.value = energy;
+  skillBtns.forEach(b => { b.disabled = energy < ENERGY_MAX; });
 }
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
@@ -222,15 +238,67 @@ function draw() {
       drawBlock(ctx, current.x + c, current.y + r, current.shape[r][c], BLOCK);
 }
 
-function drawNext() {
-  const NB = 30;
-  nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-  const shape = next.shape;
+// Dibuja una pieza centrada en un recuadro de 4x4 bloques, desplazado `slot` recuadros hacia abajo.
+function drawMini(context, shape, size, slot = 0) {
   const offX = Math.floor((4 - shape[0].length) / 2);
-  const offY = Math.floor((4 - shape.length) / 2);
+  const offY = Math.floor((4 - shape.length) / 2) + slot * 4;
   for (let r = 0; r < shape.length; r++)
     for (let c = 0; c < shape[r].length; c++)
-      drawBlock(nextCtx, offX + c, offY + r, shape[r][c], NB);
+      drawBlock(context, offX + c, offY + r, shape[r][c], size);
+}
+
+function drawNext() {
+  nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+  drawMini(nextCtx, next.shape, 30);
+  const hctx = holdCanvas.getContext('2d');
+  hctx.clearRect(0, 0, holdCanvas.width, holdCanvas.height);
+  if (held) drawMini(hctx, held.shape, 30);
+  peekSection.hidden = peekLeft <= 0;
+  if (peekLeft > 0) {
+    const pctx = peekCanvas.getContext('2d');
+    pctx.clearRect(0, 0, peekCanvas.width, peekCanvas.height);
+    [next, ...queue].forEach((p, i) => drawMini(pctx, p.shape, 10, i));
+  }
+}
+
+// Habilidades: devuelven false si no se pueden aplicar (no se gasta energía).
+const SKILLS = [
+  () => { peekLeft = 6; drawNext(); },
+  () => {
+    const p = randomPiece();
+    p.y = current.y;
+    if (collide(p.shape, p.x, p.y)) return false;
+    current = p;
+  },
+  () => { slowLeft = SLOW_MS; },
+  () => {
+    if (!lastLock) return false;
+    board = lastLock.board;
+    ({ score, lines, level } = lastLock);
+    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    queue.unshift(next);
+    queue.pop();
+    next = current;
+    current = makePiece(lastLock.type);
+    lastLock = null;
+    drawNext();
+  },
+  () => {
+    if (!held) { held = current; spawn(); return; }
+    const p = makePiece(held.type);
+    if (collide(p.shape, p.x, p.y)) return false;
+    held = makePiece(current.type);
+    current = p;
+    drawNext();
+  },
+];
+
+function useSkill(i) {
+  if (paused || gameOver || energy < ENERGY_MAX) return;
+  if (SKILLS[i]() === false) return;
+  energy = 0;
+  updateHUD();
+  draw();
 }
 
 function endGame() {
@@ -259,7 +327,8 @@ function loop(ts) {
   const dt = ts - lastTime;
   lastTime = ts;
   dropAccum += dt;
-  if (dropAccum >= dropInterval) {
+  slowLeft = Math.max(0, slowLeft - dt);
+  if (dropAccum >= dropInterval * (slowLeft > 0 ? 2.5 : 1)) {
     dropAccum = 0;
     if (!collide(current.shape, current.x, current.y + 1)) {
       current.y++;
@@ -282,6 +351,10 @@ function init() {
   dropInterval = 1000;
   dropAccum = 0;
   lastTime = performance.now();
+  energy = 0;
+  held = lastLock = null;
+  peekLeft = slowLeft = 0;
+  queue = Array.from({ length: QUEUE_LEN }, randomPiece);
   next = randomPiece();
   spawn();
   updateHUD();
@@ -293,6 +366,7 @@ function init() {
 document.addEventListener('keydown', e => {
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
+  if (e.code >= 'Digit1' && e.code <= 'Digit5') { useSkill(+e.code.slice(5) - 1); return; }
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
@@ -315,6 +389,7 @@ document.addEventListener('keydown', e => {
   updateHUD();
 });
 
+skillBtns.forEach(b => b.addEventListener('click', () => { useSkill(+b.dataset.skill); b.blur(); }));
 restartBtn.addEventListener('click', init);
 
 themeToggle.addEventListener('click', () => {

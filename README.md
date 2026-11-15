@@ -86,6 +86,9 @@ Después abre `http://localhost:8000` en el navegador.
 | `↓`       | Soft drop (bajar más rápido)      |
 | `Espacio` | Hard drop (caída instantánea)     |
 | `P`       | Pausar / reanudar                 |
+| `1`–`5`   | Habilidad (con la barra de energía llena) |
+
+**Habilidades**: cada línea limpiada da 25 de energía (máx. 100). Con la barra llena, elige una: 1 ver las siguientes 5 piezas, 2 cambiar la pieza actual por otra aleatoria, 3 ralentizar la caída 10 s, 4 deshacer la última colocación, 5 reservar (hold). Usarla vacía la barra.
 
 El botón ☀️/🌙 (clic) cambia entre modo oscuro y claro.
 
