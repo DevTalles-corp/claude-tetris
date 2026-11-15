@@ -78,6 +78,16 @@ jobs:
             ... contenido ...
             `EOF`
 
+            Formato: el comentario DEBE estar escrito en Markdown compatible con GitHub
+            (GitHub Flavored Markdown) para que se renderice correctamente en el issue:
+            - Usa encabezados (`##`, `###`), listas (`-` o `1.`), **negritas** y `código en línea`.
+            - Para fragmentos de código usa bloques con triple backtick e indica el lenguaje
+              (p. ej. ```js ... ```).
+            - Puedes usar tablas, listas de tareas (`- [ ]`) y enlaces a líneas del repo
+              (`https://github.com/${{ github.repository }}/blob/${{ github.sha }}/game.js#L10-L20`).
+            - Deja una línea en blanco entre bloques (encabezados, párrafos, listas, código).
+            - No uses HTML salvo el comentario marcador inicial.
+
             El comentario debe empezar con la línea `<!-- claude-triage -->` y seguir esta plantilla:
 
             ## 🔍 Diagnóstico automático
