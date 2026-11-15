@@ -268,7 +268,8 @@ function loop(ts) {
     }
   }
   draw();
-  animId = requestAnimationFrame(loop);
+  // lockPiece() puede terminar el juego dentro de este frame; no reprogramar el loop
+  if (!gameOver) animId = requestAnimationFrame(loop);
 }
 
 function init() {
