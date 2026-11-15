@@ -69,6 +69,24 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const themeBtn = document.getElementById('theme-toggle');
+
+let gridColor = '#22222e';
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  gridColor =
+    getComputedStyle(document.documentElement).getPropertyValue('--grid').trim() || gridColor;
+  themeBtn.textContent = theme === 'light' ? '🌙 Modo oscuro' : '☀ Modo claro';
+  try {
+    localStorage.setItem('theme', theme);
+  } catch (e) {}
+  // drawNext no corre por frame; draw también se repinta si el bucle está detenido
+  if (typeof next !== 'undefined' && next && current) {
+    drawNext();
+    draw();
+  }
+}
 
 let board,
   current,
@@ -223,7 +241,7 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = gridColor;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -367,4 +385,15 @@ document.addEventListener('keydown', (e) => {
 
 restartBtn.addEventListener('click', init);
 
+themeBtn.addEventListener('click', () => {
+  applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
+  themeBtn.blur(); // evita que Space active el botón
+});
+
+let savedTheme = null;
+try {
+  savedTheme = localStorage.getItem('theme');
+} catch (e) {}
+
 init();
+applyTheme(savedTheme === 'light' ? 'light' : 'dark');
