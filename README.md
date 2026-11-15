@@ -43,6 +43,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Pausa** y **Game Over** con opción de reinicio.
 - **Pantalla de inicio** con botón "Jugar" y **records locales**: top 5 (nombre de hasta 12 caracteres + puntuación), mejor combo (limpiezas de líneas en piezas consecutivas) y líneas máximas, guardados en `localStorage` (`records`, `recordStats`). Al hacer game over con una puntuación que entra al top se pide el nombre y la fila se resalta; un botón permite resetear los records.
+- **Skins**: selector arriba a la izquierda con Retro (plano), Neon (fondo negro y brillo), Pastel (bordes redondeados) y Pixel art (textura). Cambia sin recargar, es independiente del tema y se guarda en `localStorage` (clave `skin`).
 - **Modo oscuro / claro**: oscuro por defecto; un botón con icono (☀️/🌙) en la esquina superior derecha alterna el tema y la elección se guarda en `localStorage`.
 
 ---
