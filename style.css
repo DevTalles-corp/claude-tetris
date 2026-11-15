@@ -233,6 +233,33 @@ kbd {
   outline-offset: 2px;
 }
 
+/* Skins: Neon fuerza fondo negro en ambos temas */
+[data-skin="neon"] {
+  --bg: #000;
+  --text: #e0f7ff;
+  --surface: #05050a;
+  --border: #1b2a4a;
+  --grid: #101a2e;
+  --label: #6a8ab0;
+  --muted: #8fb0d0;
+  --overlay-bg: rgba(0, 0, 0, 0.8);
+}
+
+#skin {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  z-index: 10;
+  height: 36px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 6px;
+  font: inherit;
+  font-size: 13px;
+}
+
 #hold-canvas, #peek-canvas {
   display: block;
   border: 1px solid var(--border);

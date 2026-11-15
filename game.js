@@ -47,6 +47,7 @@ const peekSection = document.getElementById('peek-section');
 const energyEl = document.getElementById('energy');
 const skillBtns = document.querySelectorAll('[data-skill]');
 const themeToggle = document.getElementById('theme-toggle');
+const skinSelect = document.getElementById('skin');
 
 let gridColor = '#22222e';
 
@@ -194,16 +195,75 @@ function updateHUD() {
   skillBtns.forEach(b => { b.disabled = energy < ENERGY_MAX; });
 }
 
+// Skins: paleta (misma indexación que COLORS) + función de dibujo de bloque.
+const rgba = (hex, a) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`;
+};
+const SKINS = {
+  retro: {
+    colors: COLORS,
+    draw(context, px, py, s, color) {
+      context.fillStyle = color;
+      context.fillRect(px + 1, py + 1, s - 2, s - 2);
+      context.fillStyle = 'rgba(255,255,255,0.12)';
+      context.fillRect(px + 1, py + 1, s - 2, 4);
+    },
+  },
+  neon: {
+    colors: [null, '#00f0ff', '#fff200', '#d400ff', '#39ff14', '#ff2a4d', '#3d7bff', '#ff8c00', '#ff3df0'],
+    draw(context, px, py, s, color) {
+      context.shadowColor = color;
+      context.shadowBlur = 12;
+      context.strokeStyle = color;
+      context.lineWidth = 2;
+      context.strokeRect(px + 3, py + 3, s - 6, s - 6);
+      context.fillStyle = rgba(color, 0.35);
+      context.fillRect(px + 3, py + 3, s - 6, s - 6);
+      context.shadowBlur = 0;
+    },
+  },
+  pastel: {
+    colors: [null, '#a8e6ef', '#fff1b8', '#d9b8e6', '#bfe8c4', '#f4b8b8', '#bcd2f7', '#fcd5a8', '#f7bcd0'],
+    draw(context, px, py, s, color) {
+      context.fillStyle = color;
+      context.beginPath();
+      context.roundRect(px + 1, py + 1, s - 2, s - 2, s * 0.3);
+      context.fill();
+      context.fillStyle = 'rgba(255,255,255,0.45)';
+      context.beginPath();
+      context.roundRect(px + s * 0.2, py + s * 0.15, s * 0.4, s * 0.12, s * 0.06);
+      context.fill();
+    },
+  },
+  pixel: {
+    colors: COLORS,
+    draw(context, px, py, s, color) {
+      context.fillStyle = color;
+      context.fillRect(px, py, s, s);
+      const u = s / 6; // rejilla de 6x6 "píxeles"
+      context.fillStyle = 'rgba(255,255,255,0.3)';
+      context.fillRect(px, py, s, u);
+      context.fillRect(px, py, u, s);
+      context.fillStyle = 'rgba(0,0,0,0.3)';
+      context.fillRect(px, py + s - u, s, u);
+      context.fillRect(px + s - u, py, u, s);
+      context.fillStyle = 'rgba(0,0,0,0.18)';
+      context.fillRect(px + 2 * u, py + 2 * u, u, u);
+      context.fillRect(px + 3 * u, py + 3 * u, u, u);
+      context.fillStyle = 'rgba(255,255,255,0.25)';
+      context.fillRect(px + 3 * u, py + 2 * u, u, u);
+    },
+  },
+};
+let skin = SKINS[document.documentElement.dataset.skin] || SKINS.retro;
+
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  skin.draw(context, x * size, y * size, size, skin.colors[colorIndex]);
   context.globalAlpha = 1;
+  context.shadowBlur = 0;
 }
 
 function drawGrid() {
@@ -495,6 +555,17 @@ themeToggle.addEventListener('click', () => {
   try { localStorage.setItem('theme', theme); } catch (e) { /* ignorar */ }
   themeToggle.blur(); // evita que Espacio/Enter reactive el botón
   if (board && current) { draw(); drawNext(); } // redibuja en pausa/game over
+});
+
+skinSelect.value = document.documentElement.dataset.skin;
+skinSelect.addEventListener('change', () => {
+  const name = SKINS[skinSelect.value] ? skinSelect.value : 'retro';
+  skin = SKINS[name];
+  document.documentElement.dataset.skin = name;
+  applyTheme(document.documentElement.dataset.theme); // recachea gridColor
+  try { localStorage.setItem('skin', name); } catch (e) { /* ignorar */ }
+  skinSelect.blur(); // evita que flechas/Espacio cambien el select
+  if (board && current) { draw(); drawNext(); }
 });
 
 applyTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark');

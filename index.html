@@ -12,10 +12,24 @@
       document.documentElement.dataset.theme = 'dark';
     }
   </script>
+  <script>
+    try {
+      const s = localStorage.getItem('skin');
+      document.documentElement.dataset.skin = ['neon', 'pastel', 'pixel'].includes(s) ? s : 'retro';
+    } catch (e) {
+      document.documentElement.dataset.skin = 'retro';
+    }
+  </script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="wrapper">
+    <select id="skin" aria-label="Skin">
+      <option value="retro">Retro</option>
+      <option value="neon">Neon</option>
+      <option value="pastel">Pastel</option>
+      <option value="pixel">Pixel art</option>
+    </select>
     <button id="theme-toggle" type="button" aria-label="Cambiar a modo claro" title="Cambiar a modo claro">☀️</button>
     <h1 class="title">Tetris</h1>
     <div class="game-container">
