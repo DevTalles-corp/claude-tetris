@@ -4,10 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme =
+        localStorage.getItem('theme') === 'light' ? 'light' : 'dark';
+    } catch (e) {
+      document.documentElement.dataset.theme = 'dark';
+    }
+  </script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="wrapper">
+    <button id="theme-toggle" type="button" aria-label="Cambiar a modo claro" title="Cambiar a modo claro">☀️</button>
     <h1 class="title">Tetris</h1>
     <div class="game-container">
       <canvas id="board" width="300" height="600" role="img" aria-label="Tablero de juego"></canvas>
