@@ -62,6 +62,7 @@ function applyTheme(theme) {
 
 const ENERGY_PER_LINE = 25, ENERGY_MAX = 100, SLOW_MS = 10000, QUEUE_LEN = 4;
 let energy, queue, held, lastLock, peekLeft, slowLeft;
+let startLevel = 1;
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
 function createBoard() {
@@ -135,7 +136,7 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
+    level = startLevel + Math.floor(lines / 10);
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     energy = Math.min(ENERGY_MAX, energy + cleared * ENERGY_PER_LINE);
     updateHUD();
@@ -321,10 +322,9 @@ function togglePause() {
     loop(lastTime);
   } else {
     cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
   }
+  pauseMenu.hidden = !paused;
+  if (!paused) document.activeElement.blur();
 }
 
 function loop(ts) {
@@ -349,10 +349,11 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  level = startLevel;
   paused = false;
+  pauseMenu.hidden = true;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   dropAccum = 0;
   lastTime = performance.now();
   energy = 0;
@@ -368,7 +369,7 @@ function init() {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.code === 'KeyP') { togglePause(); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); return; }
   if (paused || gameOver) return;
   if (e.code >= 'Digit1' && e.code <= 'Digit5') { useSkill(+e.code.slice(5) - 1); return; }
   switch (e.code) {
@@ -395,6 +396,18 @@ document.addEventListener('keydown', e => {
 
 skillBtns.forEach(b => b.addEventListener('click', () => { useSkill(+b.dataset.skill); b.blur(); }));
 restartBtn.addEventListener('click', init);
+
+// ---- Menú de pausa ----
+const pauseMenu = document.getElementById('pause-menu');
+const pmLevel = document.getElementById('pm-level');
+for (let i = 1; i <= 10; i++) pmLevel.add(new Option(i, i));
+document.getElementById('pm-resume').addEventListener('click', togglePause);
+document.getElementById('pm-restart').addEventListener('click', () => { init(); document.activeElement.blur(); });
+document.getElementById('pm-controls').addEventListener('click', () => {
+  const l = document.getElementById('pm-controls-list'); l.hidden = !l.hidden;
+  document.activeElement.blur();
+});
+pmLevel.addEventListener('change', () => { startLevel = +pmLevel.value; pmLevel.blur(); });
 
 themeToggle.addEventListener('click', () => {
   const theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
