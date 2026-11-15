@@ -1,4 +1,4 @@
-//Agergo este comentario
+//Agergo este comentario y punto
 'use strict';
 
 const COLS = 10;
