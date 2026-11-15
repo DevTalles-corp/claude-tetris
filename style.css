@@ -238,3 +238,7 @@ kbd {
 .skills button { text-align: left; cursor: pointer; }
 .skills button:disabled { cursor: not-allowed; opacity: 0.5; }
 #energy { width: 100%; accent-color: var(--accent); }
+
+/* Paneles laterales: no deben ser más altos que el tablero */
+[hidden] { display: none !important; }
+#next-canvas, #hold-canvas, #peek-canvas { width: 96px; height: auto; }
