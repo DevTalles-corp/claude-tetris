@@ -28,3 +28,4 @@ Three files: `index.html` (DOM + two canvases), `style.css`, and `game.js` (all 
 - Rotation uses simple horizontal kicks only (`[0,-1,1,-2,2]` in `tryRotate`), not SRS.
 - Scoring: `LINE_SCORES[cleared] * level`; soft drop +1/cell, hard drop +2/cell. Fall interval is `max(100, 1000 - (level-1)*90)` ms, recomputed in `clearLines()`.
 - The README's "~300 lines" and docs describe `game.js`; keep it in sync if behavior changes (e.g. controls table, scoring).
+- Theming: colors are CSS variables in `style.css` (`:root` = dark default, `[data-theme="light"]`). An inline `<head>` script sets `data-theme` from `localStorage` before paint; `game.js` `applyTheme()` caches `--grid` into `gridColor` for `drawGrid()`. Piece `COLORS` are shared by both themes.
