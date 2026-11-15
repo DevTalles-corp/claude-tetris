@@ -227,3 +227,14 @@ kbd {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+#hold-canvas, #peek-canvas {
+  display: block;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.skills { display: flex; flex-direction: column; gap: 4px; }
+.skills button { text-align: left; cursor: pointer; }
+.skills button:disabled { cursor: not-allowed; opacity: 0.5; }
+#energy { width: 100%; accent-color: var(--accent); }
