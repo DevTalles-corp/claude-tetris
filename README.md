@@ -103,7 +103,8 @@ El juego se compone de tres archivos que cooperan:
 Define la estructura visual:
 
 - Un `<canvas id="board">` de **300 × 600** píxeles donde se renderiza el tablero.
-- Un panel lateral con `SCORE`, `LINES`, `LEVEL`, vista de la siguiente pieza y la lista de controles.
+- Un panel izquierdo con `SCORE`, `LINES`, `LEVEL`, las habilidades (barra de energía) y la lista de controles.
+- Un panel derecho con `NEXT`, `HOLD` y `PRÓXIMAS 5` (solo visible al usar esa habilidad). Ningún panel supera la altura del tablero, para evitar scroll.
 - Un overlay para los estados **PAUSA** y **GAME OVER**.
 
 ### 2. `style.css`
