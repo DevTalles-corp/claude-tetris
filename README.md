@@ -42,6 +42,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Sistema de puntuación** clásico de Tetris (100 / 300 / 500 / 800 multiplicado por nivel).
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Pausa** y **Game Over** con opción de reinicio.
+- **Tema Light / Dark**: inicia en Dark y se puede alternar con el botón de la esquina superior derecha, sin afectar la partida en curso. Los colores se definen como variables CSS en `style.css`.
 
 ---
 
