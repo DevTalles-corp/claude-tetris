@@ -40,7 +40,13 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 
+const BOMB_CHANCE = 0.12;   // probabilidad por pieza de ser bomba
+const BOMB_MIN_GAP = 5;     // mínimo de piezas entre bombas
+const EXPLOSION_MS = 450;
+
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let piecesSinceBomb = 0;
+let explosion = null;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -49,7 +55,38 @@ function createBoard() {
 function randomPiece() {
   const type = Math.floor(Math.random() * 7) + 1;
   const shape = PIECES[type].map(row => [...row]);
-  return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
+  piecesSinceBomb++;
+  let bomb = false;
+  if (piecesSinceBomb >= BOMB_MIN_GAP && Math.random() < BOMB_CHANCE) {
+    bomb = true;
+    piecesSinceBomb = 0;
+  }
+  return { type, shape, bomb, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
+}
+
+// Destruye el área 3x3 alrededor de cada bloque de la pieza (pieza + 1 celda de margen)
+function explode(piece) {
+  const cells = [];
+  let destroyed = 0;
+  for (let r = 0; r < piece.shape.length; r++) {
+    for (let c = 0; c < piece.shape[r].length; c++) {
+      if (!piece.shape[r][c]) continue;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const ny = piece.y + r + dy;
+          const nx = piece.x + c + dx;
+          if (ny < 0 || ny >= ROWS || nx < 0 || nx >= COLS) continue;
+          if (cells.some(p => p[0] === nx && p[1] === ny)) continue;
+          cells.push([nx, ny]);
+          if (board[ny][nx]) destroyed++;
+          board[ny][nx] = 0;
+        }
+      }
+    }
+  }
+  score += destroyed * 10 * level;
+  explosion = { cells, start: performance.now() };
+  updateHUD();
 }
 
 function collide(shape, ox, oy) {
@@ -137,6 +174,7 @@ function softDrop() {
 
 function lockPiece() {
   merge();
+  if (current.bomb) explode(current);
   clearLines();
   spawn();
 }
@@ -205,6 +243,54 @@ function draw() {
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       drawBlock(ctx, current.x + c, current.y + r, current.shape[r][c], BLOCK);
+
+  if (current.bomb) drawBombEffect();
+  drawExplosion();
+}
+
+// Efecto bomba: pulso focus in/out + destello con degradado de color rotativo
+function drawBombEffect() {
+  const t = performance.now();
+  const p = (Math.sin(t / 180) + 1) / 2;            // 0..1 (focus in/out)
+  const hue = (t / 6) % 360;
+  const inset = 1 + (1 - p) * 4;                    // el bloque "respira"
+  for (let r = 0; r < current.shape.length; r++) {
+    for (let c = 0; c < current.shape[r].length; c++) {
+      if (!current.shape[r][c]) continue;
+      const px = (current.x + c) * BLOCK;
+      const py = (current.y + r) * BLOCK;
+      const cx = px + BLOCK / 2, cy = py + BLOCK / 2;
+      // halo 3x3 (zona de explosión), desenfocado → enfocado
+      const halo = ctx.createRadialGradient(cx, cy, 2, cx, cy, BLOCK * (1.6 - 0.5 * p));
+      halo.addColorStop(0, `hsla(${hue}, 100%, 65%, ${0.55 * p + 0.15})`);
+      halo.addColorStop(0.5, `hsla(${(hue + 60) % 360}, 100%, 60%, ${0.3 * p + 0.05})`);
+      halo.addColorStop(1, `hsla(${(hue + 120) % 360}, 100%, 55%, 0)`);
+      ctx.fillStyle = halo;
+      ctx.fillRect(px - BLOCK, py - BLOCK, BLOCK * 3, BLOCK * 3);
+      // destello degradado sobre el bloque
+      const g = ctx.createLinearGradient(px, py, px + BLOCK, py + BLOCK);
+      g.addColorStop(0, `hsla(${hue}, 100%, 70%, ${0.35 + 0.5 * p})`);
+      g.addColorStop(1, `hsla(${(hue + 90) % 360}, 100%, 60%, ${0.15 + 0.4 * p})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(px + inset, py + inset, BLOCK - 2 * inset, BLOCK - 2 * inset);
+    }
+  }
+}
+
+function drawExplosion() {
+  if (!explosion) return;
+  const k = (performance.now() - explosion.start) / EXPLOSION_MS;
+  if (k >= 1) { explosion = null; return; }
+  const a = 1 - k;
+  for (const [x, y] of explosion.cells) {
+    const cx = x * BLOCK + BLOCK / 2, cy = y * BLOCK + BLOCK / 2;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, BLOCK * (0.6 + k));
+    g.addColorStop(0, `hsla(50, 100%, 85%, ${a})`);
+    g.addColorStop(0.5, `hsla(25, 100%, 55%, ${a * 0.7})`);
+    g.addColorStop(1, 'hsla(0, 100%, 50%, 0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x * BLOCK - 6, y * BLOCK - 6, BLOCK + 12, BLOCK + 12);
+  }
 }
 
 function drawNext() {
@@ -216,6 +302,13 @@ function drawNext() {
   for (let r = 0; r < shape.length; r++)
     for (let c = 0; c < shape[r].length; c++)
       drawBlock(nextCtx, offX + c, offY + r, shape[r][c], NB);
+  if (next.bomb) {
+    const g = nextCtx.createRadialGradient(60, 60, 5, 60, 60, 60);
+    g.addColorStop(0, 'hsla(50, 100%, 70%, 0.5)');
+    g.addColorStop(1, 'hsla(0, 100%, 55%, 0)');
+    nextCtx.fillStyle = g;
+    nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+  }
 }
 
 function endGame() {
@@ -268,6 +361,8 @@ function init() {
   dropInterval = 1000;
   dropAccum = 0;
   lastTime = performance.now();
+  piecesSinceBomb = 0;
+  explosion = null;
   next = randomPiece();
   spawn();
   updateHUD();
