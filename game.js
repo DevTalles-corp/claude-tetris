@@ -326,9 +326,12 @@ function loadJSON(key, fallback) {
 function saveJSON(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) { /* ignorar */ } }
 const loadRecords = () => {
   const r = loadJSON('records', []);
-  return Array.isArray(r) ? r.filter(x => x && typeof x.score === 'number').slice(0, MAX_RECORDS) : [];
+  return Array.isArray(r) ? r.filter(x => x && typeof x.score === 'number' && typeof x.name === 'string').slice(0, MAX_RECORDS) : [];
 };
-const loadStats = () => ({ combo: 0, lines: 0, ...loadJSON('recordStats', {}) });
+const loadStats = () => {
+  const s = loadJSON('recordStats', {});
+  return { combo: Number(s.combo) || 0, lines: Number(s.lines) || 0 };
+};
 
 // Rellena `box` con la tabla; `hi` = índice a resaltar. Todo con textContent.
 function renderRecords(box, hi = -1) {
