@@ -68,8 +68,12 @@ function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
 }
 
-function randomPiece() {
-  return makePiece(Math.floor(Math.random() * (PIECES.length - 1)) + 1);
+function randomPiece(exclude) {
+  // Con `exclude` sortea entre los demás tipos (nunca devuelve ese).
+  const n = PIECES.length - 1 - (exclude ? 1 : 0);
+  let type = Math.floor(Math.random() * n) + 1;
+  if (exclude && type >= exclude) type++;
+  return makePiece(type);
 }
 
 function makePiece(type) {
@@ -265,7 +269,7 @@ function drawNext() {
 const SKILLS = [
   () => { peekLeft = 6; drawNext(); },
   () => {
-    const p = randomPiece();
+    const p = randomPiece(current.type);
     p.y = current.y;
     if (collide(p.shape, p.x, p.y)) return false;
     current = p;
@@ -354,7 +358,7 @@ function init() {
   energy = 0;
   held = lastLock = null;
   peekLeft = slowLeft = 0;
-  queue = Array.from({ length: QUEUE_LEN }, randomPiece);
+  queue = Array.from({ length: QUEUE_LEN }, () => randomPiece());
   next = randomPiece();
   spawn();
   updateHUD();
