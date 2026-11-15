@@ -1,0 +1,111 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    # Evita re-analizar por acciones del propio bot y, en ediciones,
+    # solo corre si cambió el título o el cuerpo del issue.
+    if: |
+      github.actor != 'claude[bot]' &&
+      (github.event.action == 'opened' || github.event.changes.title || github.event.changes.body)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Asegurar labels del proyecto
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          create() { gh label create "$1" --color "$2" --description "$3" --repo "$REPO" --force; }
+          create "area:gameplay"   "1d76db" "Piezas, colisión, rotación, líneas, puntuación, niveles"
+          create "area:render"     "5319e7" "Canvas, dibujo del tablero, ghost, preview de la siguiente pieza"
+          create "area:controles"  "0e8a16" "Entrada de teclado y controles"
+          create "area:hud"        "fbca04" "Marcadores: puntos, líneas, nivel, tiempo"
+          create "area:ui"         "c5def5" "HTML/CSS, overlay, botones, layout"
+          create "prioridad:alta"  "b60205" "Rompe el juego o bloquea su uso"
+          create "prioridad:media" "d93f0b" "Afecta la experiencia pero hay forma de seguir jugando"
+          create "prioridad:baja"  "c2e0c6" "Detalle menor o mejora opcional"
+          create "necesita-info"   "d4c5f9" "Falta información para diagnosticar"
+
+      - name: Analizar issue con Claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--allowedTools "Read,Glob,Grep,Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*)"'
+          prompt: |
+            Eres el encargado de hacer el triage de issues del repositorio ${{ github.repository }},
+            un Tetris clásico en JavaScript vanilla + HTML5 Canvas + CSS.
+            Evento: issue ${{ github.event.action }} — issue #${{ github.event.issue.number }}.
+
+            Responde SIEMPRE en español. NO modifiques archivos, NO abras PRs y NO cierres el issue.
+
+            ## 1. Entender el issue y el código
+            - Lee el issue: `gh issue view ${{ github.event.issue.number }} --repo ${{ github.repository }} --json title,body,labels,author`
+            - Lee `CLAUDE.md` (arquitectura y constantes acopladas) y el código relevante
+              (`game.js`, `index.html`, `style.css`). Localiza las funciones concretas implicadas.
+
+            ## 2. Asignar labels
+            - Consulta los labels disponibles: `gh label list --repo ${{ github.repository }}`
+            - Usa SOLO labels existentes; no inventes nuevos. Asigna:
+              - Exactamente UN tipo: `bug`, `enhancement`, `documentation` o `question`.
+              - Una o más áreas: `area:gameplay`, `area:render`, `area:controles`, `area:hud`, `area:ui`.
+              - Exactamente UNA prioridad: `prioridad:alta`, `prioridad:media` o `prioridad:baja`.
+              - `necesita-info` si el issue no tiene datos suficientes para diagnosticar.
+              - `duplicate` / `invalid` solo si es evidente.
+            - Aplica con `gh issue edit ${{ github.event.issue.number }} --repo ${{ github.repository }} --add-label "..."`.
+            - Si el issue ya tenía labels de tipo/área/prioridad/necesita-info que ya no aplican
+              (por ejemplo tras una edición), quítalos con `--remove-label`.
+
+            ## 3. Publicar el diagnóstico
+            Publica (o actualiza, si ya existía) UN solo comentario con:
+            `gh issue comment ${{ github.event.issue.number }} --repo ${{ github.repository }} --edit-last --create-if-none --body-file - <<'EOF'`
+            ... contenido ...
+            `EOF`
+
+            El comentario debe empezar con la línea `<!-- claude-triage -->` y seguir esta plantilla:
+
+            ## 🔍 Diagnóstico automático
+
+            **Resumen:** el problema en 1–2 frases.
+
+            ### Clasificación
+            Tipo, área(s) y prioridad, con una breve justificación.
+
+            ### Archivos y funciones involucrados
+            Lista con rutas y funciones concretas (p. ej. `game.js` → `collide`, `tryRotate`, `clearLines`, `updateHUD`).
+
+            ### Causa probable / hipótesis
+            Explicación técnica basada en la lectura real del código (cita líneas cuando ayude).
+
+            ### Pasos para reproducir
+            Si aplica; si no se pueden deducir, indícalo.
+
+            ### Propuesta de solución
+            Pasos concretos para implementarla.
+
+            ### Riesgos y constantes acopladas
+            Lo que hay que mantener sincronizado según `CLAUDE.md` (p. ej. `COLS × BLOCK` vs tamaño del canvas,
+            `PIECES`/`COLORS`/`* 7` en `randomPiece()`, ids del DOM usados por `game.js`, nuevo estado en `init()`,
+            valores del HUD vía `updateHUD()`).
+
+            ### Preguntas abiertas
+            Información que falta del autor (si no falta nada, escribe "Ninguna").
+
+            ---
+            _Diagnóstico generado automáticamente por Claude. Revísalo antes de implementar._
