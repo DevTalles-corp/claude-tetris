@@ -4,13 +4,35 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
+  <script>
+    try {
+      document.documentElement.dataset.theme =
+        localStorage.getItem('theme') === 'light' ? 'light' : 'dark';
+    } catch (e) {
+      document.documentElement.dataset.theme = 'dark';
+    }
+  </script>
+  <script>
+    try {
+      const s = localStorage.getItem('skin');
+      document.documentElement.dataset.skin = ['neon', 'pastel', 'pixel'].includes(s) ? s : 'retro';
+    } catch (e) {
+      document.documentElement.dataset.skin = 'retro';
+    }
+  </script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="wrapper">
+    <select id="skin" aria-label="Skin">
+      <option value="retro">Retro</option>
+      <option value="neon">Neon</option>
+      <option value="pastel">Pastel</option>
+      <option value="pixel">Pixel art</option>
+    </select>
+    <button id="theme-toggle" type="button" aria-label="Cambiar a modo claro" title="Cambiar a modo claro">☀️</button>
+    <h1 class="title">Tetris</h1>
     <div class="game-container">
-      <canvas id="board" width="300" height="600"></canvas>
-
       <aside class="panel">
         <div class="panel-section">
           <span class="label">SCORE</span>
@@ -25,9 +47,14 @@
           <span class="value" id="level">1</span>
         </div>
 
-        <div class="panel-section">
-          <span class="label">NEXT</span>
-          <canvas id="next-canvas" width="120" height="120"></canvas>
+        <div class="panel-section skills">
+          <span class="label">ENERGÍA</span>
+          <progress id="energy" max="100" value="0" aria-label="Energía"></progress>
+          <button type="button" data-skill="0" disabled>1 · Ver 5 siguientes</button>
+          <button type="button" data-skill="1" disabled>2 · Cambiar pieza</button>
+          <button type="button" data-skill="2" disabled>3 · Ralentizar 10s</button>
+          <button type="button" data-skill="3" disabled>4 · Deshacer</button>
+          <button type="button" data-skill="4" disabled>5 · Reservar (hold)</button>
         </div>
 
         <div class="panel-section controls">
@@ -38,7 +65,27 @@
             <li><kbd>↓</kbd> bajar</li>
             <li><kbd>Space</kbd> caída</li>
             <li><kbd>P</kbd> pausa</li>
+            <li><kbd>1</kbd>–<kbd>5</kbd> habilidad</li>
           </ul>
+        </div>
+      </aside>
+
+      <canvas id="board" width="300" height="600" role="img" aria-label="Tablero de juego"></canvas>
+
+      <aside class="panel">
+        <div class="panel-section">
+          <span class="label">NEXT</span>
+          <canvas id="next-canvas" width="120" height="120" role="img" aria-label="Siguiente pieza"></canvas>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">HOLD</span>
+          <canvas id="hold-canvas" width="120" height="120" role="img" aria-label="Pieza reservada"></canvas>
+        </div>
+
+        <div class="panel-section" id="peek-section" hidden>
+          <span class="label">PRÓXIMAS 5</span>
+          <canvas id="peek-canvas" width="120" height="180" role="img" aria-label="Siguientes cinco piezas"></canvas>
         </div>
       </aside>
     </div>
@@ -47,7 +94,40 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <form id="name-form" hidden>
+          <input id="name-input" maxlength="12" placeholder="Tu nombre" aria-label="Tu nombre" autocomplete="off" required />
+          <button type="submit">Guardar</button>
+        </form>
+        <div id="records-over" class="records" hidden></div>
         <button id="restart-btn">Reiniciar</button>
+      </div>
+    </div>
+
+    <div id="pause-menu" class="overlay" role="dialog" aria-label="Menú de pausa" hidden>
+      <div class="overlay-box">
+        <p class="pause-title">PAUSA</p>
+        <button type="button" id="pm-resume">Reanudar</button>
+        <button type="button" id="pm-restart">Reiniciar</button>
+        <button type="button" id="pm-controls">Ver controles</button>
+        <ul id="pm-controls-list" hidden>
+          <li><kbd>←</kbd><kbd>→</kbd> mover</li>
+          <li><kbd>↑</kbd> / <kbd>X</kbd> rotar</li>
+          <li><kbd>↓</kbd> bajar</li>
+          <li><kbd>Space</kbd> caída</li>
+          <li><kbd>P</kbd> / <kbd>Esc</kbd> pausa</li>
+          <li><kbd>1</kbd>–<kbd>5</kbd> habilidad</li>
+        </ul>
+        <label>Nivel inicial
+          <select id="pm-level"></select>
+        </label>
+      </div>
+    </div>
+
+    <div id="start-overlay" class="overlay">
+      <div class="overlay-box">
+        <p class="start-title">TETRIS</p>
+        <div id="records-start" class="records"></div>
+        <button id="start-btn" type="button">Jugar</button>
       </div>
     </div>
   </div>

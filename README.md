@@ -34,7 +34,7 @@ Implementación del clásico **Tetris** en JavaScript vanilla, usando HTML5 Canv
 Es una versión jugable del Tetris clásico con todas las mecánicas que esperarías:
 
 - Tablero de **10 × 20** celdas.
-- Las **7 piezas estándar** (I, O, T, S, Z, J, L) con colores diferenciados.
+- Las **7 piezas estándar** (I, O, T, S, Z, J, L) más la pieza extra **U**, con colores diferenciados.
 - **Rotación** con _wall kicks_ básicos (pequeños desplazamientos para que la pieza pueda rotar pegada a la pared).
 - **Soft drop** (bajada acelerada) y **hard drop** (caída instantánea).
 - **Pieza fantasma** (_ghost piece_): muestra dónde aterrizará la pieza actual.
@@ -42,6 +42,9 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Sistema de puntuación** clásico de Tetris (100 / 300 / 500 / 800 multiplicado por nivel).
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Pausa** y **Game Over** con opción de reinicio.
+- **Pantalla de inicio** con botón "Jugar" y **records locales**: top 5 (nombre de hasta 12 caracteres + puntuación), mejor combo (limpiezas de líneas en piezas consecutivas) y líneas máximas, guardados en `localStorage` (`records`, `recordStats`). Al hacer game over con una puntuación que entra al top se pide el nombre y la fila se resalta; un botón permite resetear los records.
+- **Skins**: selector arriba a la izquierda con Retro (plano), Neon (fondo negro y brillo), Pastel (bordes redondeados) y Pixel art (textura). Cambia sin recargar, es independiente del tema y se guarda en `localStorage` (clave `skin`).
+- **Modo oscuro / claro**: oscuro por defecto; un botón con icono (☀️/🌙) en la esquina superior derecha alterna el tema y la elección se guarda en `localStorage`.
 
 ---
 
@@ -84,7 +87,14 @@ Después abre `http://localhost:8000` en el navegador.
 | `↑` o `X` | Rotar la pieza en sentido horario |
 | `↓`       | Soft drop (bajar más rápido)      |
 | `Espacio` | Hard drop (caída instantánea)     |
-| `P`       | Pausar / reanudar                 |
+| `P` / `Esc` | Pausar / reanudar (abre el menú de pausa) |
+| `1`–`5`   | Habilidad (con la barra de energía llena) |
+
+**Habilidades**: cada línea limpiada da 25 de energía (máx. 100). Con la barra llena, elige una: 1 ver las siguientes 5 piezas, 2 cambiar la pieza actual por otra aleatoria, 3 ralentizar la caída 10 s, 4 deshacer la última colocación, 5 reservar (hold). Usarla vacía la barra.
+
+**Menú de pausa**: Reanudar, Reiniciar, Ver controles y Nivel inicial (1–10, aplica a la siguiente partida/reinicio). Los controles del juego quedan bloqueados mientras está abierto.
+
+El botón ☀️/🌙 (clic) cambia entre modo oscuro y claro.
 
 ---
 
@@ -97,7 +107,8 @@ El juego se compone de tres archivos que cooperan:
 Define la estructura visual:
 
 - Un `<canvas id="board">` de **300 × 600** píxeles donde se renderiza el tablero.
-- Un panel lateral con `SCORE`, `LINES`, `LEVEL`, vista de la siguiente pieza y la lista de controles.
+- Un panel izquierdo con `SCORE`, `LINES`, `LEVEL`, las habilidades (barra de energía) y la lista de controles.
+- Un panel derecho con `NEXT`, `HOLD` y `PRÓXIMAS 5` (solo visible al usar esa habilidad). Ningún panel supera la altura del tablero, para evitar scroll.
 - Un overlay para los estados **PAUSA** y **GAME OVER**.
 
 ### 2. `style.css`
@@ -108,7 +119,7 @@ Aporta el aspecto visual con estética _dark / retro arcade_: fondo oscuro, tipo
 
 Contiene toda la lógica del juego. A grandes rasgos:
 
-- **Modelo del tablero**: una matriz `ROWS × COLS` donde cada celda guarda `0` (vacía) o un índice de color (1–7) que identifica la pieza.
+- **Modelo del tablero**: una matriz `ROWS × COLS` donde cada celda guarda `0` (vacía) o un índice de color (1–8) que identifica la pieza.
 - **Piezas**: definidas como matrices cuadradas. Para rotar se calcula la transposición + reverso de filas (`rotateCW`).
 - **Detección de colisiones** (`collide`): comprueba que ninguna celda de la pieza salga del tablero ni se solape con bloques ya fijados.
 - **Wall kicks** (`tryRotate`): si la rotación choca, intenta desplazar la pieza ±1 y ±2 columnas antes de descartar el giro.
@@ -173,9 +184,11 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `COLS`         | Columnas del tablero                     | `10`                  |
 | `ROWS`         | Filas del tablero                        | `20`                  |
 | `BLOCK`        | Tamaño en píxeles de cada celda          | `30`                  |
-| `COLORS`       | Paleta de colores por tipo de pieza      | 7 colores             |
+| `COLORS`       | Paleta de colores por tipo de pieza      | 8 colores             |
 | `LINE_SCORES`  | Puntos por 1, 2, 3 o 4 líneas eliminadas | `[0,100,300,500,800]` |
 | `dropInterval` | Velocidad inicial de caída en ms         | `1000`                |
+
+> Los colores de la interfaz y de la cuadrícula son variables CSS en `style.css` (`:root` para el tema oscuro y `[data-theme="light"]` para el claro).
 
 > Si cambias `COLS`, `ROWS` o `BLOCK`, recuerda ajustar también `width` y `height` del `<canvas id="board">` en `index.html` para que coincida (`COLS × BLOCK` × `ROWS × BLOCK`).
 
