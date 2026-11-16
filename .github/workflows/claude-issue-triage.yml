@@ -47,6 +47,10 @@ jobs:
                - **Reproducción / información faltante**: steps, or what the reporter should add.
                - **Enfoque de solución sugerido**: concrete steps to implement the fix.
                - **Complejidad estimada**: low / medium / high, with one line of justification.
+               Format the whole comment as GitHub Flavored Markdown so GitHub renders it correctly:
+               bold section headings, bullet/numbered lists, `inline code` for identifiers and
+               file names, fenced code blocks with a language tag for snippets, and
+               `path/file.js:123` style references. Do not use HTML other than the first-line marker.
                This diagnosis will later be used as input to implement the fix, so be specific.
                Do not write the string "@claude" anywhere in the comment.
             5. Idempotency: before commenting, look for an existing comment containing
