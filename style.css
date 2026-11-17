@@ -285,7 +285,28 @@ kbd {
   font-family: 'Courier New', Courier, monospace;
 }
 
-#save-btn {
+/* ---- Pause menu ---- */
+.menu-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: #e57373;
+}
+
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+  min-width: 190px;
+}
+
+.menu-list.hidden {
+  display: none;
+}
+
+#save-btn,
+.menu-btn {
   background: var(--title-color);
   color: var(--bg-color);
   border: none;
@@ -350,4 +371,44 @@ kbd {
 
 .link-btn:hover {
   color: #e57373;
+}
+
+.menu-btn {
+  padding: 10px 28px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: opacity 0.15s;
+}
+
+.menu-btn:hover,
+.menu-btn:focus-visible {
+  opacity: 0.85;
+}
+
+.menu-level {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--panel-value);
+}
+
+.menu-level select {
+  font: inherit;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.menu-controls {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--panel-value);
 }
