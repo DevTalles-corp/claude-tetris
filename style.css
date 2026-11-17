@@ -16,7 +16,27 @@ body {
 }
 
 .wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stage {
   position: relative;
+}
+
+.title {
+  font-size: 44px;
+  font-weight: 900;
+  letter-spacing: 10px;
+  margin-bottom: 20px;
+  padding-left: 10px; /* compensa el letter-spacing final */
+  text-align: center;
+}
+
+.title span {
+  color: var(--c);
+  text-shadow: 0 0 14px var(--c), 0 3px 0 rgba(0, 0, 0, 0.5);
 }
 
 .game-container {
