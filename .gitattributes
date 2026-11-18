@@ -1,0 +1,4 @@
+# Los scripts y workflows corren en runners Linux: CRLF rompe el shebang.
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
