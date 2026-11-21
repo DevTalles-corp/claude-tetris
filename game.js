@@ -169,7 +169,7 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim();
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -273,6 +273,29 @@ function init() {
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
+
+// ---- Tema claro/oscuro (oscuro por defecto) ----
+const themeToggle = document.getElementById('theme-toggle');
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  themeToggle.textContent = theme === 'dark' ? '🌙 Tema oscuro' : '☀️ Tema claro';
+  themeToggle.setAttribute('aria-label',
+    `Tema activo: ${theme === 'dark' ? 'oscuro' : 'claro'}. Pulsa para cambiar.`);
+  // redibujar para que el canvas refleje el nuevo tema aunque esté en pausa
+  if (typeof current !== 'undefined' && current) { draw(); drawNext(); }
+}
+
+let savedTheme = null;
+try { savedTheme = localStorage.getItem('theme'); } catch (_) {}
+applyTheme(savedTheme === 'light' ? 'light' : 'dark');
+
+themeToggle.addEventListener('click', () => {
+  const nextTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  applyTheme(nextTheme);
+  try { localStorage.setItem('theme', nextTheme); } catch (_) {}
+  themeToggle.blur(); // evita que Space/Enter vuelvan a activar el botón durante el juego
+});
 
 document.addEventListener('keydown', e => {
   if (e.code === 'KeyP') { togglePause(); return; }
