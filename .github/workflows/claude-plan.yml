@@ -1,0 +1,35 @@
+name: Claude Plan
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  plan:
+    # Solo si el issue lo abre el owner y no menciona @claude
+    # (en ese caso ya se ejecuta claude.yml)
+    if: |
+      github.event.issue.author_association == 'OWNER' &&
+      !contains(github.event.issue.body, '@claude') &&
+      !contains(github.event.issue.title, '@claude')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write # necesario para comentar en el issue
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Claude comenta un plan
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Lee el issue #${{ github.event.issue.number }} de ${{ github.repository }}
+            y el CLAUDE.md del repo. NO implementes nada ni modifiques archivos.
+            Publica un comentario en el issue con un plan de implementación:
+            archivos a tocar, pasos y posibles riesgos. Escribe en español.
+          claude_args: '--allowedTools "Bash(gh issue comment:*),Bash(gh issue view:*)"'
