@@ -16,10 +16,25 @@ body {
 }
 
 .wrapper {
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.title {
+  line-height: 0;
+  filter: drop-shadow(0 0 8px rgba(122, 162, 247, 0.35));
+}
+
+.title svg {
+  display: block;
+  width: 240px;
+  height: auto;
 }
 
 .game-container {
+  position: relative;
   display: flex;
   gap: 20px;
   align-items: flex-start;
