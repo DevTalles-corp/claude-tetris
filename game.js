@@ -230,7 +230,6 @@ function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
-    overlay.classList.add('hidden');
     lastTime = performance.now();
     loop(lastTime);
   } else {
