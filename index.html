@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
+  <script>
+    // Aplica el tema guardado antes de pintar (evita parpadeo). Oscuro por defecto.
+    try { document.documentElement.dataset.theme = localStorage.getItem('theme') === 'light' ? 'light' : 'dark'; }
+    catch (e) { document.documentElement.dataset.theme = 'dark'; }
+  </script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -39,8 +44,11 @@
             <li><kbd>↓</kbd> bajar</li>
             <li><kbd>Space</kbd> caída</li>
             <li><kbd>P</kbd> pausa</li>
+            <li><kbd>T</kbd> tema</li>
           </ul>
         </div>
+
+        <button id="theme-btn" class="theme-btn" type="button">Tema: oscuro</button>
       </aside>
 
       <div id="overlay" class="overlay hidden">
