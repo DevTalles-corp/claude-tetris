@@ -39,6 +39,7 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const themeBtn = document.getElementById('theme-btn');
 
 const CLEAR_DURATION = 400;
 const BLINK_MS = 100;
@@ -168,6 +169,23 @@ function updateHUD() {
   levelEl.textContent = level;
 }
 
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function setTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  try { localStorage.setItem('theme', theme); } catch (e) { /* almacenamiento no disponible */ }
+  themeBtn.textContent = theme === 'light' ? 'Tema: claro' : 'Tema: oscuro';
+  // el canvas no hereda CSS: redibujar (también en pausa o game over)
+  draw();
+  drawNext();
+}
+
+function toggleTheme() {
+  setTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
+}
+
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
   const color = COLORS[colorIndex];
@@ -181,7 +199,7 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = cssVar('--grid');
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -208,7 +226,7 @@ function draw() {
     for (let c = 0; c < COLS; c++) {
       if (flashing) {
         if (blinkOn && board[r][c]) {
-          ctx.fillStyle = '#ffffff';
+          ctx.fillStyle = cssVar('--flash');
           ctx.fillRect(c * BLOCK + 1, r * BLOCK + 1, BLOCK - 2, BLOCK - 2);
         }
       } else {
@@ -310,6 +328,7 @@ function init() {
 
 document.addEventListener('keydown', e => {
   if (e.code === 'KeyP') { togglePause(); return; }
+  if (e.code === 'KeyT') { toggleTheme(); return; }
   if (paused || gameOver || clearing) return;
   switch (e.code) {
     case 'ArrowLeft':
@@ -334,5 +353,7 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+themeBtn.addEventListener('click', () => { toggleTheme(); themeBtn.blur(); });
 
 init();
+setTheme(document.documentElement.dataset.theme);
