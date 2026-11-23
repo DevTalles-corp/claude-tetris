@@ -60,7 +60,17 @@ jobs:
                Si el issue ya tenía labels de tipo/prioridad/área que ya no aplican (por ejemplo
                tras una edición), quítalos con `--remove-label`. No toques otros labels.
 
-            4. Escribe el diagnóstico en el archivo /tmp/diagnostico.md con este formato Markdown:
+            4. Escribe el diagnóstico en el archivo /tmp/diagnostico.md en GitHub Flavored Markdown
+               (GFM) válido, para que GitHub lo renderice correctamente en el comentario:
+               - Usa encabezados `##`/`###`, listas con `-` o `1.`, y deja una línea en blanco
+                 antes y después de cada encabezado, lista, tabla o bloque de código.
+               - Pon nombres de archivos, funciones, variables y `archivo:línea` entre backticks.
+               - Usa bloques de código cercados con triple backtick e indica el lenguaje
+                 (p. ej. ```js, ```html, ```css) y ciérralos siempre.
+               - Si usas tablas, incluye la fila separadora `|---|---|`.
+               - No envuelvas todo el comentario en un bloque de código ni uses HTML salvo el
+                 marcador `<!-- claude-triage -->`.
+               Sigue esta estructura:
 
                <!-- claude-triage -->
                ## 🔍 Diagnóstico automático
