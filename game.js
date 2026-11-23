@@ -40,7 +40,10 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+const CLEAR_DURATION = 400;
+const BLINK_MS = 100;
+
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, clearing;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -93,23 +96,28 @@ function merge() {
         board[current.y + r][current.x + c] = current.shape[r][c];
 }
 
-function clearLines() {
-  let cleared = 0;
-  for (let r = ROWS - 1; r >= 0; r--) {
-    if (board[r].every(v => v !== 0)) {
-      board.splice(r, 1);
-      board.unshift(new Array(COLS).fill(0));
-      cleared++;
-      r++;
-    }
+function findFullRows() {
+  const rows = [];
+  for (let r = 0; r < ROWS; r++)
+    if (board[r].every(v => v !== 0)) rows.push(r);
+  return rows;
+}
+
+function finishClear() {
+  const rows = clearing.rows;
+  clearing = null;
+  // eliminar de abajo hacia arriba para que los índices sigan siendo válidos
+  for (let i = rows.length - 1; i >= 0; i--) {
+    board.splice(rows[i], 1);
+    board.unshift(new Array(COLS).fill(0));
   }
-  if (cleared) {
-    lines += cleared;
-    score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
-    updateHUD();
-  }
+  const cleared = rows.length;
+  lines += cleared;
+  score += (LINE_SCORES[cleared] || 0) * level;
+  level = Math.floor(lines / 10) + 1;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+  updateHUD();
+  spawn();
 }
 
 function ghostY() {
@@ -137,8 +145,12 @@ function softDrop() {
 
 function lockPiece() {
   merge();
-  clearLines();
-  spawn();
+  const rows = findFullRows();
+  if (rows.length) {
+    clearing = { rows, elapsed: 0 };
+  } else {
+    spawn();
+  }
 }
 
 function spawn() {
@@ -190,9 +202,23 @@ function draw() {
   drawGrid();
 
   // board
-  for (let r = 0; r < ROWS; r++)
-    for (let c = 0; c < COLS; c++)
-      drawBlock(ctx, c, r, board[r][c], BLOCK);
+  const blinkOn = clearing && Math.floor(clearing.elapsed / BLINK_MS) % 2 === 0;
+  for (let r = 0; r < ROWS; r++) {
+    const flashing = clearing && clearing.rows.includes(r);
+    for (let c = 0; c < COLS; c++) {
+      if (flashing) {
+        if (blinkOn && board[r][c]) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(c * BLOCK + 1, r * BLOCK + 1, BLOCK - 2, BLOCK - 2);
+        }
+      } else {
+        drawBlock(ctx, c, r, board[r][c], BLOCK);
+      }
+    }
+  }
+
+  // durante la animación la pieza ya está fusionada en el tablero
+  if (clearing) return;
 
   // ghost
   const gy = ghostY();
@@ -243,8 +269,15 @@ function togglePause() {
 function loop(ts) {
   const dt = ts - lastTime;
   lastTime = ts;
-  dropAccum += dt;
-  if (dropAccum >= dropInterval) {
+  if (clearing) {
+    dropAccum = 0;
+    clearing.elapsed += dt;
+    if (clearing.elapsed >= CLEAR_DURATION) finishClear();
+    if (gameOver) return;
+  } else {
+    dropAccum += dt;
+  }
+  if (!clearing && dropAccum >= dropInterval) {
     dropAccum = 0;
     if (!collide(current.shape, current.x, current.y + 1)) {
       current.y++;
@@ -263,6 +296,7 @@ function init() {
   level = 1;
   paused = false;
   gameOver = false;
+  clearing = null;
   dropInterval = 1000;
   dropAccum = 0;
   lastTime = performance.now();
@@ -276,7 +310,7 @@ function init() {
 
 document.addEventListener('keydown', e => {
   if (e.code === 'KeyP') { togglePause(); return; }
-  if (paused || gameOver) return;
+  if (paused || gameOver || clearing) return;
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
