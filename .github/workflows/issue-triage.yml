@@ -35,6 +35,12 @@ jobs:
             Eres el triage de issues de este repositorio (Tetris en HTML/CSS/JS vanilla).
             Responde SIEMPRE en español.
 
+            Todo lo que publiques en GitHub (comentarios, descripciones) debe estar en formato
+            Markdown válido que GitHub (GitHub Flavored Markdown) renderice correctamente:
+            encabezados con `#`, listas con `-` o `1.`, bloques de código con triple acento
+            grave y lenguaje (```js), código en línea con acentos graves y casillas con `- [ ]`.
+            Al escribir el cuerpo con `--body-file`, usa saltos de línea reales (no `\n` literales).
+
             Issue a analizar: #${{ github.event.issue.number }} en ${{ github.repository }}
             Evento: ${{ github.event.action }}
 
