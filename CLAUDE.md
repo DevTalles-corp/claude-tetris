@@ -22,5 +22,6 @@ Three files, one global script scope (`index.html` loads `game.js` with a plain 
 ## Gotchas
 
 - Canvas size is hardcoded in `index.html` (`#board` is 300×600, `#next-canvas` and `#hold-canvas` are 120×120). Changing `COLS`, `ROWS` or `BLOCK` in `game.js` requires updating those attributes to `COLS×BLOCK` by `ROWS×BLOCK`.
-- DOM ids used by `game.js` (`board`, `next-canvas`, `hold-canvas`, `score`, `lines`, `level`, `overlay`, `overlay-title`, `overlay-score`, `restart-btn`) are looked up at load. Renaming one in the HTML breaks the script.
+- DOM ids used by `game.js` (`board`, `next-canvas`, `hold-canvas`, `score`, `lines`, `level`, `overlay`, `overlay-title`, `overlay-score`, `restart-btn`, `start-overlay`, `start-records`, `start-btn`, `overlay-records`, `record-form`, `record-name`, `record-save`) are looked up at load. Renaming one in the HTML breaks the script.
+- Records: localStorage key `tetris-records` (`{top[<=5], bestCombo, maxLines}`, always try/catch + `sanitizeRecords`). The game does not start until the start overlay's "Jugar" calls `init()`; keydown ignores input/textarea targets and everything while `started` is false.
 - Scoring: `LINE_SCORES` times level. Hard drop gives 2 points per cell, soft drop 1 per row. Level rises every 10 lines. Fall interval is `max(100, 1000 − (level − 1) × 90)` ms.
