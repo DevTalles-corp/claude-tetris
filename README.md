@@ -86,7 +86,7 @@ Después abre `http://localhost:8000` en el navegador.
 | `↓`       | Soft drop (bajar más rápido)      |
 | `Espacio` | Hard drop (caída instantánea)     |
 | `Shift` / `C` | Guardar pieza (hold) / intercambiar |
-| `P`       | Pausar / reanudar                 |
+| `P` / `Esc` | Menú de pausa (reanudar, reiniciar, controles, nivel inicial) |
 
 ---
 
