@@ -21,6 +21,6 @@ Three files, one global script scope (`index.html` loads `game.js` with a plain 
 
 ## Gotchas
 
-- Canvas size is hardcoded in `index.html` (`#board` is 300×600, `#next-canvas` is 120×120). Changing `COLS`, `ROWS` or `BLOCK` in `game.js` requires updating those attributes to `COLS×BLOCK` by `ROWS×BLOCK`.
-- DOM ids used by `game.js` (`board`, `next-canvas`, `score`, `lines`, `level`, `overlay`, `overlay-title`, `overlay-score`, `restart-btn`) are looked up at load. Renaming one in the HTML breaks the script.
+- Canvas size is hardcoded in `index.html` (`#board` is 300×600, `#next-canvas` and `#hold-canvas` are 120×120). Changing `COLS`, `ROWS` or `BLOCK` in `game.js` requires updating those attributes to `COLS×BLOCK` by `ROWS×BLOCK`.
+- DOM ids used by `game.js` (`board`, `next-canvas`, `hold-canvas`, `score`, `lines`, `level`, `overlay`, `overlay-title`, `overlay-score`, `restart-btn`) are looked up at load. Renaming one in the HTML breaks the script.
 - Scoring: `LINE_SCORES` times level. Hard drop gives 2 points per cell, soft drop 1 per row. Level rises every 10 lines. Fall interval is `max(100, 1000 − (level − 1) × 90)` ms.
