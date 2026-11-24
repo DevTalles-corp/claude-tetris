@@ -15,6 +15,48 @@ body {
   user-select: none;
 }
 
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ---- Título con fuego ---- */
+.title {
+  position: relative;
+  font-family: "Impact", "Arial Black", system-ui, sans-serif;
+  font-size: 56px;
+  font-weight: 900;
+  letter-spacing: 0.25em;
+  padding-left: 0.25em; /* compensa el letter-spacing final */
+  line-height: 1;
+  background: linear-gradient(to top, #ff2a00 0%, #ff7a00 35%, #ffc700 70%, #fff3a0 100%);
+  background-size: 100% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 6px #ff4500) drop-shadow(0 -4px 14px #ff8c00);
+  animation: fire-gradient 1.2s ease-in-out infinite alternate,
+             fire-flicker 0.18s steps(2, end) infinite;
+}
+
+@keyframes fire-gradient {
+  from { background-position: 0 0; }
+  to   { background-position: 0 100%; }
+}
+
+@keyframes fire-flicker {
+  0%   { filter: drop-shadow(0 0 6px #ff4500) drop-shadow(0 -4px 14px #ff8c00); transform: translateY(0); }
+  50%  { filter: drop-shadow(0 0 10px #ff2a00) drop-shadow(0 -8px 20px #ffb300); transform: translateY(-1px); }
+  100% { filter: drop-shadow(0 0 7px #ff5a00) drop-shadow(0 -5px 16px #ff9d00); transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title { animation: none; }
+}
+
 .wrapper {
   position: relative;
 }
