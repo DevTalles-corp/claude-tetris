@@ -48,6 +48,13 @@
           </ul>
         </div>
 
+        <div class="panel-section records-panel">
+          <span class="label">RECORDS</span>
+          <ol id="records-list" class="records-list"></ol>
+          <span id="records-stats" class="records-stats"></span>
+          <button id="records-reset" class="records-btn" type="button">Borrar records</button>
+        </div>
+
         <button id="theme-btn" class="theme-btn" type="button">Tema: oscuro</button>
       </aside>
 
@@ -55,6 +62,12 @@
         <div class="overlay-box">
           <p id="overlay-title">GAME OVER</p>
           <p id="overlay-score"></p>
+          <div id="records-entry" class="records-entry hidden">
+            <label for="records-name">¡Nuevo record! Tu nombre:</label>
+            <input id="records-name" type="text" maxlength="12" placeholder="Jugador" autocomplete="off" />
+            <button id="records-save" class="records-btn" type="button">Guardar</button>
+          </div>
+          <ol id="records-overlay-list" class="records-list"></ol>
           <button id="restart-btn">Reiniciar</button>
         </div>
       </div>
@@ -62,6 +75,7 @@
   </div>
 
   <script src="title.js"></script>
+  <script src="records.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
