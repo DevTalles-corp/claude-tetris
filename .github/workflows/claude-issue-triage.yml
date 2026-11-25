@@ -1,0 +1,72 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    # Evita bucles: ignora ediciones hechas por bots (incluido este workflow)
+    if: github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Analizar issue con Claude
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: '--allowedTools "Read,Glob,Grep,Bash(gh issue view:*),Bash(gh label list:*),Bash(gh issue edit:*),Bash(gh issue comment:*)"'
+          prompt: |
+            Eres el encargado de hacer el triage de issues del repositorio ${{ github.repository }}
+            (un Tetris en JavaScript vanilla con HTML5 Canvas).
+
+            Issue a analizar: #${{ github.event.issue.number }} (evento: ${{ github.event.action }}).
+
+            Pasos:
+            1. Lee el issue con `gh issue view ${{ github.event.issue.number }}` y los labels
+               disponibles con `gh label list`.
+            2. Lee `CLAUDE.md` y el código relevante (`game.js`, `index.html`, `style.css`,
+               `README.md`) para entender el contexto y localizar el código afectado.
+            3. Labels: aplica los labels apropiados con
+               `gh issue edit ${{ github.event.issue.number }} --add-label "..."`.
+               Usa SOLO labels que ya existan en el repositorio; no crees labels nuevos
+               y no quites labels que ya tenga el issue.
+            4. Escribe un diagnóstico en español, en Markdown, con esta estructura:
+
+               ## 🔍 Diagnóstico automático
+               **Resumen:** una o dos frases con lo que pide/reporta el issue.
+               **Tipo:** bug / mejora / documentación / pregunta.
+               ### Análisis
+               Causa probable (si es un bug) o alcance del cambio (si es una mejora).
+               ### Archivos y funciones afectadas
+               Lista con rutas y nombres de funciones concretas (p. ej. `game.js` → `tryRotate`).
+               ### Propuesta de solución
+               Pasos concretos de implementación.
+               ### Riesgos e invariantes
+               Invariantes de `CLAUDE.md` que la solución debe respetar.
+               ### Información faltante
+               Preguntas para el autor, si el issue es ambiguo (omite la sección si no aplica).
+
+               _Diagnóstico generado por Claude; se actualiza al editar el issue._
+
+            5. Publica el diagnóstico con
+               `gh issue comment ${{ github.event.issue.number }} --edit-last --create-if-none --body "<diagnóstico>"`
+               para que, si el issue se edita, se actualice el mismo comentario en vez de crear otro.
+
+            Restricciones: no modifiques archivos, no hagas commits ni abras pull requests.
+            Tu único output son los labels y el comentario de diagnóstico.
