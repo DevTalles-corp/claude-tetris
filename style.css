@@ -11,8 +11,18 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
   min-height: 100vh;
   user-select: none;
+}
+
+.game-title {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 8px;
+  color: #7aa2f7;
+  text-align: center;
+  margin-bottom: 18px;
 }
 
 .wrapper {
