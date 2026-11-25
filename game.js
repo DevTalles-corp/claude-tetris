@@ -40,9 +40,22 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeBtn = document.getElementById('theme-btn');
+const pauseMenu = document.getElementById('pause-menu');
+const pauseMain = document.getElementById('pause-main');
+const pauseControls = document.getElementById('pause-controls');
+const pauseResumeBtn = document.getElementById('pause-resume');
+const pauseRestartBtn = document.getElementById('pause-restart');
+const pauseControlsBtn = document.getElementById('pause-controls-btn');
+const pauseBackBtn = document.getElementById('pause-back');
+const pauseLevelSel = document.getElementById('pause-level');
 
 const CLEAR_DURATION = 400;
 const BLINK_MS = 100;
+
+const PAUSE_MAX_LEVEL = 15;
+const PAUSE_RESUME_GUARD_MS = 150;
+let startLevel = 1;
+let resumedAt = 0;
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, clearing, combo;
 
@@ -267,6 +280,7 @@ function drawNext() {
 
 function endGame() {
   gameOver = true;
+  pauseMenu.classList.add('hidden');
   cancelAnimationFrame(animId);
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
@@ -274,17 +288,26 @@ function endGame() {
   overlay.classList.remove('hidden');
 }
 
+function pauseShowView(view) {
+  pauseMain.classList.toggle('hidden', view !== 'main');
+  pauseControls.classList.toggle('hidden', view !== 'controls');
+  (view === 'main' ? pauseResumeBtn : pauseBackBtn).focus();
+}
+
 function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    pauseMenu.classList.add('hidden');
+    if (document.activeElement) document.activeElement.blur();
+    resumedAt = performance.now();
     lastTime = performance.now();
     loop(lastTime);
   } else {
     cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+    pauseLevelSel.value = String(startLevel);
+    pauseMenu.classList.remove('hidden');
+    pauseShowView('main');
   }
 }
 
@@ -317,26 +340,36 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  level = startLevel;
+  lines = (startLevel - 1) * 10;
   paused = false;
   gameOver = false;
   clearing = null;
-  dropInterval = 1000;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   dropAccum = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  pauseMenu.classList.add('hidden');
+  if (document.activeElement) document.activeElement.blur();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
 document.addEventListener('keydown', e => {
   if (Records.isEditing(e.target)) return; // escribiendo el nombre en la tabla de records
+  if (e.target === pauseLevelSel) return; // el selector gestiona sus propias teclas
   if (e.code === 'KeyP') { togglePause(); return; }
+  if (e.code === 'Escape') {
+    if (paused && pauseMain.classList.contains('hidden')) pauseShowView('main');
+    else togglePause();
+    return;
+  }
   if (e.code === 'KeyT') { toggleTheme(); return; }
   if (paused || gameOver || clearing) return;
+  if (performance.now() - resumedAt < PAUSE_RESUME_GUARD_MS) return;
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
@@ -360,6 +393,12 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+pauseResumeBtn.addEventListener('click', togglePause);
+pauseRestartBtn.addEventListener('click', init);
+pauseControlsBtn.addEventListener('click', () => pauseShowView('controls'));
+pauseBackBtn.addEventListener('click', () => pauseShowView('main'));
+pauseLevelSel.addEventListener('change', () => { startLevel = parseInt(pauseLevelSel.value, 10) || 1; pauseLevelSel.blur(); });
+for (let i = 1; i <= PAUSE_MAX_LEVEL; i++) pauseLevelSel.add(new Option(String(i), String(i)));
 themeBtn.addEventListener('click', () => { toggleTheme(); themeBtn.blur(); });
 
 init();
