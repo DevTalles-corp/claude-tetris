@@ -44,7 +44,7 @@ const themeBtn = document.getElementById('theme-btn');
 const CLEAR_DURATION = 400;
 const BLINK_MS = 100;
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, clearing;
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, clearing, combo;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -113,6 +113,8 @@ function finishClear() {
     board.unshift(new Array(COLS).fill(0));
   }
   const cleared = rows.length;
+  combo++;
+  Records.noteCombo(combo);
   lines += cleared;
   score += (LINE_SCORES[cleared] || 0) * level;
   level = Math.floor(lines / 10) + 1;
@@ -150,6 +152,7 @@ function lockPiece() {
   if (rows.length) {
     clearing = { rows, elapsed: 0 };
   } else {
+    combo = 0;
     spawn();
   }
 }
@@ -267,6 +270,7 @@ function endGame() {
   cancelAnimationFrame(animId);
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
+  Records.onGameOver(score, lines);
   overlay.classList.remove('hidden');
 }
 
@@ -308,6 +312,8 @@ function loop(ts) {
 }
 
 function init() {
+  Records.startGame();
+  combo = 0;
   board = createBoard();
   score = 0;
   lines = 0;
@@ -327,6 +333,7 @@ function init() {
 }
 
 document.addEventListener('keydown', e => {
+  if (Records.isEditing(e.target)) return; // escribiendo el nombre en la tabla de records
   if (e.code === 'KeyP') { togglePause(); return; }
   if (e.code === 'KeyT') { toggleTheme(); return; }
   if (paused || gameOver || clearing) return;

@@ -221,3 +221,92 @@ kbd {
 .theme-btn:hover {
   border-color: var(--accent);
 }
+
+/* ---- Records ---- */
+.records-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  font-size: 12px;
+  color: var(--subtle);
+}
+
+.records-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.records-list li.records-empty {
+  list-style: none;
+  color: var(--muted);
+}
+
+.records-list li.records-new {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.records-name {
+  flex: 1;
+  text-align: left;
+}
+
+.records-score {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.records-stats {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.records-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.records-entry.hidden {
+  display: none;
+}
+
+.records-entry input {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  text-align: center;
+  width: 150px;
+  user-select: text;
+}
+
+.records-btn {
+  align-self: flex-start;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.records-entry .records-btn {
+  align-self: center;
+}
+
+.records-btn:hover {
+  border-color: var(--accent);
+}
+
+#records-overlay-list {
+  max-width: 200px;
+}

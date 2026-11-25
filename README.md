@@ -89,9 +89,20 @@ Después abre `http://localhost:8000` en el navegador.
 
 ---
 
+## Records
+
+- Se guardan en `localStorage` (clave `tetris-records`) los **5 mejores puntajes** con nombre (máx. 12 caracteres).
+- La tabla se ve siempre en el panel lateral y también en el overlay de **GAME OVER**.
+- Si tu puntuación entra en el top, el game over pide tu nombre (Enter o `Guardar`); el input no dispara los controles del juego. Si reinicias sin guardar, se usa el nombre `Jugador`. La entrada nueva se resalta.
+- También se guardan el **mejor combo** (bloqueos consecutivos que despejan líneas; se reinicia al bloquear sin despejar o al reiniciar) y el **máximo de líneas** en una partida.
+- El botón `Borrar records` pide confirmación y limpia todo.
+- La lógica vive en `records.js` (cargado antes de `game.js`).
+
+---
+
 ## Cómo funciona
 
-El juego se compone de tres archivos que cooperan:
+El juego se compone de varios archivos que cooperan (además, `records.js` gestiona la tabla de records y `game.js` la usa mediante el objeto global `Records`; ids `records-*` en `index.html`):
 
 ### 1. `index.html`
 
