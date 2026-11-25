@@ -86,6 +86,13 @@ Después abre `http://localhost:8000` en el navegador.
 | `Espacio` | Hard drop (caída instantánea)     |
 | `P` / `Esc` | Pausar / reanudar (abre el menú de pausa) |
 | `T`       | Alternar tema oscuro / claro      |
+| `K`       | Cambiar de skin (Retro, Neón, Pastel, Pixel art) |
+
+---
+
+### Skins visuales
+
+El panel lateral tiene un selector **SKIN** (también la tecla `K`) con cuatro apariencias: **Retro** (por defecto), **Neón**, **Pastel** y **Pixel art**. Afecta al tablero, la pieza fantasma y la siguiente pieza, es independiente del tema oscuro/claro y se guarda en `localStorage` (clave `skin`). Las definiciones están en `skins.js`.
 
 ---
 
@@ -176,7 +183,9 @@ Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara
 03-tetris/
 ├── index.html      # Estructura del DOM y canvas
 ├── style.css       # Estilos del juego (dark theme)
-├── game.js         # Toda la lógica del Tetris (~300 líneas)
+├── game.js         # Lógica del Tetris
+├── records.js      # Tabla de records (localStorage)
+├── skins.js        # Definición de skins visuales
 └── README.md
 ```
 

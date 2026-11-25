@@ -48,6 +48,7 @@ const pauseRestartBtn = document.getElementById('pause-restart');
 const pauseControlsBtn = document.getElementById('pause-controls-btn');
 const pauseBackBtn = document.getElementById('pause-back');
 const pauseLevelSel = document.getElementById('pause-level');
+const skinSelect = document.getElementById('skin-select');
 
 const CLEAR_DURATION = 400;
 const BLINK_MS = 100;
@@ -55,6 +56,7 @@ const BLINK_MS = 100;
 const PAUSE_MAX_LEVEL = 15;
 const PAUSE_RESUME_GUARD_MS = 150;
 let startLevel = 1;
+let startLines = 0; // líneas implícitas del nivel inicial (no cuentan para records)
 let resumedAt = 0;
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, clearing, combo;
@@ -202,16 +204,28 @@ function toggleTheme() {
   setTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
 }
 
+let currentSkin = 'retro';
+
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  SKINS[currentSkin].drawBlock(context, x, y, colorIndex, size);
   context.globalAlpha = 1;
+}
+
+function setSkin(skin) {
+  if (!SKINS[skin]) skin = 'retro';
+  currentSkin = skin;
+  document.documentElement.dataset.skin = skin;
+  try { localStorage.setItem('skin', skin); } catch (e) { /* almacenamiento no disponible */ }
+  skinSelect.value = skin;
+  // redibujar también en pausa o game over
+  draw();
+  drawNext();
+}
+
+function cycleSkin() {
+  setSkin(SKIN_ORDER[(SKIN_ORDER.indexOf(currentSkin) + 1) % SKIN_ORDER.length]);
 }
 
 function drawGrid() {
@@ -284,7 +298,7 @@ function endGame() {
   cancelAnimationFrame(animId);
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
-  Records.onGameOver(score, lines);
+  Records.onGameOver(score, lines - startLines);
   overlay.classList.remove('hidden');
 }
 
@@ -341,7 +355,8 @@ function init() {
   score = 0;
   lines = 0;
   level = startLevel;
-  lines = (startLevel - 1) * 10;
+  startLines = (startLevel - 1) * 10;
+  lines = startLines;
   paused = false;
   gameOver = false;
   clearing = null;
@@ -368,6 +383,8 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (e.code === 'KeyT') { toggleTheme(); return; }
+  if (e.target === skinSelect) { skinSelect.blur(); }
+  if (e.code === 'KeyK' && !(e.ctrlKey || e.metaKey || e.altKey)) { cycleSkin(); return; }
   if (paused || gameOver || clearing) return;
   if (performance.now() - resumedAt < PAUSE_RESUME_GUARD_MS) return;
   switch (e.code) {
@@ -400,6 +417,8 @@ pauseBackBtn.addEventListener('click', () => pauseShowView('main'));
 pauseLevelSel.addEventListener('change', () => { startLevel = parseInt(pauseLevelSel.value, 10) || 1; pauseLevelSel.blur(); });
 for (let i = 1; i <= PAUSE_MAX_LEVEL; i++) pauseLevelSel.add(new Option(String(i), String(i)));
 themeBtn.addEventListener('click', () => { toggleTheme(); themeBtn.blur(); });
+skinSelect.addEventListener('change', () => { setSkin(skinSelect.value); skinSelect.blur(); });
 
 init();
 setTheme(document.documentElement.dataset.theme);
+try { setSkin(localStorage.getItem('skin') || 'retro'); } catch (e) { setSkin('retro'); }
