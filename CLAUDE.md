@@ -16,7 +16,7 @@ You can also open `index.html` directly in a browser. To check a change, reload 
 
 ## Architecture
 
-All game logic is in `game.js`, a single classic script with `'use strict'`. It is loaded at the end of `<body>` and has no modules. It reads DOM elements by id at load time, so any id rename in `index.html` must also be made in `game.js`. The ids are `board`, `next-canvas`, `score`, `lines`, `level`, `overlay`, `overlay-title`, `overlay-score` and `restart-btn`.
+All game logic is in `game.js`, a single classic script with `'use strict'`. It is loaded at the end of `<body>` and has no modules. It reads DOM elements by id at load time, so any id rename in `index.html` must also be made in `game.js`. The ids are `board`, `next-canvas`, `score`, `lines`, `level`, `overlay`, `overlay-title`, `overlay-score`, `restart-btn` and the pause menu ids prefixed `pause-` (`pause-menu`, `pause-main`, `pause-controls`, `pause-resume`, `pause-restart`, `pause-controls-btn`, `pause-back`, `pause-level`).
 
 - **State** is held in module-level `let` globals: `board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, clearing`. `init()` resets all of them and is also the restart button handler.
 - **Board** is a `ROWS × COLS` matrix. Each cell is `0` or a piece type index from 1 to 7. The same index is used for `PIECES[type]` (shape matrices whose cells hold the type number) and for `COLORS[type]`. Index 0 is `null` in both arrays.
@@ -30,4 +30,4 @@ All game logic is in `game.js`, a single classic script with `'use strict'`. It 
 
 - If you change `COLS`, `ROWS` or `BLOCK`, update the `<canvas id="board">` width and height in `index.html` to `COLS*BLOCK × ROWS*BLOCK` (currently 300×600).
 - The preview canvas is 120×120 and `drawNext` assumes a 4×4 grid of 30px cells.
-- Keyboard handling uses `e.code`, not `e.key`. The controls list is written out twice, in the README and in the `index.html` side panel, so update both when controls change.
+- Keyboard handling uses `e.code`, not `e.key`. The controls list is written out three times, in the README, in the `index.html` side panel and in the pause menu (`#pause-controls`), so update all when controls change. `startLevel` (chosen in the pause menu) is used by `init()` for the initial level, lines and drop interval.

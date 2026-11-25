@@ -221,3 +221,29 @@ kbd {
 .theme-btn:hover {
   border-color: var(--accent);
 }
+
+/* Menú de pausa */
+.pause-box { gap: 10px; }
+.pause-view { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.pause-view.hidden { display: none; }
+#pause-title {
+  font-size: 28px; font-weight: 800; letter-spacing: 4px; color: var(--accent);
+}
+.pause-view button {
+  min-width: 170px;
+  background: var(--accent); color: var(--accent-text);
+  border: none; border-radius: 6px; padding: 10px 24px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+}
+.pause-view button:hover, .pause-view button:focus-visible { background: var(--accent-hover); outline: none; }
+.pause-field { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--text); }
+.pause-field select {
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px;
+}
+.pause-hint { font-size: 12px; color: var(--subtle); }
+.pause-list { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.pause-list kbd {
+  background: var(--kbd-bg); border: 1px solid var(--kbd-border); color: var(--kbd-text);
+  border-radius: 4px; padding: 1px 6px; margin-right: 4px; font-size: 12px;
+}
