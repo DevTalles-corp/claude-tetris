@@ -309,6 +309,7 @@ kbd {
 
 #records-overlay-list {
   max-width: 200px;
+}
 
 /* Menú de pausa */
 .pause-box { gap: 10px; }
