@@ -342,7 +342,8 @@ function init() {
 document.addEventListener('keydown', e => {
   if (e.code === 'KeyP') { togglePause(); return; }
   if (e.code === 'KeyT') { toggleTheme(); return; }
-  if (e.code === 'KeyK') { cycleSkin(); return; }
+  if (e.target === skinSelect) { skinSelect.blur(); }
+  if (e.code === 'KeyK' && !(e.ctrlKey || e.metaKey || e.altKey)) { cycleSkin(); return; }
   if (paused || gameOver || clearing) return;
   switch (e.code) {
     case 'ArrowLeft':
