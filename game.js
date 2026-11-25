@@ -293,6 +293,7 @@ function drawNext() {
 }
 
 function endGame() {
+  if (gameOver) return;
   gameOver = true;
   pauseMenu.classList.add('hidden');
   cancelAnimationFrame(animId);
@@ -345,6 +346,7 @@ function loop(ts) {
     }
   }
   draw();
+  if (gameOver) return; // lockPiece -> spawn pudo terminar la partida: no reprogramar el bucle
   animId = requestAnimationFrame(loop);
 }
 
