@@ -9,6 +9,9 @@
     try { document.documentElement.dataset.theme = localStorage.getItem('theme') === 'light' ? 'light' : 'dark'; }
     catch (e) { document.documentElement.dataset.theme = 'dark'; }
   </script>
+  <script>
+    try { var sk = localStorage.getItem('skin'); if (sk) document.documentElement.dataset.skin = sk; } catch (e) {}
+  </script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -45,7 +48,18 @@
             <li><kbd>Space</kbd> caída</li>
             <li><kbd>P</kbd> pausa</li>
             <li><kbd>T</kbd> tema</li>
+            <li><kbd>K</kbd> skin</li>
           </ul>
+        </div>
+
+        <div class="panel-section">
+          <label class="label" for="skin-select">SKIN</label>
+          <select id="skin-select" class="skin-select">
+            <option value="retro">Retro</option>
+            <option value="neon">Neón</option>
+            <option value="pastel">Pastel</option>
+            <option value="pixel">Pixel art</option>
+          </select>
         </div>
 
         <button id="theme-btn" class="theme-btn" type="button">Tema: oscuro</button>
@@ -62,6 +76,7 @@
   </div>
 
   <script src="title.js"></script>
+  <script src="skins.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

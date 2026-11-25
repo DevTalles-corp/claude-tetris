@@ -40,6 +40,7 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeBtn = document.getElementById('theme-btn');
+const skinSelect = document.getElementById('skin-select');
 
 const CLEAR_DURATION = 400;
 const BLINK_MS = 100;
@@ -186,16 +187,28 @@ function toggleTheme() {
   setTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
 }
 
+let currentSkin = 'retro';
+
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  SKINS[currentSkin].drawBlock(context, x, y, colorIndex, size);
   context.globalAlpha = 1;
+}
+
+function setSkin(skin) {
+  if (!SKINS[skin]) skin = 'retro';
+  currentSkin = skin;
+  document.documentElement.dataset.skin = skin;
+  try { localStorage.setItem('skin', skin); } catch (e) { /* almacenamiento no disponible */ }
+  skinSelect.value = skin;
+  // redibujar también en pausa o game over
+  draw();
+  drawNext();
+}
+
+function cycleSkin() {
+  setSkin(SKIN_ORDER[(SKIN_ORDER.indexOf(currentSkin) + 1) % SKIN_ORDER.length]);
 }
 
 function drawGrid() {
@@ -329,6 +342,7 @@ function init() {
 document.addEventListener('keydown', e => {
   if (e.code === 'KeyP') { togglePause(); return; }
   if (e.code === 'KeyT') { toggleTheme(); return; }
+  if (e.code === 'KeyK') { cycleSkin(); return; }
   if (paused || gameOver || clearing) return;
   switch (e.code) {
     case 'ArrowLeft':
@@ -354,6 +368,8 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 themeBtn.addEventListener('click', () => { toggleTheme(); themeBtn.blur(); });
+skinSelect.addEventListener('change', () => { setSkin(skinSelect.value); skinSelect.blur(); });
 
 init();
 setTheme(document.documentElement.dataset.theme);
+try { setSkin(localStorage.getItem('skin') || 'retro'); } catch (e) { setSkin('retro'); }

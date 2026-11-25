@@ -86,6 +86,13 @@ Después abre `http://localhost:8000` en el navegador.
 | `Espacio` | Hard drop (caída instantánea)     |
 | `P`       | Pausar / reanudar                 |
 | `T`       | Alternar tema oscuro / claro      |
+| `K`       | Cambiar de skin (Retro, Neón, Pastel, Pixel art) |
+
+---
+
+### Skins visuales
+
+El panel lateral tiene un selector **SKIN** (también la tecla `K`) con cuatro apariencias: **Retro** (por defecto), **Neón**, **Pastel** y **Pixel art**. Afecta al tablero, la pieza fantasma y la siguiente pieza, es independiente del tema oscuro/claro y se guarda en `localStorage` (clave `skin`). Las definiciones están en `skins.js`.
 
 ---
 

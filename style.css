@@ -221,3 +221,25 @@ kbd {
 .theme-btn:hover {
   border-color: var(--accent);
 }
+
+/* ---- Skins ---- */
+.skin-select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+[data-skin="neon"] #board,
+[data-skin="neon"] #next-canvas {
+  background: #000;
+  border-color: #00e5ff55;
+}
+[data-skin="neon"] { --grid: #0d1f24; }
+[data-skin="pastel"] { --grid: rgba(150, 150, 170, 0.25); }
+[data-skin="pastel"] #board,
+[data-skin="pastel"] #next-canvas { border-radius: 12px; }
+[data-skin="pixel"] #board,
+[data-skin="pixel"] #next-canvas { border-radius: 0; }
