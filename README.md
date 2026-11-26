@@ -36,6 +36,13 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - Tablero de **10 × 20** celdas.
 - Las **7 piezas estándar** (I, O, T, S, Z, J, L) con colores diferenciados.
 - **Pieza reto "Tuerca"**: un anillo de 3 × 3 con un hueco en el centro, dibujado como una tuerca hexagonal metálica. Aparece con la misma frecuencia que las demás y deja un agujero imposible de rellenar mientras el anillo siga entero.
+- **Power-ups**: cada 5 líneas, la siguiente pieza es un bloque especial de 1 × 1 que no se queda en el tablero, sino que activa su efecto donde cae:
+  - 💣 **Bomba**: destruye el área 3 × 3 alrededor.
+  - ⚡ **Rayo**: vacía su columna y elimina su fila (las de arriba bajan).
+  - 🎨 **Tinte**: el color más abundante del tablero se convierte en comodines ★. Cada comodín cubre un hueco de su fila, así que una fila con tantos huecos como comodines (o menos) cuenta como completa.
+  - 🌀 **Gravedad**: todos los bloques caen hasta compactar cada columna, sin huecos.
+  - ❄ **Congelar**: la caída automática se detiene 5 s (puedes seguir moviendo y soltando).
+  - Los bloques destruidos por Bomba y Rayo dan 10 puntos × nivel. Las líneas que se borran por un power-up suman puntos como siempre.
 - **Rotación** con _wall kicks_ básicos (pequeños desplazamientos para que la pieza pueda rotar pegada a la pared).
 - **Soft drop** (bajada acelerada) y **hard drop** (caída instantánea).
 - **Pieza fantasma** (_ghost piece_): muestra dónde aterrizará la pieza actual.
