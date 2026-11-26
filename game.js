@@ -13,7 +13,10 @@ const COLORS = [
   '#e57373', // Z - red
   '#90caf9', // J - pale blue
   '#ffb74d', // L - orange
+  '#b0bec5', // N - tuerca (gris metálico)
 ];
+
+const NUT = 8;
 
 const PIECES = [
   null,
@@ -24,6 +27,7 @@ const PIECES = [
   [[5,5,0],[0,5,5],[0,0,0]],                  // Z
   [[6,0,0],[6,6,6],[0,0,0]],                  // J
   [[0,0,7],[7,7,7],[0,0,0]],                  // L
+  [[8,8,8],[8,0,8],[8,8,8]],                  // N - tuerca (reto: hueco central)
 ];
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
@@ -44,14 +48,14 @@ const THEME_KEY = 'theme';
 let gridColor = '#22222e';
 let highlightColor = 'rgba(255,255,255,0.12)';
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let board, parts, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
 }
 
 function randomPiece() {
-  const type = Math.floor(Math.random() * 7) + 1;
+  const type = Math.floor(Math.random() * 8) + 1;
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
 }
@@ -93,8 +97,11 @@ function tryRotate() {
 function merge() {
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
-      if (current.shape[r][c])
+      if (current.shape[r][c]) {
         board[current.y + r][current.x + c] = current.shape[r][c];
+        // trozo de la tuerca (0–8) que ocupa esta celda, para dibujarla por partes
+        parts[current.y + r][current.x + c] = r * 3 + c;
+      }
 }
 
 function clearLines() {
@@ -103,6 +110,8 @@ function clearLines() {
     if (board[r].every(v => v !== 0)) {
       board.splice(r, 1);
       board.unshift(new Array(COLS).fill(0));
+      parts.splice(r, 1);
+      parts.unshift(new Array(COLS).fill(0));
       cleared++;
       r++;
     }
@@ -160,8 +169,45 @@ function updateHUD() {
   levelEl.textContent = level;
 }
 
-function drawBlock(context, x, y, colorIndex, size, alpha) {
+// Dibuja solo la porción de una tuerca hexagonal (3×3 celdas) que cae en la celda (x, y).
+// `part` (0–8) indica qué celda del 3×3 es, para situar la tuerca completa.
+function drawNutSlice(context, x, y, part, size, alpha) {
+  const cx = (x - (part % 3)) * size + 1.5 * size;
+  const cy = (y - Math.floor(part / 3)) * size + 1.5 * size;
+  const R = 1.45 * size;
+  const hole = 0.72 * size;
+  context.save();
+  context.globalAlpha = alpha ?? 1;
+  context.beginPath();
+  context.rect(x * size, y * size, size, size);
+  context.clip();
+
+  context.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = Math.PI / 3 * i;
+    const px = cx + R * Math.cos(a);
+    const py = cy + R * Math.sin(a);
+    if (i === 0) context.moveTo(px, py); else context.lineTo(px, py);
+  }
+  context.closePath();
+  context.moveTo(cx + hole, cy);
+  context.arc(cx, cy, hole, 0, Math.PI * 2);
+
+  const grad = context.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+  grad.addColorStop(0, '#eceff1');
+  grad.addColorStop(0.45, COLORS[NUT]);
+  grad.addColorStop(1, '#607d8b');
+  context.fillStyle = grad;
+  context.fill('evenodd');
+  context.strokeStyle = '#37474f';
+  context.lineWidth = 2;
+  context.stroke();
+  context.restore();
+}
+
+function drawBlock(context, x, y, colorIndex, size, alpha, part) {
   if (!colorIndex) return;
+  if (colorIndex === NUT) { drawNutSlice(context, x, y, part ?? 0, size, alpha); return; }
   const color = COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
   context.fillStyle = color;
@@ -196,19 +242,19 @@ function draw() {
   // board
   for (let r = 0; r < ROWS; r++)
     for (let c = 0; c < COLS; c++)
-      drawBlock(ctx, c, r, board[r][c], BLOCK);
+      drawBlock(ctx, c, r, board[r][c], BLOCK, 1, parts[r][c]);
 
   // ghost
   const gy = ghostY();
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       if (current.shape[r][c])
-        drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, 0.2);
+        drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, 0.2, r * 3 + c);
 
   // current piece
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
-      drawBlock(ctx, current.x + c, current.y + r, current.shape[r][c], BLOCK);
+      drawBlock(ctx, current.x + c, current.y + r, current.shape[r][c], BLOCK, 1, r * 3 + c);
 }
 
 function drawNext() {
@@ -219,7 +265,7 @@ function drawNext() {
   const offY = Math.floor((4 - shape.length) / 2);
   for (let r = 0; r < shape.length; r++)
     for (let c = 0; c < shape[r].length; c++)
-      drawBlock(nextCtx, offX + c, offY + r, shape[r][c], NB);
+      drawBlock(nextCtx, offX + c, offY + r, shape[r][c], NB, 1, r * 3 + c);
 }
 
 function endGame() {
@@ -262,6 +308,7 @@ function loop(ts) {
 
 function init() {
   board = createBoard();
+  parts = createBoard();
   score = 0;
   lines = 0;
   level = 1;
