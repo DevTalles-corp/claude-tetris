@@ -47,6 +47,8 @@ jobs:
                - Si ya existe un comentario con esa línea en el issue (revisa con `gh issue view ${{ github.event.issue.number }} --comments`), actualízalo con `gh api -X PATCH repos/${{ github.repository }}/issues/comments/<ID>` en lugar de crear otro.
                - Si no existe, créalo con `gh issue comment`.
 
+            El comentario DEBE estar en formato Markdown válido que GitHub pueda renderizar (encabezados, listas, bloques de código con ``` y negritas con **), sin HTML salvo la línea `<!-- claude-triage -->`.
+
             No modifiques archivos del repositorio ni hagas commits. No cierres el issue.
           claude_args: |
             --allowed-tools "Read,Grep,Glob,Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue edit:*),Bash(gh label list:*),Bash(gh api:*)"
