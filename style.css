@@ -18,6 +18,9 @@
   --danger: #e57373;
   --grid-line: #22222e;
   --block-highlight: rgba(255, 255, 255, 0.12);
+  --title-green: #39ff6a;
+  --title-glow: rgba(57, 255, 106, 0.5);
+  --title-shadow: #0b5c24;
 }
 
 [data-theme="light"] {
@@ -39,6 +42,9 @@
   --danger: #c62828;
   --grid-line: #e2e2ec;
   --block-highlight: rgba(255, 255, 255, 0.35);
+  --title-green: #1b9e3e;
+  --title-glow: rgba(27, 158, 62, 0.25);
+  --title-shadow: #0b5c24;
 }
 
 *, *::before, *::after {
@@ -74,12 +80,13 @@ body {
 }
 
 .title {
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: 12px;
-  padding-left: 12px; /* compensa el letter-spacing final para centrar */
-  color: var(--accent);
-  text-shadow: 0 0 18px var(--accent-glow);
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  font-size: 30px;
+  font-weight: 400;
+  letter-spacing: 8px;
+  padding-left: 8px; /* compensa el letter-spacing final para centrar */
+  color: var(--title-green);
+  text-shadow: 0 0 18px var(--title-glow), 3px 3px 0 var(--title-shadow);
 }
 
 .game-area {
