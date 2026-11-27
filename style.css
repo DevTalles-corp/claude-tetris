@@ -62,12 +62,12 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 16px 0;
+  gap: 8px;
+  padding: 8px 0;
 }
 
 .title {
-  font-size: 36px;
+  font-size: 28px;
   font-weight: 800;
   letter-spacing: 12px;
   padding-left: 12px; /* compensa el letter-spacing final para centrar */
@@ -91,6 +91,14 @@ body {
   background: var(--board-bg);
   border-radius: 4px;
   box-shadow: 0 0 40px var(--board-shadow);
+  /* La resolución interna sigue siendo 300x600; solo se escala en CSS */
+  height: min(600px, calc(100vh - 80px));
+  width: auto;
+}
+
+@media (max-height: 700px) {
+  .panel { gap: 10px; }
+  .value { font-size: 20px; }
 }
 
 /* ---- Panel lateral ---- */
