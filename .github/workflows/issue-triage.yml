@@ -1,0 +1,54 @@
+name: Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  triage:
+    if: github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    concurrency:
+      group: issue-triage-${{ github.event.issue.number }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Triage issue with Claude
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Eres el encargado de triage de issues del repositorio del juego Tetris (ver CLAUDE.md para la arquitectura).
+
+            Issue #${{ github.event.issue.number }} (evento: ${{ github.event.action }}).
+
+            Pasos:
+            1. Lee el título y el cuerpo del issue con `gh issue view ${{ github.event.issue.number }}`.
+            2. Revisa el código relevante (`game.js`, `index.html`, `style.css`) para identificar el área afectada.
+            3. Asigna labels SOLO de los que existan en el repo (consulta con `gh label list`). Elige: tipo (bug, enhancement, question, documentation), área (gameplay, UI, scoring, etc.) y prioridad si aplica. No inventes labels.
+            4. Publica un comentario en español con el diagnóstico general, con este formato:
+               - Resumen del problema
+               - Tipo y labels asignados
+               - Causa probable (archivos, funciones y líneas involucradas)
+               - Pasos sugeridos para la solución (sin implementarla)
+               - Información faltante, si la hay
+               - Complejidad estimada (baja / media / alta)
+            5. El comentario DEBE empezar con la línea `<!-- claude-triage -->`.
+               - Si ya existe un comentario con esa línea en el issue (revisa con `gh issue view ${{ github.event.issue.number }} --comments`), actualízalo con `gh api -X PATCH repos/${{ github.repository }}/issues/comments/<ID>` en lugar de crear otro.
+               - Si no existe, créalo con `gh issue comment`.
+
+            El comentario DEBE estar en formato Markdown válido que GitHub pueda renderizar (encabezados, listas, bloques de código con ``` y negritas con **), sin HTML salvo la línea `<!-- claude-triage -->`.
+
+            No modifiques archivos del repositorio ni hagas commits. No cierres el issue.
+          claude_args: |
+            --allowed-tools "Read,Grep,Glob,Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue edit:*),Bash(gh label list:*),Bash(gh api:*)"
